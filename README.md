@@ -30,10 +30,12 @@ A secure, enterprise-grade Key Management System (KMS) built with modern web tec
 This project uses a monorepo structure with the following components:
 
 ### Apps
+
 - `api`: Main Express.js REST API server
 - `hcv_engine`: HashiCorp Vault integration engine
 
 ### Packages
+
 - `config-eslint`: Shared ESLint configurations
 - `config-typescript`: Shared TypeScript configurations
 - `error-handling`: Centralized error handling utilities
@@ -52,7 +54,14 @@ This project uses a monorepo structure with the following components:
 
 ## Quick Start
 
-For detailed setup instructions, see [QUICKSTART.md](./QUICKSTART.md).
+For detailed setup instructions, see [Quick Start Guide](./docs/quickstart.md).
+
+### Documentation
+
+- [Architecture Overview](./docs/features/organization_system.md)
+- [Frontend Guide](./docs/frontend/guide.md)
+- [Bug Fixes](./docs/changelog/fixes.md)
+- [API Documentation](./docs/api/README.md)
 
 ### 1. Clone and Install
 
@@ -111,26 +120,31 @@ The API will be available at `http://localhost:5001`.
 ## API Overview
 
 ### Authentication
+
 - `POST /api/v1/auth/register` - Register new user
 - `POST /api/v1/auth/login` - User login
 - `POST /api/v1/auth/refresh` - Refresh access token
 
 ### Users
+
 - `GET /api/v1/users/me` - Get current user profile
 
 ### Vaults
+
 - `POST /api/v1/vaults` - Create a new vault
 - `GET /api/v1/vaults` - List user vaults
 - `PUT /api/v1/vaults/:id` - Update vault
 - `DELETE /api/v1/vaults/:id` - Delete vault
 
 ### Keys
+
 - `POST /api/v1/keys` - Create encryption key
 - `GET /api/v1/keys` - List keys
 - `POST /api/v1/keys/:id/encrypt` - Encrypt data
 - `POST /api/v1/keys/:id/decrypt` - Decrypt data
 
 ### Secrets
+
 - `POST /api/v1/secrets` - Store a secret
 - `GET /api/v1/secrets` - List secrets (metadata only)
 - `POST /api/v1/secrets/:id/reveal` - Reveal secret value
@@ -139,6 +153,7 @@ The API will be available at `http://localhost:5001`.
 - `DELETE /api/v1/secrets/:id` - Delete secret
 
 ### Health Checks
+
 - `GET /health` - Basic health check
 - `GET /status` - Detailed system status
 

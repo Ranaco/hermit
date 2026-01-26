@@ -3,12 +3,25 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useVaults, useCreateVault, useDeleteVault } from "@/hooks/use-vaults";
-import { Plus, Trash2, Search, Vault as VaultIcon } from "lucide-react";
+import { useOrganizationStore } from "@/store/organization.store";
+import {
+  Plus,
+  Trash2,
+  Search,
+  Vault as VaultIcon,
+  Building2,
+} from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 export default function VaultsPage() {
@@ -17,26 +30,55 @@ export default function VaultsPage() {
   const [newVault, setNewVault] = useState({
     name: "",
     description: "",
-    organizationId: "",
   });
 
-  const { data: vaults, isLoading } = useVaults();
+  const { currentOrganization } = useOrganizationStore();
+  const { data: vaults, isLoading } = useVaults(currentOrganization?.id);
   const { mutate: createVault, isPending: isCreating } = useCreateVault();
   const { mutate: deleteVault } = useDeleteVault();
 
   const filteredVaults = vaults?.filter((vault) =>
-    vault.name.toLowerCase().includes(searchQuery.toLowerCase())
+    vault.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleCreateVault = (e: React.FormEvent) => {
     e.preventDefault();
-    createVault(newVault, {
-      onSuccess: () => {
-        setShowCreateDialog(false);
-        setNewVault({ name: "", description: "", organizationId: "" });
+    if (!currentOrganization) return;
+
+    createVault(
+      {
+        ...newVault,
+        organizationId: currentOrganization.id,
       },
-    });
+      {
+        onSuccess: () => {
+          setShowCreateDialog(false);
+          setNewVault({ name: "", description: "" });
+        },
+      },
+    );
   };
+
+  if (!currentOrganization) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <Card className="shadow-md max-w-md">
+            <CardContent className="py-12 text-center">
+              <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground text-lg mb-4">
+                Select an organization to view vaults
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Use the organization selector in the sidebar to choose an
+                organization.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -46,7 +88,8 @@ export default function VaultsPage() {
           <div>
             <h1 className="text-4xl font-bold mb-2">Vaults</h1>
             <p className="text-muted-foreground text-lg">
-              Secure storage containers for your secrets
+              Secure storage containers for{" "}
+              <strong>{currentOrganization.name}</strong>
             </p>
           </div>
           <Button
@@ -64,7 +107,9 @@ export default function VaultsPage() {
           <Card className="shadow-lg border-primary/20">
             <CardHeader>
               <CardTitle>Create New Vault</CardTitle>
-              <CardDescription>Create a new secure storage vault</CardDescription>
+              <CardDescription>
+                Create a new secure storage vault in {currentOrganization.name}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateVault} className="space-y-4">
@@ -74,7 +119,9 @@ export default function VaultsPage() {
                     id="vault-name"
                     placeholder="Production Vault"
                     value={newVault.name}
-                    onChange={(e) => setNewVault({ ...newVault, name: e.target.value })}
+                    onChange={(e) =>
+                      setNewVault({ ...newVault, name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -84,20 +131,9 @@ export default function VaultsPage() {
                     id="vault-description"
                     placeholder="Vault for production secrets"
                     value={newVault.description}
-                    onChange={(e) => setNewVault({ ...newVault, description: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="org-id">Organization ID</Label>
-                  <Input
-                    id="org-id"
-                    placeholder="org-123"
-                    value={newVault.organizationId}
                     onChange={(e) =>
-                      setNewVault({ ...newVault, organizationId: e.target.value })
+                      setNewVault({ ...newVault, description: e.target.value })
                     }
-                    required
                   />
                 </div>
                 <div className="flex gap-3 justify-end">
@@ -108,7 +144,7 @@ export default function VaultsPage() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isCreating}>
+                  <Button type="submit" disabled={isCreating || !newVault.name}>
                     {isCreating ? "Creating..." : "Create Vault"}
                   </Button>
                 </div>
@@ -138,7 +174,10 @@ export default function VaultsPage() {
             </Card>
           ) : filteredVaults && filteredVaults.length > 0 ? (
             filteredVaults.map((vault) => (
-              <Card key={vault.id} className="shadow-md hover:shadow-lg transition-shadow">
+              <Card
+                key={vault.id}
+                className="shadow-md hover:shadow-lg transition-shadow"
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="p-3 bg-accent/10 border-2 border-border">
@@ -148,7 +187,11 @@ export default function VaultsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        if (confirm(`Are you sure you want to delete "${vault.name}"?`)) {
+                        if (
+                          confirm(
+                            `Are you sure you want to delete "${vault.name}"?`,
+                          )
+                        ) {
                           deleteVault(vault.id);
                         }
                       }}
@@ -162,18 +205,20 @@ export default function VaultsPage() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Status</span>
-                      <Badge
-                        variant={vault.status === "active" ? "default" : "destructive"}
-                      >
-                        {vault.status}
+                      <span className="text-sm text-muted-foreground">
+                        Keys
+                      </span>
+                      <Badge variant="outline">
+                        {vault._count?.keys || 0} keys
                       </Badge>
                     </div>
                     <div className="pt-3 border-t-2 border-border">
                       <p className="text-xs text-muted-foreground">
                         Created: {formatDateTime(vault.createdAt)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">ID: {vault.id}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ID: {vault.id}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -184,7 +229,12 @@ export default function VaultsPage() {
               <CardContent className="py-12 text-center">
                 <VaultIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground text-lg">
-                  {searchQuery ? "No vaults found matching your search" : "No vaults yet"}
+                  {searchQuery
+                    ? "No vaults found matching your search"
+                    : "No vaults yet"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Create your first vault to start storing keys and secrets.
                 </p>
               </CardContent>
             </Card>

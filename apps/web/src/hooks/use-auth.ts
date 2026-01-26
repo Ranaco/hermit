@@ -4,47 +4,54 @@ import { useAuthStore } from "@/store/auth.store";
 import { toast } from "sonner";
 
 export function useLogin() {
-  const { setUser, setToken } = useAuthStore();
+  const { setUser, setTokens } = useAuthStore();
 
   return useMutation({
     mutationFn: (credentials: LoginCredentials) => authService.login(credentials),
     onSuccess: (data) => {
       setUser(data.user);
-      setToken(data.token);
+      setTokens(data.tokens.accessToken, data.tokens.refreshToken);
       toast.success("Login successful!");
     },
-    onError: () => {
-      toast.error("Login failed. Please check your credentials.");
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Login failed. Please check your credentials.";
+      toast.error(message);
     },
   });
 }
 
 export function useRegister() {
-  const { setUser, setToken } = useAuthStore();
+  const { setUser, setTokens } = useAuthStore();
 
   return useMutation({
     mutationFn: (data: RegisterData) => authService.register(data),
     onSuccess: (data) => {
       setUser(data.user);
-      setToken(data.token);
+      setTokens(data.tokens.accessToken, data.tokens.refreshToken);
       toast.success("Registration successful!");
     },
-    onError: () => {
-      toast.error("Registration failed. Please try again.");
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Registration failed. Please try again.";
+      toast.error(message);
     },
   });
 }
 
 export function useLogout() {
-  const { logout } = useAuthStore();
+  const { logout, refreshToken } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: authService.logout,
+    mutationFn: () => authService.logout(refreshToken || ""),
     onSuccess: () => {
       logout();
       queryClient.clear();
       toast.success("Logged out successfully");
+    },
+    onError: () => {
+      // Even if logout fails on server, clear local state
+      logout();
+      queryClient.clear();
     },
   });
 }

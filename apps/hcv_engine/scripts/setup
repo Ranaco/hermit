@@ -144,7 +144,7 @@ PAYLOAD=$(cat <<EOF
   "timestamp": "$TIMESTAMP",
   "hostname": "$(hostname)",
   "status": "initialized_with_approle",
-  "root_token": "$ROOT_TOKEN"
+  "root_token": "$ROOT_TOKEN",
   "credentials": {
     "read_only": {
       "role_id": "$READ_ROLE_ID",

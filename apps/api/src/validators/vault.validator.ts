@@ -2,27 +2,44 @@
  * Vault Validation Schemas
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 // UUID validation
-const uuidSchema = z.string().uuid('Invalid UUID format');
+const uuidSchema = z.string().uuid("Invalid UUID format");
 
 // Permission level enum
-const permissionLevelSchema = z.enum(['VIEW', 'USE', 'EDIT', 'ADMIN'], {
-  errorMap: () => ({ message: 'Permission level must be one of: VIEW, USE, EDIT, ADMIN' }),
+const permissionLevelSchema = z.enum(["VIEW", "USE", "EDIT", "ADMIN"], {
+  errorMap: () => ({
+    message: "Permission level must be one of: VIEW, USE, EDIT, ADMIN",
+  }),
 });
 
 // Create vault schema
 export const createVaultSchema = z.object({
-  name: z.string().min(1, 'Vault name is required').max(100, 'Vault name must be at most 100 characters'),
-  description: z.string().max(500, 'Description must be at most 500 characters').optional().nullable(),
+  name: z
+    .string()
+    .min(1, "Vault name is required")
+    .max(100, "Vault name must be at most 100 characters"),
+  description: z
+    .string()
+    .max(500, "Description must be at most 500 characters")
+    .optional()
+    .nullable(),
   organizationId: uuidSchema.optional(),
 });
 
 // Update vault schema
 export const updateVaultSchema = z.object({
-  name: z.string().min(1, 'Vault name is required').max(100, 'Vault name must be at most 100 characters').optional(),
-  description: z.string().max(500, 'Description must be at most 500 characters').optional().nullable(),
+  name: z
+    .string()
+    .min(1, "Vault name is required")
+    .max(100, "Vault name must be at most 100 characters")
+    .optional(),
+  description: z
+    .string()
+    .max(500, "Description must be at most 500 characters")
+    .optional()
+    .nullable(),
 });
 
 // Get vaults query schema
@@ -50,11 +67,11 @@ export const grantGroupPermissionSchema = z.object({
 });
 
 // User ID param schema
-export const userIdParamSchema = z.object({
+export const vaultUserIdParamSchema = z.object({
   userId: uuidSchema,
 });
 
 // Group ID param schema
-export const groupIdParamSchema = z.object({
+export const vaultGroupIdParamSchema = z.object({
   groupId: uuidSchema,
 });

@@ -9,9 +9,12 @@ import { hashPassword, verifyPassword, validatePasswordStrength } from '../utils
 import { createAuditLog } from '../services/audit.service';
 import { validateMfaToken } from '../utils/mfa';
 
+import { emailService } from '../services/email.service';
+
 export const userWrapper = {
   /**
    * Get current user profile
+
    */
   async getCurrentUser(userId: string) {
     const prisma = getPrismaClient();
@@ -195,9 +198,9 @@ export const userWrapper = {
       },
     });
 
-    // TODO: Send email with reset link
-    // For now, just log it
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Send email with reset link
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password?token=${resetToken}`;
+    await emailService.sendPasswordResetEmail(email, resetToken, resetLink);
 
     await createAuditLog({
       userId: user.id,
@@ -360,8 +363,9 @@ export const userWrapper = {
       },
     });
 
-    // TODO: Send email with verification link
-    console.log(`Email verification token for ${user.email}: ${token}`);
+    // Send email with verification link
+    const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/verify-email?token=${token}`;
+    await emailService.sendVerificationEmail(user.email, token, verificationLink);
 
     return { success: true };
   },

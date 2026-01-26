@@ -3,9 +3,9 @@
  * Comprehensive audit logging for all security-sensitive operations
  */
 
-import { AuditAction, ResourceType } from '@hermes/prisma';
-import getPrismaClient from './prisma.service';
-import { log } from '@hermes/logger';
+import { AuditAction, ResourceType } from "@hermes/prisma";
+import getPrismaClient from "./prisma.service";
+import { log } from "@hermes/logger";
 
 export interface AuditLogData {
   userId?: string;
@@ -30,20 +30,20 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
         action: data.action,
         resourceType: data.resourceType,
         resourceId: data.resourceId,
-        details: data.details,
+        details: data.details as any,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
       },
     });
 
-    log.info('Audit log created', {
+    log.info("Audit log created", {
       action: data.action,
       resourceType: data.resourceType,
       userId: data.userId,
     });
   } catch (error) {
     // Don't throw errors from audit logging - just log them
-    log.error('Failed to create audit log', { error, data });
+    log.error("Failed to create audit log", { error, data });
   }
 }
 
@@ -74,7 +74,7 @@ export async function queryAuditLogs(filters: {
   if (filters.resourceType) where.resourceType = filters.resourceType;
   if (filters.resourceId) where.resourceId = filters.resourceId;
   if (filters.action) where.action = filters.action;
-  
+
   if (filters.startDate || filters.endDate) {
     where.createdAt = {};
     if (filters.startDate) where.createdAt.gte = filters.startDate;
@@ -84,7 +84,7 @@ export async function queryAuditLogs(filters: {
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: filters.limit || 100,
       skip: filters.offset || 0,
       include: {
@@ -118,7 +118,12 @@ export const auditLog = {
       userAgent,
     }),
 
-  loginFailed: (email: string, ipAddress: string, userAgent: string, reason: string) =>
+  loginFailed: (
+    email: string,
+    ipAddress: string,
+    userAgent: string,
+    reason: string,
+  ) =>
     createAuditLog({
       action: AuditAction.LOGIN_FAILED,
       resourceType: ResourceType.USER,
@@ -138,7 +143,12 @@ export const auditLog = {
       userAgent,
     }),
 
-  createKey: (userId: string, keyId: string, vaultId: string, details: Record<string, unknown>) =>
+  createKey: (
+    userId: string,
+    keyId: string,
+    vaultId: string,
+    details: Record<string, unknown>,
+  ) =>
     createAuditLog({
       userId,
       action: AuditAction.CREATE,
@@ -147,7 +157,12 @@ export const auditLog = {
       details: { vaultId, ...details },
     }),
 
-  rotateKey: (userId: string, keyId: string, oldVersion: number, newVersion: number) =>
+  rotateKey: (
+    userId: string,
+    keyId: string,
+    oldVersion: number,
+    newVersion: number,
+  ) =>
     createAuditLog({
       userId,
       action: AuditAction.ROTATE_KEY,
@@ -156,7 +171,12 @@ export const auditLog = {
       details: { oldVersion, newVersion },
     }),
 
-  shareKey: (userId: string, keyId: string, shareWith: string, expiresAt: Date) =>
+  shareKey: (
+    userId: string,
+    keyId: string,
+    shareWith: string,
+    expiresAt: Date,
+  ) =>
     createAuditLog({
       userId,
       action: AuditAction.SHARE_KEY,
@@ -183,7 +203,11 @@ export const auditLog = {
       details: {},
     }),
 
-  addDevice: (userId: string, deviceId: string, deviceInfo: Record<string, unknown>) =>
+  addDevice: (
+    userId: string,
+    deviceId: string,
+    deviceInfo: Record<string, unknown>,
+  ) =>
     createAuditLog({
       userId,
       action: AuditAction.ADD_DEVICE,

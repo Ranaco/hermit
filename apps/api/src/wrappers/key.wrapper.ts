@@ -3,25 +3,37 @@
  * Contains business logic for encryption key management and cryptographic operations
  */
 
-import { AuthenticationError, ValidationError, ErrorCode, NotFoundError } from '@hermes/error-handling';
-import getPrismaClient from '../services/prisma.service';
-import encryptionService from '../services/encryption.service';
-import { createAuditLog } from '../services/audit.service';
+import {
+  AuthenticationError,
+  ValidationError,
+  ErrorCode,
+  NotFoundError,
+} from "@hermes/error-handling";
+import getPrismaClient from "../services/prisma.service";
+import encryptionService from "../services/encryption.service";
+import { createAuditLog } from "../services/audit.service";
 
 export const keyWrapper = {
   /**
    * Create a new encryption key
    */
-  async createKey(userId: string, data: {
-    name: string;
-    description?: string;
-    vaultId: string;
-  }, auditData: { ipAddress?: string; userAgent?: string }) {
+  async createKey(
+    userId: string,
+    data: {
+      name: string;
+      description?: string;
+      vaultId: string;
+    },
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { name, description, vaultId } = data;
     const { ipAddress, userAgent } = auditData;
 
     if (!name || !vaultId) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Name and vault ID are required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Name and vault ID are required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -35,7 +47,7 @@ export const keyWrapper = {
             permissions: {
               some: {
                 userId,
-                permissionLevel: { in: ['EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: { in: ["EDIT" as const, "ADMIN" as const] },
               },
             },
           },
@@ -49,7 +61,7 @@ export const keyWrapper = {
                     },
                   },
                 },
-                permissionLevel: { in: ['EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: { in: ["EDIT" as const, "ADMIN" as const] },
               },
             },
           },
@@ -58,11 +70,19 @@ export const keyWrapper = {
     });
 
     if (!vault) {
-      throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, 'Vault not found or insufficient permissions');
+      throw new NotFoundError(
+        ErrorCode.VAULT_NOT_FOUND,
+        "Vault not found or insufficient permissions",
+      );
     }
 
-    // Generate unique key name for Vault
-    const vaultKeyName = `${vaultId}_${name.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}`;
+    // Generate unique key name for Vault Transit Engine
+    // Vault transit keys must only contain alphanumeric characters, underscores, and hyphens
+    // Clean the vault ID and name to ensure compatibility
+    const cleanVaultId = vaultId.replace(/[^a-zA-Z0-9]/g, "");
+    const cleanName = name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+    const timestamp = Date.now();
+    const vaultKeyName = `key_${cleanVaultId}_${cleanName}_${timestamp}`;
 
     // Create key in Vault Transit Engine
     await encryptionService.createKey(vaultKeyName);
@@ -82,7 +102,7 @@ export const keyWrapper = {
           create: {
             versionNumber: 1,
             encryptedValue: vaultKeyName, // Store vault key name in encrypted value
-            encryptionMethod: 'vault-transit',
+            encryptionMethod: "vault-transit",
             createdBy: {
               connect: { id: userId },
             },
@@ -102,12 +122,12 @@ export const keyWrapper = {
 
     await createAuditLog({
       userId,
-      action: 'CREATE',
-      resourceType: 'KEY',
+      action: "CREATE",
+      resourceType: "KEY",
       resourceId: key.id,
       details: { keyName: name, vaultId },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { key };
@@ -118,7 +138,10 @@ export const keyWrapper = {
    */
   async getKeys(userId: string, vaultId: string) {
     if (!vaultId) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Vault ID is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Vault ID is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -132,7 +155,14 @@ export const keyWrapper = {
             permissions: {
               some: {
                 userId,
-                permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: {
+                  in: [
+                    "VIEW" as const,
+                    "USE" as const,
+                    "EDIT" as const,
+                    "ADMIN" as const,
+                  ],
+                },
               },
             },
           },
@@ -146,7 +176,14 @@ export const keyWrapper = {
                     },
                   },
                 },
-                permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: {
+                  in: [
+                    "VIEW" as const,
+                    "USE" as const,
+                    "EDIT" as const,
+                    "ADMIN" as const,
+                  ],
+                },
               },
             },
           },
@@ -155,7 +192,10 @@ export const keyWrapper = {
     });
 
     if (!vault) {
-      throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, 'Vault not found or insufficient permissions');
+      throw new NotFoundError(
+        ErrorCode.VAULT_NOT_FOUND,
+        "Vault not found or insufficient permissions",
+      );
     }
 
     const keys = await prisma.key.findMany({
@@ -177,7 +217,7 @@ export const keyWrapper = {
               },
             },
           },
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 1,
         },
         _count: {
@@ -186,7 +226,7 @@ export const keyWrapper = {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return { keys };
@@ -207,7 +247,14 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                  permissionLevel: {
+                    in: [
+                      "VIEW" as const,
+                      "USE" as const,
+                      "EDIT" as const,
+                      "ADMIN" as const,
+                    ],
+                  },
                 },
               },
             },
@@ -222,7 +269,7 @@ export const keyWrapper = {
                     },
                   },
                 },
-                permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: { in: ["VIEW", "USE", "EDIT", "ADMIN"] },
               },
             },
           ],
@@ -236,7 +283,7 @@ export const keyWrapper = {
           },
         },
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
         },
       },
     });
@@ -251,7 +298,11 @@ export const keyWrapper = {
   /**
    * Rotate a key (create new version)
    */
-  async rotateKey(userId: string, keyId: string, auditData: { ipAddress?: string; userAgent?: string }) {
+  async rotateKey(
+    userId: string,
+    keyId: string,
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { ipAddress, userAgent } = auditData;
 
     const prisma = getPrismaClient();
@@ -266,7 +317,7 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: { in: ['EDIT' as const, 'ADMIN' as const] },
+                  permissionLevel: { in: ["EDIT" as const, "ADMIN" as const] },
                 },
               },
             },
@@ -281,7 +332,7 @@ export const keyWrapper = {
                     },
                   },
                 },
-                permissionLevel: { in: ['EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: { in: ["EDIT", "ADMIN"] },
               },
             },
           ],
@@ -289,19 +340,22 @@ export const keyWrapper = {
       },
       include: {
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 5,
         },
       },
     });
 
     if (!key) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key not found or insufficient permissions');
+      throw new NotFoundError(
+        ErrorCode.KEY_NOT_FOUND,
+        "Key not found or insufficient permissions",
+      );
     }
 
     const vaultKeyName = key.versions[0]?.encryptedValue;
     if (!vaultKeyName) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key version not found');
+      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
 
     // Rotate key in Vault
@@ -314,19 +368,19 @@ export const keyWrapper = {
         keyId: key.id,
         versionNumber: latestVersion.versionNumber + 1,
         encryptedValue: vaultKeyName,
-        encryptionMethod: 'vault-transit',
+        encryptionMethod: "vault-transit",
         createdById: userId,
       },
     });
 
     await createAuditLog({
       userId,
-      action: 'UPDATE',
-      resourceType: 'KEY',
+      action: "UPDATE",
+      resourceType: "KEY",
       resourceId: key.id,
-      details: { action: 'rotate', versionNumber: newVersion.versionNumber },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      details: { action: "rotate", versionNumber: newVersion.versionNumber },
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { versionNumber: newVersion };
@@ -337,7 +391,10 @@ export const keyWrapper = {
    */
   async encryptData(userId: string, keyId: string, plaintext: string) {
     if (!plaintext) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Plaintext is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Plaintext is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -352,7 +409,14 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                  permissionLevel: {
+                    in: [
+                      "VIEW" as const,
+                      "USE" as const,
+                      "EDIT" as const,
+                      "ADMIN" as const,
+                    ],
+                  },
                 },
               },
             },
@@ -367,7 +431,7 @@ export const keyWrapper = {
                     },
                   },
                 },
-                permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: { in: ["VIEW", "USE", "EDIT", "ADMIN"] },
               },
             },
           ],
@@ -375,19 +439,22 @@ export const keyWrapper = {
       },
       include: {
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 1,
         },
       },
     });
 
     if (!key) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key not found or insufficient permissions');
+      throw new NotFoundError(
+        ErrorCode.KEY_NOT_FOUND,
+        "Key not found or insufficient permissions",
+      );
     }
 
     const vaultKeyName = key.versions[0]?.encryptedValue;
     if (!vaultKeyName) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key version not found');
+      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
 
     // Encrypt using Vault
@@ -401,7 +468,10 @@ export const keyWrapper = {
    */
   async decryptData(userId: string, keyId: string, ciphertext: string) {
     if (!ciphertext) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Ciphertext is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Ciphertext is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -416,7 +486,14 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                  permissionLevel: {
+                    in: [
+                      "VIEW" as const,
+                      "USE" as const,
+                      "EDIT" as const,
+                      "ADMIN" as const,
+                    ],
+                  },
                 },
               },
             },
@@ -431,7 +508,7 @@ export const keyWrapper = {
                     },
                   },
                 },
-                permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                permissionLevel: { in: ["VIEW", "USE", "EDIT", "ADMIN"] },
               },
             },
           ],
@@ -439,19 +516,22 @@ export const keyWrapper = {
       },
       include: {
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 1,
         },
       },
     });
 
     if (!key) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key not found or insufficient permissions');
+      throw new NotFoundError(
+        ErrorCode.KEY_NOT_FOUND,
+        "Key not found or insufficient permissions",
+      );
     }
 
     const vaultKeyName = key.versions[0]?.encryptedValue;
     if (!vaultKeyName) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key version not found');
+      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
 
     // Decrypt using Vault
@@ -465,7 +545,10 @@ export const keyWrapper = {
    */
   async batchEncrypt(userId: string, keyId: string, plaintexts: string[]) {
     if (!Array.isArray(plaintexts) || plaintexts.length === 0) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Plaintexts array is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Plaintexts array is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -479,7 +562,14 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                  permissionLevel: {
+                    in: [
+                      "VIEW" as const,
+                      "USE" as const,
+                      "EDIT" as const,
+                      "ADMIN" as const,
+                    ],
+                  },
                 },
               },
             },
@@ -488,7 +578,7 @@ export const keyWrapper = {
       },
       include: {
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 1,
         },
       },
@@ -500,10 +590,13 @@ export const keyWrapper = {
 
     const vaultKeyName = key.versions[0]?.encryptedValue;
     if (!vaultKeyName) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key version not found');
+      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
 
-    const ciphertexts = await encryptionService.batchEncrypt(vaultKeyName, plaintexts);
+    const ciphertexts = await encryptionService.batchEncrypt(
+      vaultKeyName,
+      plaintexts,
+    );
 
     return { ciphertexts };
   },
@@ -513,7 +606,10 @@ export const keyWrapper = {
    */
   async batchDecrypt(userId: string, keyId: string, ciphertexts: string[]) {
     if (!Array.isArray(ciphertexts) || ciphertexts.length === 0) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Ciphertexts array is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Ciphertexts array is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -527,7 +623,14 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: { in: ['VIEW' as const, 'USE' as const, 'EDIT' as const, 'ADMIN' as const] },
+                  permissionLevel: {
+                    in: [
+                      "VIEW" as const,
+                      "USE" as const,
+                      "EDIT" as const,
+                      "ADMIN" as const,
+                    ],
+                  },
                 },
               },
             },
@@ -536,7 +639,7 @@ export const keyWrapper = {
       },
       include: {
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 1,
         },
       },
@@ -548,10 +651,13 @@ export const keyWrapper = {
 
     const vaultKeyName = key.versions[0]?.encryptedValue;
     if (!vaultKeyName) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key version not found');
+      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
 
-    const plaintexts = await encryptionService.batchDecrypt(vaultKeyName, ciphertexts);
+    const plaintexts = await encryptionService.batchDecrypt(
+      vaultKeyName,
+      ciphertexts,
+    );
 
     return { plaintexts };
   },
@@ -572,7 +678,7 @@ export const keyWrapper = {
               permissions: {
                 some: {
                   userId,
-                  permissionLevel: 'ADMIN' as const,
+                  permissionLevel: "ADMIN" as const,
                 },
               },
             },
@@ -581,14 +687,17 @@ export const keyWrapper = {
       },
       include: {
         versions: {
-          orderBy: { versionNumber: 'desc' },
+          orderBy: { versionNumber: "desc" },
           take: 1,
         },
       },
     });
 
     if (!key) {
-      throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, 'Key not found or insufficient permissions');
+      throw new NotFoundError(
+        ErrorCode.KEY_NOT_FOUND,
+        "Key not found or insufficient permissions",
+      );
     }
 
     const vaultKeyName = key.versions[0]?.encryptedValue;

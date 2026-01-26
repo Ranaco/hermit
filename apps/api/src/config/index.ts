@@ -26,8 +26,8 @@ const config = {
   // HashiCorp Vault
   vault: {
     endpoint: process.env.VAULT_ENDPOINT || "http://localhost:8200",
-    token: process.env.VAULT_TOKEN,
-    namespace: process.env.VAULT_NAMESPACE || "medusa_vault",
+    token: process.env.VAULT_TOKEN || "",
+    namespace: process.env.VAULT_NAMESPACE || "", // Empty for root namespace
     transitMount: process.env.VAULT_TRANSIT_MOUNT || "transit",
     requestTimeout: parseInt(process.env.VAULT_REQUEST_TIMEOUT || "5000", 10),
     keyName: process.env.VAULT_KEY_NAME || "hermes-master-key",
@@ -69,7 +69,7 @@ const config = {
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5001"],
+    origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000", "http://localhost:5001"],
     credentials: true,
     optionsSuccessStatus: 200,
   },

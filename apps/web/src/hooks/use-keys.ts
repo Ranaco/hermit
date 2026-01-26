@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keyService, type CreateKeyData } from "@/services/key.service";
 import { toast } from "sonner";
 
-export function useKeys() {
+export function useKeys(vaultId?: string) {
   return useQuery({
-    queryKey: ["keys"],
-    queryFn: keyService.getAll,
+    queryKey: ["keys", vaultId],
+    queryFn: () => keyService.getAll(vaultId!),
+    enabled: !!vaultId,
   });
 }
 

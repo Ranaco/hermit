@@ -2,44 +2,130 @@ import { apiClient } from "@/lib/api";
 
 export interface Secret {
   id: string;
-  key: string;
-  value: string;
-  version: number;
+  name: string;
+  description?: string;
+  value?: string; // Only present when revealed
+  metadata?: Record<string, unknown>;
+  tags?: string[];
+  vaultId: string;
+  keyId: string;
+  hasPassword?: boolean;
+  passwordHash?: string;
+  expiresAt?: string;
+  lastAccessedAt?: string;
+  accessCount?: number;
+  currentVersionId?: string;
   createdAt: string;
   updatedAt: string;
-  vaultId: string;
+  vault?: {
+    id: string;
+    name: string;
+  };
+  key?: {
+    id: string;
+    name: string;
+  };
+  currentVersion?: {
+    versionNumber: number;
+    createdAt: string;
+  };
+  _count?: {
+    versions: number;
+  };
+}
+
+export interface SecretVersion {
+  id: string;
+  versionNumber: number;
+  commitMessage?: string;
+  createdAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  };
 }
 
 export interface CreateSecretData {
-  key: string;
+  name: string;
+  description?: string;
   value: string;
   vaultId: string;
+  keyId: string;
+  password?: string;
+  metadata?: Record<string, unknown>;
+  tags?: string[];
+  expiresAt?: string;
+}
+
+export interface UpdateSecretData {
+  value?: string;
+  description?: string;
+  password?: string;
+  metadata?: Record<string, unknown>;
+  tags?: string[];
+  expiresAt?: string;
+  commitMessage?: string;
+}
+
+export interface RevealSecretData {
+  password?: string;
+  vaultPassword?: string;
+  versionNumber?: number;
+}
+
+export interface RevealSecretResponse {
+  secret?: Secret;
+  requiresPassword?: "secret" | "vault";
+  error?: {
+    code: string;
+    message: string;
+  };
 }
 
 export const secretService = {
-  getAll: async (vaultId?: string): Promise<Secret[]> => {
+  getAll: async (
+    vaultId: string,
+  ): Promise<{ secrets: Secret[]; count: number }> => {
     const response = await apiClient.get("/secrets", {
       params: { vaultId },
     });
-    return response.data;
+    return response.data.data;
   },
 
-  getById: async (id: string): Promise<Secret> => {
-    const response = await apiClient.get(`/secrets/${id}`);
-    return response.data;
+  reveal: async (
+    id: string,
+    data?: RevealSecretData,
+  ): Promise<RevealSecretResponse> => {
+    const response = await apiClient.post(`/secrets/${id}/reveal`, data || {});
+    if (response.data.success === false) {
+      return {
+        requiresPassword: response.data.requiresPassword,
+        error: response.data.error,
+      };
+    }
+    return response.data.data;
   },
 
   create: async (data: CreateSecretData): Promise<Secret> => {
     const response = await apiClient.post("/secrets", data);
-    return response.data;
+    return response.data.data.secret;
   },
 
-  update: async (id: string, value: string): Promise<Secret> => {
-    const response = await apiClient.put(`/secrets/${id}`, { value });
-    return response.data;
+  update: async (id: string, data: UpdateSecretData): Promise<Secret> => {
+    const response = await apiClient.put(`/secrets/${id}`, data);
+    return response.data.data.secret;
   },
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/secrets/${id}`);
+  },
+
+  getVersions: async (
+    id: string,
+  ): Promise<{ versions: SecretVersion[]; count: number }> => {
+    const response = await apiClient.get(`/secrets/${id}/versions`);
+    return response.data.data;
   },
 };

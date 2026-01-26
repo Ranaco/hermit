@@ -7,6 +7,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { AuthenticationError, ErrorCode, asyncHandler } from '@hermes/error-handling';
 import { verifyAccessToken } from '../utils/jwt';
 import getPrismaClient from '../services/prisma.service';
+import { validateMfaToken } from '../utils/mfa';
 
 declare global {
   namespace Express {
@@ -106,6 +107,8 @@ export const requireMfa = asyncHandler(async (req: Request, _res: Response, next
     select: {
       isTwoFactorEnabled: true,
       requiresMfaForSensitiveOps: true,
+      twoFactorSecret: true,
+      backupCodes: true,
     },
   });
 
@@ -120,8 +123,16 @@ export const requireMfa = asyncHandler(async (req: Request, _res: Response, next
       throw new AuthenticationError(ErrorCode.MFA_REQUIRED, 'MFA verification required for this operation');
     }
 
-    // TODO: Verify MFA token
-    // This would check the token against the user's TOTP secret or backup codes
+    // Verify MFA token
+    const result = await validateMfaToken(
+      user.twoFactorSecret,
+      user.backupCodes as string[], // Cast assumes backupCodes is string[] in DB/Prisma type
+      mfaToken
+    );
+
+    if (!result.valid) {
+      throw new AuthenticationError(ErrorCode.MFA_INVALID, 'Invalid MFA token');
+    }
   }
 
   next();

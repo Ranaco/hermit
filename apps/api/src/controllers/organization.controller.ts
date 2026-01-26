@@ -71,6 +71,30 @@ export const getOrganization = asyncHandler(async (req: Request, res: Response) 
 });
 
 /**
+ * Get organization members
+ * GET /api/v1/organizations/:id/members
+ */
+export const getMembers = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  }
+
+  const { id } = req.params;
+  const { page, limit, search } = req.query;
+
+  const result = await organizationWrapper.getMembers(req.user.id, id, {
+    page: page ? parseInt(page as string) : undefined,
+    limit: limit ? parseInt(limit as string) : undefined,
+    search: search as string,
+  });
+
+  res.json({
+    success: true,
+    data: result,
+  });
+});
+
+/**
  * Update organization
  * PATCH /api/v1/organizations/:id
  */

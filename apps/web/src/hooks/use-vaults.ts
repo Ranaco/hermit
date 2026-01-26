@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vaultService, type CreateVaultData } from "@/services/vault.service";
 import { toast } from "sonner";
 
-export function useVaults() {
+export function useVaults(organizationId?: string) {
   return useQuery({
-    queryKey: ["vaults"],
-    queryFn: vaultService.getAll,
+    queryKey: ["vaults", organizationId],
+    queryFn: () => vaultService.getAll(organizationId),
+    enabled: !!organizationId, // Only fetch when we have an organization
   });
 }
 

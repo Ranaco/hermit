@@ -1,5 +1,5 @@
-import vault from 'node-vault';
-import { log } from './logger';
+import vault from "node-vault";
+import { log } from "./logger";
 import type {
   VaultConfig,
   EncryptOptions,
@@ -20,11 +20,11 @@ import type {
   DataKeyGenerateResult,
   CreateKeyOptions,
   VaultError,
-} from './types';
+} from "./types";
 
 /**
  * VaultService - A comprehensive wrapper for HashiCorp Vault Transit Engine
- * 
+ *
  * This service provides:
  * - Encryption/Decryption using Transit Engine
  * - Key versioning and rotation
@@ -40,11 +40,11 @@ export class VaultService {
 
   constructor(config: VaultConfig) {
     this.config = config;
-    this.transitMount = config.transitMount || 'transit';
+    this.transitMount = config.transitMount || "transit";
 
     // Initialize Vault client
     this.client = vault({
-      apiVersion: 'v1',
+      apiVersion: "v1",
       endpoint: config.endpoint,
       token: config.token,
       namespace: config.namespace,
@@ -53,7 +53,7 @@ export class VaultService {
       },
     });
 
-    log.info('VaultService initialized', {
+    log.info("VaultService initialized", {
       endpoint: config.endpoint,
       transitMount: this.transitMount,
       namespace: config.namespace,
@@ -67,36 +67,37 @@ export class VaultService {
    */
   async encrypt(options: EncryptOptions): Promise<EncryptResult> {
     try {
-      const { keyName, plaintext, context, keyVersion, nonce, convergent } = options;
+      const { keyName, plaintext, context, keyVersion, nonce, convergent } =
+        options;
 
       // Base64 encode the plaintext
-      const base64Plaintext = Buffer.from(plaintext).toString('base64');
+      const base64Plaintext = Buffer.from(plaintext).toString("base64");
 
       const payload: Record<string, unknown> = {
         plaintext: base64Plaintext,
       };
 
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
       if (keyVersion) payload.key_version = keyVersion;
       if (nonce) payload.nonce = nonce;
       if (convergent !== undefined) payload.convergent_encryption = convergent;
 
       const response = await this.client.write(
         `${this.transitMount}/encrypt/${keyName}`,
-        payload
+        payload,
       );
 
       const ciphertext = response.data.ciphertext as string;
       const version = response.data.key_version as number;
 
-      log.debug('Encryption successful', { keyName, keyVersion: version });
+      log.debug("Encryption successful", { keyName, keyVersion: version });
 
       return {
         ciphertext,
         keyVersion: version,
       };
     } catch (error) {
-      log.error('Encryption failed', { error, keyName: options.keyName });
+      log.error("Encryption failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -114,22 +115,24 @@ export class VaultService {
         ciphertext,
       };
 
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
       if (nonce) payload.nonce = nonce;
 
       const response = await this.client.write(
         `${this.transitMount}/decrypt/${keyName}`,
-        payload
+        payload,
       );
 
       const base64Plaintext = response.data.plaintext as string;
-      const plaintext = Buffer.from(base64Plaintext, 'base64').toString('utf-8');
+      const plaintext = Buffer.from(base64Plaintext, "base64").toString(
+        "utf-8",
+      );
 
-      log.debug('Decryption successful', { keyName });
+      log.debug("Decryption successful", { keyName });
 
       return { plaintext };
     } catch (error) {
-      log.error('Decryption failed', { error, keyName: options.keyName });
+      log.error("Decryption failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -142,31 +145,39 @@ export class VaultService {
    */
   async batchEncrypt(
     keyName: string,
-    items: Array<{ plaintext: string; context?: string }>
+    items: Array<{ plaintext: string; context?: string }>,
   ): Promise<EncryptResult[]> {
     try {
       const batchInput = items.map((item) => ({
-        plaintext: Buffer.from(item.plaintext).toString('base64'),
-        context: item.context ? Buffer.from(item.context).toString('base64') : undefined,
+        plaintext: Buffer.from(item.plaintext).toString("base64"),
+        context: item.context
+          ? Buffer.from(item.context).toString("base64")
+          : undefined,
       }));
 
-      const response = await this.client.write(`${this.transitMount}/encrypt/${keyName}`, {
-        batch_input: batchInput,
-      });
+      const response = await this.client.write(
+        `${this.transitMount}/encrypt/${keyName}`,
+        {
+          batch_input: batchInput,
+        },
+      );
 
       const results = response.data.batch_results as Array<{
         ciphertext: string;
         key_version: number;
       }>;
 
-      log.debug('Batch encryption successful', { keyName, count: items.length });
+      log.debug("Batch encryption successful", {
+        keyName,
+        count: items.length,
+      });
 
       return results.map((r) => ({
         ciphertext: r.ciphertext,
         keyVersion: r.key_version,
       }));
     } catch (error) {
-      log.error('Batch encryption failed', { error, keyName });
+      log.error("Batch encryption failed", { error, keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -179,27 +190,37 @@ export class VaultService {
    */
   async batchDecrypt(
     keyName: string,
-    items: Array<{ ciphertext: string; context?: string }>
+    items: Array<{ ciphertext: string; context?: string }>,
   ): Promise<DecryptResult[]> {
     try {
       const batchInput = items.map((item) => ({
         ciphertext: item.ciphertext,
-        context: item.context ? Buffer.from(item.context).toString('base64') : undefined,
+        context: item.context
+          ? Buffer.from(item.context).toString("base64")
+          : undefined,
       }));
 
-      const response = await this.client.write(`${this.transitMount}/decrypt/${keyName}`, {
-        batch_input: batchInput,
+      const response = await this.client.write(
+        `${this.transitMount}/decrypt/${keyName}`,
+        {
+          batch_input: batchInput,
+        },
+      );
+
+      const results = response.data.batch_results as Array<{
+        plaintext: string;
+      }>;
+
+      log.debug("Batch decryption successful", {
+        keyName,
+        count: items.length,
       });
 
-      const results = response.data.batch_results as Array<{ plaintext: string }>;
-
-      log.debug('Batch decryption successful', { keyName, count: items.length });
-
       return results.map((r) => ({
-        plaintext: Buffer.from(r.plaintext, 'base64').toString('utf-8'),
+        plaintext: Buffer.from(r.plaintext, "base64").toString("utf-8"),
       }));
     } catch (error) {
-      log.error('Batch decryption failed', { error, keyName });
+      log.error("Batch decryption failed", { error, keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -211,11 +232,14 @@ export class VaultService {
    */
   async rotateKey(keyName: string): Promise<KeyRotationResult> {
     try {
-      await this.client.write(`${this.transitMount}/keys/${keyName}/rotate`, {});
+      await this.client.write(
+        `${this.transitMount}/keys/${keyName}/rotate`,
+        {},
+      );
 
       const keyInfo = await this.getKeyInfo(keyName);
 
-      log.info('Key rotation successful', {
+      log.info("Key rotation successful", {
         keyName,
         newVersion: keyInfo.latestVersion,
       });
@@ -225,7 +249,7 @@ export class VaultService {
         newVersion: keyInfo.latestVersion,
       };
     } catch (error) {
-      log.error('Key rotation failed', { error, keyName });
+      log.error("Key rotation failed", { error, keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -237,7 +261,9 @@ export class VaultService {
    */
   async getKeyInfo(keyName: string): Promise<KeyInfo> {
     try {
-      const response = await this.client.read(`${this.transitMount}/keys/${keyName}`);
+      const response = await this.client.read(
+        `${this.transitMount}/keys/${keyName}`,
+      );
 
       const data = response.data;
 
@@ -253,7 +279,32 @@ export class VaultService {
         keys: data.keys as Record<string, KeyVersionInfo>,
       };
     } catch (error) {
-      log.error('Failed to get key info', { error, keyName });
+      log.error("Failed to get key info", { error, keyName });
+      throw this.handleVaultError(error as VaultError);
+    }
+  }
+
+  /**
+   * Ensure the transit secrets engine is enabled
+   */
+  private async ensureTransitEnabled(): Promise<void> {
+    try {
+      // Check if already mounted
+      const mounts = await this.client.mounts();
+      if (mounts.data[this.transitMount + "/"]) {
+        return; // already enabled
+      }
+    } catch (error) {
+      // ignore errors during check
+    }
+
+    try {
+      await this.client.write(`sys/mounts/${this.transitMount}`, {
+        type: "transit",
+      });
+      log.info("Transit engine enabled", { mount: this.transitMount });
+    } catch (error) {
+      log.error("Failed to enable transit engine", { error });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -264,6 +315,9 @@ export class VaultService {
    * @param options Key creation options
    */
   async createKey(keyName: string, options?: CreateKeyOptions): Promise<void> {
+    // Ensure transit engine is enabled
+    await this.ensureTransitEnabled();
+
     try {
       const payload: Record<string, unknown> = {};
 
@@ -288,9 +342,9 @@ export class VaultService {
 
       await this.client.write(`${this.transitMount}/keys/${keyName}`, payload);
 
-      log.info('Transit key created', { keyName, options });
+      log.info("Transit key created", { keyName, options });
     } catch (error) {
-      log.error('Failed to create key', { error, keyName });
+      log.error("Failed to create key", { error, keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -309,9 +363,9 @@ export class VaultService {
       // Then delete the key
       await this.client.delete(`${this.transitMount}/keys/${keyName}`);
 
-      log.info('Transit key deleted', { keyName });
+      log.info("Transit key deleted", { keyName });
     } catch (error) {
-      log.error('Failed to delete key', { error, keyName });
+      log.error("Failed to delete key", { error, keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -330,23 +384,23 @@ export class VaultService {
         ciphertext,
       };
 
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
       if (keyVersion) payload.key_version = keyVersion;
       if (nonce) payload.nonce = nonce;
 
       const response = await this.client.write(
         `${this.transitMount}/rewrap/${keyName}`,
-        payload
+        payload,
       );
 
-      log.debug('Rewrap successful', { keyName });
+      log.debug("Rewrap successful", { keyName });
 
       return {
         ciphertext: response.data.ciphertext as string,
         keyVersion: response.data.key_version as number,
       };
     } catch (error) {
-      log.error('Rewrap failed', { error, keyName: options.keyName });
+      log.error("Rewrap failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -357,22 +411,24 @@ export class VaultService {
    * @param options Data key generation options
    * @returns Generated data key (plaintext and ciphertext)
    */
-  async generateDataKey(options: DataKeyGenerateOptions): Promise<DataKeyGenerateResult> {
+  async generateDataKey(
+    options: DataKeyGenerateOptions,
+  ): Promise<DataKeyGenerateResult> {
     try {
       const { keyName, bits = 256, context, nonce } = options;
 
       const payload: Record<string, unknown> = {};
 
       if (bits) payload.bits = bits;
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
       if (nonce) payload.nonce = nonce;
 
       const response = await this.client.write(
         `${this.transitMount}/datakey/plaintext/${keyName}`,
-        payload
+        payload,
       );
 
-      log.debug('Data key generated', { keyName, bits });
+      log.debug("Data key generated", { keyName, bits });
 
       return {
         plaintext: response.data.plaintext as string,
@@ -380,7 +436,10 @@ export class VaultService {
         keyVersion: response.data.key_version as number,
       };
     } catch (error) {
-      log.error('Data key generation failed', { error, keyName: options.keyName });
+      log.error("Data key generation failed", {
+        error,
+        keyName: options.keyName,
+      });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -392,7 +451,7 @@ export class VaultService {
    * @returns Encrypted data key
    */
   async generateWrappedDataKey(
-    options: DataKeyGenerateOptions
+    options: DataKeyGenerateOptions,
   ): Promise<{ ciphertext: string; keyVersion: number }> {
     try {
       const { keyName, bits = 256, context, nonce } = options;
@@ -400,22 +459,25 @@ export class VaultService {
       const payload: Record<string, unknown> = {};
 
       if (bits) payload.bits = bits;
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
       if (nonce) payload.nonce = nonce;
 
       const response = await this.client.write(
         `${this.transitMount}/datakey/wrapped/${keyName}`,
-        payload
+        payload,
       );
 
-      log.debug('Wrapped data key generated', { keyName, bits });
+      log.debug("Wrapped data key generated", { keyName, bits });
 
       return {
         ciphertext: response.data.ciphertext as string,
         keyVersion: response.data.key_version as number,
       };
     } catch (error) {
-      log.error('Wrapped data key generation failed', { error, keyName: options.keyName });
+      log.error("Wrapped data key generation failed", {
+        error,
+        keyName: options.keyName,
+      });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -427,26 +489,36 @@ export class VaultService {
    */
   async sign(options: SignOptions): Promise<SignResult> {
     try {
-      const { keyName, input, hashAlgorithm, signatureAlgorithm, prehashed, context } = options;
+      const {
+        keyName,
+        input,
+        hashAlgorithm,
+        signatureAlgorithm,
+        prehashed,
+        context,
+      } = options;
 
       const payload: Record<string, unknown> = {
-        input: Buffer.from(input).toString('base64'),
+        input: Buffer.from(input).toString("base64"),
       };
 
       if (hashAlgorithm) payload.hash_algorithm = hashAlgorithm;
       if (signatureAlgorithm) payload.signature_algorithm = signatureAlgorithm;
       if (prehashed !== undefined) payload.prehashed = prehashed;
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
 
-      const response = await this.client.write(`${this.transitMount}/sign/${keyName}`, payload);
+      const response = await this.client.write(
+        `${this.transitMount}/sign/${keyName}`,
+        payload,
+      );
 
-      log.debug('Signing successful', { keyName });
+      log.debug("Signing successful", { keyName });
 
       return {
         signature: response.data.signature as string,
       };
     } catch (error) {
-      log.error('Signing failed', { error, keyName: options.keyName });
+      log.error("Signing failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -469,24 +541,30 @@ export class VaultService {
       } = options;
 
       const payload: Record<string, unknown> = {
-        input: Buffer.from(input).toString('base64'),
+        input: Buffer.from(input).toString("base64"),
         signature,
       };
 
       if (hashAlgorithm) payload.hash_algorithm = hashAlgorithm;
       if (signatureAlgorithm) payload.signature_algorithm = signatureAlgorithm;
       if (prehashed !== undefined) payload.prehashed = prehashed;
-      if (context) payload.context = Buffer.from(context).toString('base64');
+      if (context) payload.context = Buffer.from(context).toString("base64");
 
-      const response = await this.client.write(`${this.transitMount}/verify/${keyName}`, payload);
+      const response = await this.client.write(
+        `${this.transitMount}/verify/${keyName}`,
+        payload,
+      );
 
-      log.debug('Verification successful', { keyName, valid: response.data.valid });
+      log.debug("Verification successful", {
+        keyName,
+        valid: response.data.valid,
+      });
 
       return {
         valid: response.data.valid as boolean,
       };
     } catch (error) {
-      log.error('Verification failed', { error, keyName: options.keyName });
+      log.error("Verification failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -512,7 +590,7 @@ export class VaultService {
         clusterId: response.cluster_id,
       };
     } catch (error) {
-      log.error('Health check failed', { error });
+      log.error("Health check failed", { error });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -527,11 +605,11 @@ export class VaultService {
 
       const keys = (response.data.keys as string[]) || [];
 
-      log.debug('Keys listed', { count: keys.length });
+      log.debug("Keys listed", { count: keys.length });
 
       return keys;
     } catch (error) {
-      log.error('Failed to list keys', { error });
+      log.error("Failed to list keys", { error });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -556,9 +634,9 @@ export class VaultService {
 
       await this.client.write(`${this.transitMount}/config/keys`, payload);
 
-      log.info('Transit config updated', config);
+      log.info("Transit config updated", config);
     } catch (error) {
-      log.error('Failed to update config', { error });
+      log.error("Failed to update config", { error });
       throw this.handleVaultError(error as VaultError);
     }
   }
@@ -570,9 +648,9 @@ export class VaultService {
    */
   private handleVaultError(error: VaultError): Error {
     const statusCode = error.response?.statusCode || error.statusCode;
-    const message = error.message || 'Unknown Vault error';
+    const message = error.message || "Unknown Vault error";
 
-    const errorMessage = `Vault Error (${statusCode || 'unknown'}): ${message}`;
+    const errorMessage = `Vault Error (${statusCode || "unknown"}): ${message}`;
 
     const vaultError = new Error(errorMessage) as VaultError;
     vaultError.statusCode = statusCode;
@@ -588,10 +666,10 @@ export class VaultService {
   async testConnection(): Promise<boolean> {
     try {
       await this.checkHealth();
-      log.info('Vault connection test successful');
+      log.info("Vault connection test successful");
       return true;
     } catch (error) {
-      log.error('Vault connection test failed', { error });
+      log.error("Vault connection test failed", { error });
       return false;
     }
   }

@@ -6,7 +6,13 @@ import { useLogin, useRegister } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
 export default function LoginPage() {
@@ -14,28 +20,42 @@ export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
 
   const { mutate: login, isPending: isLoggingIn } = useLogin();
   const { mutate: register, isPending: isRegistering } = useRegister();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isLogin) {
-      login({ email, password }, {
-        onSuccess: () => router.push("/dashboard"),
-      });
+      login(
+        { email, password },
+        {
+          onSuccess: () => router.push("/dashboard"),
+        },
+      );
     } else {
-      register({ email, password, name }, {
-        onSuccess: () => router.push("/dashboard"),
-      });
+      register(
+        { 
+          email, 
+          password, 
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          username: username || undefined,
+        },
+        {
+          onSuccess: () => router.push("/onboarding"),
+        },
+      );
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/50 to-accent/10 p-4">
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-primary text-primary-foreground shadow-md border-2 border-border">
             <Lock className="h-8 w-8" />
@@ -48,16 +68,35 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    placeholder="johndoe"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -89,8 +128,8 @@ export default function LoginPage() {
               {isLoggingIn || isRegistering
                 ? "Loading..."
                 : isLogin
-                ? "Sign In"
-                : "Sign Up"}
+                  ? "Sign In"
+                  : "Sign Up"}
             </Button>
           </form>
 

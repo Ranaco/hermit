@@ -1,12 +1,13 @@
 {
-  "name": "hcv_engine",
+  "name": "@hermes/hcv-engine",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "server": "./src/vault.exe"
+    "build": "node -e \"require('fs').mkdirSync('dist', {recursive:true}); require('fs').writeFileSync('dist/build.txt', 'done')\"",
+    "start": "bash scripts/start.sh"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "HashiCorp Vault Engine Configuration"
 }

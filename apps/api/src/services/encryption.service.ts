@@ -3,13 +3,13 @@
  * Wraps Vault Transit Engine for encryption operations
  */
 
-import { createVaultService } from '@hermes/vault-client';
-import config from '../config';
+import { createVaultService } from "@hermes/vault-client";
+import config from "../config";
 
 // Initialize Vault service using factory exported by the vault-client package
 const vaultService = createVaultService({
   endpoint: config.vault.endpoint,
-  token: config.vault.token,
+  token: config.vault.token ?? "",
   namespace: config.vault.namespace,
   transitMount: config.vault.transitMount,
 });
@@ -17,7 +17,10 @@ const vaultService = createVaultService({
 /**
  * Encrypt plaintext data
  */
-export async function encrypt(keyName: string, plaintext: string): Promise<string> {
+export async function encrypt(
+  keyName: string,
+  plaintext: string,
+): Promise<string> {
   const result = await vaultService.encrypt({ keyName, plaintext });
   return result.ciphertext;
 }
@@ -25,7 +28,10 @@ export async function encrypt(keyName: string, plaintext: string): Promise<strin
 /**
  * Decrypt ciphertext
  */
-export async function decrypt(keyName: string, ciphertext: string): Promise<string> {
+export async function decrypt(
+  keyName: string,
+  ciphertext: string,
+): Promise<string> {
   const result = await vaultService.decrypt({ keyName, ciphertext });
   return result.plaintext;
 }
@@ -35,11 +41,11 @@ export async function decrypt(keyName: string, ciphertext: string): Promise<stri
  */
 export async function batchEncrypt(
   keyName: string,
-  plaintexts: string[]
+  plaintexts: string[],
 ): Promise<string[]> {
-  const batchInput = plaintexts.map(plaintext => ({ plaintext }));
+  const batchInput = plaintexts.map((plaintext) => ({ plaintext }));
   const results = await vaultService.batchEncrypt(keyName, batchInput);
-  return results.map(r => r.ciphertext);
+  return results.map((r) => r.ciphertext);
 }
 
 /**
@@ -47,11 +53,11 @@ export async function batchEncrypt(
  */
 export async function batchDecrypt(
   keyName: string,
-  ciphertexts: string[]
+  ciphertexts: string[],
 ): Promise<string[]> {
-  const batchInput = ciphertexts.map(ciphertext => ({ ciphertext }));
+  const batchInput = ciphertexts.map((ciphertext) => ({ ciphertext }));
   const results = await vaultService.batchDecrypt(keyName, batchInput);
-  return results.map(r => r.plaintext);
+  return results.map((r) => r.plaintext);
 }
 
 /**
@@ -71,7 +77,10 @@ export async function rotateKey(keyName: string): Promise<void> {
 /**
  * Rewrap ciphertext with latest key version
  */
-export async function rewrap(keyName: string, ciphertext: string): Promise<string> {
+export async function rewrap(
+  keyName: string,
+  ciphertext: string,
+): Promise<string> {
   const result = await vaultService.rewrap({ keyName, ciphertext });
   return result.ciphertext;
 }

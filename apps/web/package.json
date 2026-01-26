@@ -1,11 +1,12 @@
 {
-  "name": "web",
+  "name": "@hermes/web",
+  "description": "Hermes KMS Dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3001",
+    "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start --port 3001",
+    "start": "next start --port 3000",
     "lint": "eslint",
     "clean": "rm -rf .next .turbo node_modules"
   },

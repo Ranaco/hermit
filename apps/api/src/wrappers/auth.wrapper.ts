@@ -3,21 +3,31 @@
  * Contains business logic for user authentication, registration, MFA, and device management
  */
 
-import { AuthenticationError, ValidationError, ErrorCode, ConflictError, NotFoundError } from '@hermes/error-handling';
-import getPrismaClient from '../services/prisma.service';
-import { hashPassword, verifyPassword, validatePasswordStrength } from '../utils/password';
-import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
+import {
+  AuthenticationError,
+  ValidationError,
+  ErrorCode,
+  ConflictError,
+  NotFoundError,
+} from "@hermes/error-handling";
+import getPrismaClient from "../services/prisma.service";
+import {
+  hashPassword,
+  verifyPassword,
+  validatePasswordStrength,
+} from "../utils/password";
+import { generateTokenPair, verifyRefreshToken } from "../utils/jwt";
 import {
   generateTotpSecret,
   generateTotpQRCode,
   verifyTotpToken,
   generateBackupCodes,
   hashBackupCode,
-  validateMfaToken
-} from '../utils/mfa';
-import { getOrCreateDevice, createSession } from '../utils/device';
-import { auditLog } from '../services/audit.service';
-import config from '../config';
+  validateMfaToken,
+} from "../utils/mfa";
+import { getOrCreateDevice, createSession } from "../utils/device";
+import { auditLog } from "../services/audit.service";
+import config from "../config";
 
 export const authWrapper = {
   /**
@@ -38,13 +48,19 @@ export const authWrapper = {
 
     // Validate required fields
     if (!email || !password) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Email and password are required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Email and password are required",
+      );
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new ValidationError(ErrorCode.INVALID_EMAIL, 'Invalid email format');
+      throw new ValidationError(
+        ErrorCode.INVALID_EMAIL,
+        "Invalid email format",
+      );
     }
 
     // Validate password strength (throws if invalid)
@@ -58,87 +74,75 @@ export const authWrapper = {
     });
 
     if (existingUser) {
-      throw new ConflictError(ErrorCode.USER_ALREADY_EXISTS, 'User with this email already exists');
+      throw new ConflictError(
+        ErrorCode.USER_ALREADY_EXISTS,
+        "User with this email already exists",
+      );
     }
 
     // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Create user and optionally organization in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create user
-      const user = await tx.user.create({
-        data: {
-          email: email.toLowerCase(),
-          username: username || email.split('@')[0],
-          firstName: firstName || null,
-          lastName: lastName || null,
-          passwordHash,
-        },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          firstName: true,
-          lastName: true,
-          isEmailVerified: true,
-          isTwoFactorEnabled: true,
-          createdAt: true,
-        },
-      });
-
-      // Create organization if organizationName provided
-      let organization = null;
-      if (organizationName) {
-        organization = await tx.organization.create({
-          data: {
-            name: organizationName,
-            members: {
-              create: {
-                userId: user.id,
-                role: 'OWNER',
-              },
-            },
-          },
-          select: {
-            id: true,
-            name: true,
-          },
-        });
-      }
-
-      return { user, organization };
+    // Create user WITHOUT organization - user must complete onboarding
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        username: username || email.split("@")[0],
+        firstName: firstName || null,
+        lastName: lastName || null,
+        passwordHash,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        isEmailVerified: true,
+        isTwoFactorEnabled: true,
+        createdAt: true,
+      },
     });
 
-    // Generate tokens
+    const result = { user, organization: null };
+
+    // Generate tokens without organization (user needs to complete onboarding)
     const tokens = generateTokenPair({
       userId: result.user.id,
       email: result.user.email,
-      organizationId: result.organization?.id,
+      organizationId: undefined,
     });
 
     // Get or create device from request data
-    const device = await getOrCreateDevice(result.user.id, {
-      ip: ipAddress || 'unknown',
-      headers: { 'user-agent': userAgent || 'unknown' }
-    } as any, deviceFingerprint);
+    const device = await getOrCreateDevice(
+      result.user.id,
+      {
+        ip: ipAddress || "unknown",
+        headers: { "user-agent": userAgent || "unknown" },
+      } as any,
+      deviceFingerprint,
+    );
 
     // Create session with device
     await createSession(
       result.user.id,
       device.id,
       tokens.refreshToken,
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     );
 
     // Audit log
-    await auditLog.login(result.user.id, ipAddress || 'unknown', userAgent || 'unknown');
+    await auditLog.login(
+      result.user.id,
+      ipAddress || "unknown",
+      userAgent || "unknown",
+    );
 
     return {
       user: result.user,
       organization: result.organization,
       tokens,
-      device: { id: device.id, isTrusted: device.isTrusted }
+      device: { id: device.id, isTrusted: device.isTrusted },
     };
   },
 
@@ -153,10 +157,20 @@ export const authWrapper = {
     ipAddress?: string;
     userAgent?: string;
   }) {
-    const { email, password, mfaToken, deviceFingerprint, ipAddress, userAgent } = data;
+    const {
+      email,
+      password,
+      mfaToken,
+      deviceFingerprint,
+      ipAddress,
+      userAgent,
+    } = data;
 
     if (!email || !password) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Email and password are required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Email and password are required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -174,16 +188,26 @@ export const authWrapper = {
     });
 
     if (!user) {
-      await auditLog.loginFailed(email, ipAddress || 'unknown', userAgent || 'unknown', 'User not found');
-      throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS, 'Invalid email or password');
+      await auditLog.loginFailed(
+        email,
+        ipAddress || "unknown",
+        userAgent || "unknown",
+        "User not found",
+      );
+      throw new AuthenticationError(
+        ErrorCode.INVALID_CREDENTIALS,
+        "Invalid email or password",
+      );
     }
 
     // Check if account is locked
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      const minutesRemaining = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+      const minutesRemaining = Math.ceil(
+        (user.lockedUntil.getTime() - Date.now()) / 60000,
+      );
       throw new AuthenticationError(
         ErrorCode.ACCOUNT_LOCKED,
-        `Account is locked. Try again in ${minutesRemaining} minutes.`
+        `Account is locked. Try again in ${minutesRemaining} minutes.`,
       );
     }
 
@@ -205,22 +229,45 @@ export const authWrapper = {
         },
       });
 
-      await auditLog.loginFailed(email, ipAddress || 'unknown', userAgent || 'unknown', 'Invalid password');
+      await auditLog.loginFailed(
+        email,
+        ipAddress || "unknown",
+        userAgent || "unknown",
+        "Invalid password",
+      );
 
-      throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS, 'Invalid email or password');
+      throw new AuthenticationError(
+        ErrorCode.INVALID_CREDENTIALS,
+        "Invalid email or password",
+      );
     }
 
     // Check MFA if enabled
     if (user.isTwoFactorEnabled) {
       if (!mfaToken) {
-        throw new AuthenticationError(ErrorCode.MFA_REQUIRED, 'MFA token required');
+        throw new AuthenticationError(
+          ErrorCode.MFA_REQUIRED,
+          "MFA token required",
+        );
       }
 
-      const mfaResult = await validateMfaToken(user.twoFactorSecret, user.backupCodes, mfaToken);
+      const mfaResult = await validateMfaToken(
+        user.twoFactorSecret,
+        user.backupCodes,
+        mfaToken,
+      );
 
       if (!mfaResult.valid) {
-        await auditLog.loginFailed(email, ipAddress || 'unknown', userAgent || 'unknown', 'Invalid MFA token');
-        throw new AuthenticationError(ErrorCode.MFA_INVALID, 'Invalid MFA token');
+        await auditLog.loginFailed(
+          email,
+          ipAddress || "unknown",
+          userAgent || "unknown",
+          "Invalid MFA token",
+        );
+        throw new AuthenticationError(
+          ErrorCode.MFA_INVALID,
+          "Invalid MFA token",
+        );
       }
 
       // If backup code was used, remove it
@@ -245,10 +292,14 @@ export const authWrapper = {
     });
 
     // Get or create device from request data
-    const device = await getOrCreateDevice(user.id, {
-      ip: ipAddress || 'unknown',
-      headers: { 'user-agent': userAgent || 'unknown' }
-    } as any, deviceFingerprint);
+    const device = await getOrCreateDevice(
+      user.id,
+      {
+        ip: ipAddress || "unknown",
+        headers: { "user-agent": userAgent || "unknown" },
+      } as any,
+      deviceFingerprint,
+    );
 
     // Get user's primary organization
     const primaryOrg = user.organizations[0]?.organization;
@@ -265,11 +316,15 @@ export const authWrapper = {
       user.id,
       device.id,
       tokens.refreshToken,
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     );
 
     // Audit log
-    await auditLog.login(user.id, ipAddress || 'unknown', userAgent || 'unknown');
+    await auditLog.login(
+      user.id,
+      ipAddress || "unknown",
+      userAgent || "unknown",
+    );
 
     return {
       user: {
@@ -281,7 +336,9 @@ export const authWrapper = {
         isEmailVerified: user.isEmailVerified,
         isTwoFactorEnabled: user.isTwoFactorEnabled,
       },
-      organization: primaryOrg ? { id: primaryOrg.id, name: primaryOrg.name } : null,
+      organization: primaryOrg
+        ? { id: primaryOrg.id, name: primaryOrg.name }
+        : null,
       device: device ? { id: device.id, isTrusted: device.isTrusted } : null,
       tokens,
     };
@@ -290,11 +347,19 @@ export const authWrapper = {
   /**
    * Logout user
    */
-  async logout(data: { refreshToken: string; userId?: string; ipAddress?: string; userAgent?: string }) {
+  async logout(data: {
+    refreshToken: string;
+    userId?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }) {
     const { refreshToken, userId, ipAddress, userAgent } = data;
 
     if (!refreshToken) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Refresh token is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Refresh token is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -306,7 +371,11 @@ export const authWrapper = {
 
     // Audit log
     if (userId) {
-      await auditLog.logout(userId, ipAddress || 'unknown', userAgent || 'unknown');
+      await auditLog.logout(
+        userId,
+        ipAddress || "unknown",
+        userAgent || "unknown",
+      );
     }
 
     return { success: true };
@@ -319,7 +388,10 @@ export const authWrapper = {
     const { refreshToken: token } = data;
 
     if (!token) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Refresh token is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Refresh token is required",
+      );
     }
 
     // Verify refresh token
@@ -348,7 +420,10 @@ export const authWrapper = {
     });
 
     if (!session) {
-      throw new AuthenticationError(ErrorCode.TOKEN_INVALID, 'Invalid or expired refresh token');
+      throw new AuthenticationError(
+        ErrorCode.TOKEN_INVALID,
+        "Invalid or expired refresh token",
+      );
     }
 
     // Generate new token pair
@@ -380,15 +455,23 @@ export const authWrapper = {
     // Check if MFA is already enabled
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isTwoFactorEnabled: true, email: true, firstName: true, lastName: true },
+      select: {
+        isTwoFactorEnabled: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
     });
 
     if (!user) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, 'User not found');
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "User not found");
     }
 
     if (user.isTwoFactorEnabled) {
-      throw new ConflictError(ErrorCode.USER_ALREADY_EXISTS, 'MFA is already enabled');
+      throw new ConflictError(
+        ErrorCode.USER_ALREADY_EXISTS,
+        "MFA is already enabled",
+      );
     }
 
     // Generate TOTP secret
@@ -417,7 +500,10 @@ export const authWrapper = {
    */
   async enableMfa(userId: string, token: string) {
     if (!token) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'MFA token is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "MFA token is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -431,28 +517,34 @@ export const authWrapper = {
     });
 
     if (!user) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, 'User not found');
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "User not found");
     }
 
     if (user.isTwoFactorEnabled) {
-      throw new ConflictError(ErrorCode.USER_ALREADY_EXISTS, 'MFA is already enabled');
+      throw new ConflictError(
+        ErrorCode.USER_ALREADY_EXISTS,
+        "MFA is already enabled",
+      );
     }
 
     if (!user.twoFactorSecret) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'MFA setup not initiated. Call /mfa/setup first');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "MFA setup not initiated. Call /mfa/setup first",
+      );
     }
 
     // Verify token
     const isValid = verifyTotpToken(user.twoFactorSecret, token);
 
     if (!isValid) {
-      throw new AuthenticationError(ErrorCode.MFA_INVALID, 'Invalid MFA token');
+      throw new AuthenticationError(ErrorCode.MFA_INVALID, "Invalid MFA token");
     }
 
     // Generate backup codes
     const backupCodes = generateBackupCodes();
     const hashedBackupCodes = await Promise.all(
-      backupCodes.map(code => hashBackupCode(code))
+      backupCodes.map((code) => hashBackupCode(code)),
     );
 
     // Enable MFA and store backup codes
@@ -465,7 +557,7 @@ export const authWrapper = {
     });
 
     // Audit log
-    await auditLog.enable2FA(userId, 'TOTP');
+    await auditLog.enable2FA(userId, "TOTP");
 
     return { backupCodes };
   },
@@ -475,7 +567,10 @@ export const authWrapper = {
    */
   async disableMfa(userId: string, password: string, mfaToken: string) {
     if (!password || !mfaToken) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Password and MFA token are required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Password and MFA token are required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -485,23 +580,33 @@ export const authWrapper = {
     });
 
     if (!user) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, 'User not found');
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "User not found");
     }
 
     if (!user.isTwoFactorEnabled) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'MFA is not enabled');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "MFA is not enabled",
+      );
     }
 
     // Verify password
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new AuthenticationError(ErrorCode.INVALID_CREDENTIALS, 'Invalid password');
+      throw new AuthenticationError(
+        ErrorCode.INVALID_CREDENTIALS,
+        "Invalid password",
+      );
     }
 
     // Verify MFA token
-    const mfaResult = await validateMfaToken(user.twoFactorSecret, user.backupCodes, mfaToken);
+    const mfaResult = await validateMfaToken(
+      user.twoFactorSecret,
+      user.backupCodes,
+      mfaToken,
+    );
     if (!mfaResult.valid) {
-      throw new AuthenticationError(ErrorCode.MFA_INVALID, 'Invalid MFA token');
+      throw new AuthenticationError(ErrorCode.MFA_INVALID, "Invalid MFA token");
     }
 
     // Disable MFA
@@ -537,7 +642,7 @@ export const authWrapper = {
         ipAddress: true,
         createdAt: true,
       },
-      orderBy: { lastUsedAt: 'desc' },
+      orderBy: { lastUsedAt: "desc" },
     });
 
     return { devices };
@@ -558,7 +663,7 @@ export const authWrapper = {
     });
 
     if (!device) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, 'Device not found');
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Device not found");
     }
 
     // Delete device

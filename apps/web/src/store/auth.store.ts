@@ -4,17 +4,20 @@ import { persist } from "zustand/middleware";
 interface User {
   id: string;
   email: string;
-  name: string;
-  role: string;
-  organizationId: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  isEmailVerified: boolean;
+  isTwoFactorEnabled: boolean;
 }
 
 interface AuthState {
   user: User | null;
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
-  setToken: (token: string | null) => void;
+  setTokens: (accessToken: string | null, refreshToken: string | null) => void;
   logout: () => void;
 }
 
@@ -22,20 +25,27 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setToken: (token) => {
-        if (token) {
-          localStorage.setItem("auth_token", token);
+      setTokens: (accessToken, refreshToken) => {
+        if (accessToken) {
+          localStorage.setItem("auth_token", accessToken);
         } else {
           localStorage.removeItem("auth_token");
         }
-        set({ token });
+        if (refreshToken) {
+          localStorage.setItem("refresh_token", refreshToken);
+        } else {
+          localStorage.removeItem("refresh_token");
+        }
+        set({ accessToken, refreshToken });
       },
       logout: () => {
         localStorage.removeItem("auth_token");
-        set({ user: null, token: null, isAuthenticated: false });
+        localStorage.removeItem("refresh_token");
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
     }),
     {

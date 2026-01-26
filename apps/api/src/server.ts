@@ -17,7 +17,7 @@ import {
   generalRateLimiter,
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
-import { checkDatabaseConnection } from "./services/prisma.service";
+import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
 import { createVaultService } from "@hermes/vault-client";
 
 // Import routes
@@ -27,6 +27,7 @@ import organizationRoutes from "./routes/organization.routes";
 import vaultRoutes from "./routes/vault.routes";
 import keyRoutes from "./routes/key.routes";
 import secretRoutes from "./routes/secret.routes";
+import onboardingRoutes from "./routes/onboarding.routes";
 
 /**
  * Create and configure Express application
@@ -35,11 +36,7 @@ export const createServer = (): Express => {
   const app = express();
 
   // Trust proxy if behind reverse proxy (e.g., nginx, AWS ALB)
-  // if (config.security.trustedProxies.length > 0) {
-  //   app.set("trust proxy", config.security.trustedProxies);
-  // } else {
   app.set("trust proxy", true);
-  // }
 
   // Disable x-powered-by header
   app.disable("x-powered-by");
@@ -118,8 +115,7 @@ export const createServer = (): Express => {
   app.use(`${config.app.apiPrefix}/vaults`, vaultRoutes);
   app.use(`${config.app.apiPrefix}/keys`, keyRoutes);
   app.use(`${config.app.apiPrefix}/secrets`, secretRoutes);
-  // app.use(`${config.app.apiPrefix}/vaults`, vaultRoutes);
-  // app.use(`${config.app.apiPrefix}/keys`, keyRoutes);
+  app.use(`${config.app.apiPrefix}/onboarding`, onboardingRoutes);
 
   // Temporary placeholder route
   app.get(`${config.app.apiPrefix}/info`, (_req: Request, res: Response) => {
@@ -185,7 +181,10 @@ export async function initializeApp(): Promise<void> {
   }
 
   // TODO: Run database migrations if needed
+  log.info("Database migrations check skipped (managed externally)");
+  
   // TODO: Initialize Vault keys if needed
+  log.info("Vault keys initialization check skipped (managed by hcv_engine)");
 
   log.info("Application initialized successfully");
 }
@@ -196,8 +195,9 @@ export async function initializeApp(): Promise<void> {
 export async function gracefulShutdown(signal: string): Promise<void> {
   log.info(`Received ${signal}, starting graceful shutdown...`);
 
-  // TODO: Close database connections
-  // TODO: Clean up resources
+  const prisma = getPrismaClient();
+  await prisma.$disconnect();
+  log.info("Database connection closed");
 
   log.info("Graceful shutdown complete");
   process.exit(0);

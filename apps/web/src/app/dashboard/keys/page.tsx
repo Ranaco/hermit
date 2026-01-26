@@ -3,12 +3,31 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useKeys, useCreateKey, useDeleteKey, useRotateKey } from "@/hooks/use-keys";
-import { Plus, Trash2, RefreshCw, Search, Key as KeyIcon } from "lucide-react";
+import {
+  useKeys,
+  useCreateKey,
+  useDeleteKey,
+  useRotateKey,
+} from "@/hooks/use-keys";
+import { useOrganizationStore } from "@/store/organization.store";
+import {
+  Plus,
+  Trash2,
+  RefreshCw,
+  Search,
+  Key as KeyIcon,
+  Vault,
+} from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 export default function KeysPage() {
@@ -16,34 +35,66 @@ export default function KeysPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [newKey, setNewKey] = useState({
     name: "",
-    type: "encryption" as "encryption" | "signing" | "hmac",
-    algorithm: "AES-256-GCM",
-    vaultId: "",
+    description: "",
+    valueType: "STRING" as
+      | "STRING"
+      | "JSON"
+      | "NUMBER"
+      | "BOOLEAN"
+      | "MULTILINE",
   });
 
-  const { data: keys, isLoading } = useKeys();
+  const { currentVault } = useOrganizationStore();
+  const { data: keys, isLoading } = useKeys(currentVault?.id);
   const { mutate: createKey, isPending: isCreating } = useCreateKey();
   const { mutate: deleteKey } = useDeleteKey();
   const { mutate: rotateKey } = useRotateKey();
 
   const filteredKeys = keys?.filter((key) =>
-    key.name.toLowerCase().includes(searchQuery.toLowerCase())
+    key.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleCreateKey = (e: React.FormEvent) => {
     e.preventDefault();
-    createKey(newKey, {
-      onSuccess: () => {
-        setShowCreateDialog(false);
-        setNewKey({
-          name: "",
-          type: "encryption",
-          algorithm: "AES-256-GCM",
-          vaultId: "",
-        });
+    if (!currentVault) return;
+
+    createKey(
+      {
+        ...newKey,
+        vaultId: currentVault.id,
       },
-    });
+      {
+        onSuccess: () => {
+          setShowCreateDialog(false);
+          setNewKey({
+            name: "",
+            description: "",
+            valueType: "STRING",
+          });
+        },
+      },
+    );
   };
+
+  if (!currentVault) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <Card className="shadow-md max-w-md">
+            <CardContent className="py-12 text-center">
+              <Vault className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground text-lg mb-4">
+                Select a vault to view keys
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Use the vault selector in the sidebar to choose a vault.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -53,7 +104,7 @@ export default function KeysPage() {
           <div>
             <h1 className="text-4xl font-bold mb-2">Encryption Keys</h1>
             <p className="text-muted-foreground text-lg">
-              Manage your cryptographic keys
+              Manage cryptographic keys in <strong>{currentVault.name}</strong>
             </p>
           </div>
           <Button
@@ -71,7 +122,9 @@ export default function KeysPage() {
           <Card className="shadow-lg border-primary/20">
             <CardHeader>
               <CardTitle>Create New Key</CardTitle>
-              <CardDescription>Generate a new encryption key</CardDescription>
+              <CardDescription>
+                Generate a new encryption key in {currentVault.name}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateKey} className="space-y-4">
@@ -82,46 +135,46 @@ export default function KeysPage() {
                       id="key-name"
                       placeholder="my-encryption-key"
                       value={newKey.name}
-                      onChange={(e) => setNewKey({ ...newKey, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewKey({ ...newKey, name: e.target.value })
+                      }
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="key-type">Key Type</Label>
+                    <Label htmlFor="value-type">Value Type</Label>
                     <select
-                      id="key-type"
+                      id="value-type"
                       className="flex h-10 w-full border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={newKey.type}
+                      value={newKey.valueType}
                       onChange={(e) =>
                         setNewKey({
                           ...newKey,
-                          type: e.target.value as "encryption" | "signing" | "hmac",
+                          valueType: e.target.value as
+                            | "STRING"
+                            | "JSON"
+                            | "NUMBER"
+                            | "BOOLEAN"
+                            | "MULTILINE",
                         })
                       }
                     >
-                      <option value="encryption">Encryption</option>
-                      <option value="signing">Signing</option>
-                      <option value="hmac">HMAC</option>
+                      <option value="STRING">String</option>
+                      <option value="JSON">JSON</option>
+                      <option value="NUMBER">Number</option>
+                      <option value="BOOLEAN">Boolean</option>
+                      <option value="MULTILINE">Multiline</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="algorithm">Algorithm</Label>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="key-description">Description</Label>
                     <Input
-                      id="algorithm"
-                      placeholder="AES-256-GCM"
-                      value={newKey.algorithm}
-                      onChange={(e) => setNewKey({ ...newKey, algorithm: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vault-id">Vault ID</Label>
-                    <Input
-                      id="vault-id"
-                      placeholder="vault-id"
-                      value={newKey.vaultId}
-                      onChange={(e) => setNewKey({ ...newKey, vaultId: e.target.value })}
-                      required
+                      id="key-description"
+                      placeholder="Key for encrypting user data"
+                      value={newKey.description}
+                      onChange={(e) =>
+                        setNewKey({ ...newKey, description: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -133,7 +186,7 @@ export default function KeysPage() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isCreating}>
+                  <Button type="submit" disabled={isCreating || !newKey.name}>
                     {isCreating ? "Creating..." : "Create Key"}
                   </Button>
                 </div>
@@ -163,7 +216,10 @@ export default function KeysPage() {
             </Card>
           ) : filteredKeys && filteredKeys.length > 0 ? (
             filteredKeys.map((key) => (
-              <Card key={key.id} className="shadow-md hover:shadow-lg transition-shadow">
+              <Card
+                key={key.id}
+                className="shadow-md hover:shadow-lg transition-shadow"
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
@@ -173,14 +229,13 @@ export default function KeysPage() {
                       <div>
                         <h3 className="text-xl font-bold mb-1">{key.name}</h3>
                         <div className="flex flex-wrap gap-2 mb-2">
-                          <Badge variant="secondary">{key.type}</Badge>
-                          <Badge variant="outline">{key.algorithm}</Badge>
-                          <Badge
-                            variant={key.status === "active" ? "default" : "outline"}
-                          >
-                            {key.status}
-                          </Badge>
+                          <Badge variant="secondary">{key.valueType}</Badge>
                         </div>
+                        {key.description && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {key.description}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground">
                           Created: {formatDateTime(key.createdAt)}
                         </p>
@@ -202,7 +257,11 @@ export default function KeysPage() {
                         variant="destructive"
                         size="icon"
                         onClick={() => {
-                          if (confirm(`Are you sure you want to delete "${key.name}"?`)) {
+                          if (
+                            confirm(
+                              `Are you sure you want to delete "${key.name}"?`,
+                            )
+                          ) {
                             deleteKey(key.id);
                           }
                         }}
@@ -220,7 +279,12 @@ export default function KeysPage() {
               <CardContent className="py-12 text-center">
                 <KeyIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground text-lg">
-                  {searchQuery ? "No keys found matching your search" : "No keys yet"}
+                  {searchQuery
+                    ? "No keys found matching your search"
+                    : "No keys yet"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Create your first key to start encrypting secrets.
                 </p>
               </CardContent>
             </Card>

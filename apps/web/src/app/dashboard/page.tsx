@@ -1,16 +1,39 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useKeys } from "@/hooks/use-keys";
 import { useSecrets } from "@/hooks/use-secrets";
 import { useVaults } from "@/hooks/use-vaults";
-import { Key, Lock, Vault, TrendingUp, Activity } from "lucide-react";
+import { useAutoContext } from "@/hooks/use-auto-context";
+import { useOrganizationStore } from "@/store/organization.store";
+import {
+  Key,
+  Lock,
+  Vault,
+  TrendingUp,
+  Activity,
+  Building2,
+} from "lucide-react";
 
 export default function DashboardPage() {
-  const { data: keys, isLoading: keysLoading } = useKeys();
-  const { data: secrets, isLoading: secretsLoading } = useSecrets();
-  const { data: vaults, isLoading: vaultsLoading } = useVaults();
+  // Auto-select organization and vault if none selected
+  useAutoContext();
+  
+  const { currentOrganization, currentVault } = useOrganizationStore();
+  const { data: keys, isLoading: keysLoading } = useKeys(currentVault?.id);
+  const { data: secrets, isLoading: secretsLoading } = useSecrets(
+    currentVault?.id,
+  );
+  const { data: vaults, isLoading: vaultsLoading } = useVaults(
+    currentOrganization?.id,
+  );
 
   const stats = [
     {
@@ -23,19 +46,18 @@ export default function DashboardPage() {
     },
     {
       name: "Total Secrets",
-      value: secrets?.length || 0,
+      value: secrets?.secrets?.length || 0,
       icon: Lock,
       change: "+8%",
       color: "text-chart-2",
       bg: "bg-chart-2/10",
     },
     {
-      name: "Active Vaults",
-      value: vaults?.filter((v) => v.status === "active").length || 0,
+      name: "Total Vaults",
+      value: vaults?.length || 0,
       icon: Vault,
       change: "+3%",
       color: "text-chart-3",
-      bg: "bg-chart-3/10",
     },
     {
       name: "Operations Today",
@@ -56,12 +78,37 @@ export default function DashboardPage() {
           <p className="text-muted-foreground text-lg">
             Welcome back! Here's what's happening with your KMS.
           </p>
+          {currentOrganization && (
+            <div className="flex items-center gap-2 mt-4 p-3 bg-muted/50 border-2 border-border rounded-lg">
+              <Building2 className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">{currentOrganization.name}</p>
+                {currentOrganization.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {currentOrganization.description}
+                  </p>
+                )}
+              </div>
+              {currentVault && (
+                <>
+                  <div className="mx-2 text-muted-foreground">•</div>
+                  <Vault className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{currentVault.name}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.name} className="shadow-md hover:shadow-lg transition-shadow">
+            <Card
+              key={stat.name}
+              className="shadow-md hover:shadow-lg transition-shadow"
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.name}
@@ -92,7 +139,11 @@ export default function DashboardPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Recent Keys</CardTitle>
-              <CardDescription>Latest encryption keys created</CardDescription>
+              <CardDescription>
+                {currentVault
+                  ? `Latest encryption keys in ${currentVault.name}`
+                  : "Select a vault to view keys"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {keysLoading ? (
@@ -102,25 +153,22 @@ export default function DashboardPage() {
                   {keys.slice(0, 5).map((key) => (
                     <div
                       key={key.id}
-                      className="flex items-center justify-between p-3 border-2 border-border hover:bg-muted/50 transition-colors"
+                      className="p-3 border-2 border-border hover:bg-muted/50 transition-colors"
                     >
                       <div>
                         <p className="font-medium">{key.name}</p>
-                        <p className="text-xs text-muted-foreground">{key.type}</p>
-                      </div>
-                      <div className={`px-2 py-1 text-xs font-medium border-2 border-border ${
-                        key.status === "active"
-                          ? "bg-chart-4/20 text-chart-4"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {key.status}
+                        <p className="text-xs text-muted-foreground">
+                          {key.valueType}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  No keys found
+                  {currentVault
+                    ? "No keys found"
+                    : "Select a vault to view keys"}
                 </div>
               )}
             </CardContent>
@@ -129,7 +177,11 @@ export default function DashboardPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Active Vaults</CardTitle>
-              <CardDescription>Your secure storage vaults</CardDescription>
+              <CardDescription>
+                {currentOrganization
+                  ? `Your secure storage vaults in ${currentOrganization.name}`
+                  : "Select an organization to view vaults"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {vaultsLoading ? (
@@ -139,7 +191,7 @@ export default function DashboardPage() {
                   {vaults.slice(0, 5).map((vault) => (
                     <div
                       key={vault.id}
-                      className="flex items-center justify-between p-3 border-2 border-border hover:bg-muted/50 transition-colors"
+                      className="p-3 border-2 border-border hover:bg-muted/50 transition-colors"
                     >
                       <div>
                         <p className="font-medium">{vault.name}</p>
@@ -147,19 +199,14 @@ export default function DashboardPage() {
                           {vault.description}
                         </p>
                       </div>
-                      <div className={`px-2 py-1 text-xs font-medium border-2 border-border ${
-                        vault.status === "active"
-                          ? "bg-chart-4/20 text-chart-4"
-                          : "bg-destructive/20 text-destructive"
-                      }`}>
-                        {vault.status}
-                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  No vaults found
+                  {currentOrganization
+                    ? "No vaults found"
+                    : "Select an organization to view vaults"}
                 </div>
               )}
             </CardContent>

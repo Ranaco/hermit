@@ -22,6 +22,10 @@ export const createVault = asyncHandler(async (req: Request, res: Response) => {
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Vault name is required');
   }
 
+  if (!organizationId) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Organization ID is required');
+  }
+
   const result = await vaultWrapper.createVault(req.user.id, {
     name,
     description,

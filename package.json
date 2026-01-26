@@ -1,5 +1,6 @@
 {
-  "name": "kitchen-sink",
+  "name": "hermes-kms",
+  "description": "Hermes Key Management System",
   "private": true,
   "scripts": {
     "build": "turbo run build",

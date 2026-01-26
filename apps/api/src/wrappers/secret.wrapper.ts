@@ -215,9 +215,12 @@ export const secretWrapper = {
     userId: string,
     data: {
       vaultId: string;
+      page?: number;
+      limit?: number;
+      search?: string;
     },
   ) {
-    const { vaultId } = data;
+    const { vaultId, page = 1, limit = 20, search } = data;
 
     if (!vaultId) {
       throw new ValidationError(
@@ -264,27 +267,44 @@ export const secretWrapper = {
       );
     }
 
-    const secrets = await prisma.secret.findMany({
-      where: { vaultId },
-      include: {
-        key: {
-          select: {
-            id: true,
-            name: true,
+    const where = {
+      vaultId,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } as any },
+              { description: { contains: search, mode: "insensitive" } as any },
+            ],
+          }
+        : {}),
+    };
+
+    const [secrets, total] = await Promise.all([
+      prisma.secret.findMany({
+        where,
+        include: {
+          key: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          currentVersion: {
+            select: {
+              versionNumber: true,
+              createdAt: true,
+            },
+          },
+          _count: {
+            select: { versions: true },
           },
         },
-        currentVersion: {
-          select: {
-            versionNumber: true,
-            createdAt: true,
-          },
-        },
-        _count: {
-          select: { versions: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      prisma.secret.count({ where }),
+    ]);
 
     // Don't return encrypted values or password hashes in list view
     const sanitizedSecrets = secrets.map((secret) => ({
@@ -293,7 +313,15 @@ export const secretWrapper = {
       passwordHash: undefined,
     }));
 
-    return { secrets: sanitizedSecrets, count: secrets.length };
+    return {
+      secrets: sanitizedSecrets,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   },
 
   /**

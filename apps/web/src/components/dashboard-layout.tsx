@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth.store";
 import { useLogout } from "@/hooks/use-auth";
 import { useUIStore } from "@/store/ui.store";
+import { OrganizationSelector } from "@/components/organization-selector";
+import { VaultSelector } from "@/components/vault-selector";
 import {
   LayoutDashboard,
   Key,
@@ -18,11 +20,13 @@ import {
   Menu,
   Sun,
   Moon,
+  Building2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Organizations", href: "/dashboard/organizations", icon: Building2 },
   { name: "Keys", href: "/dashboard/keys", icon: Key },
   { name: "Secrets", href: "/dashboard/secrets", icon: Lock },
   { name: "Vaults", href: "/dashboard/vaults", icon: Vault },
@@ -32,6 +36,7 @@ const navigation = [
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuthStore();
   const { mutate: logout } = useLogout();
   const { sidebarOpen, toggleSidebar } = useUIStore();
@@ -77,11 +82,32 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {/* Context Selectors */}
+        {sidebarOpen && (
+          <div className="border-t-2 border-border p-4 space-y-3">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
+                Context
+              </p>
+              <OrganizationSelector 
+                onCreateNew={() => router.push("/dashboard/organizations")}
+              />
+              <VaultSelector 
+                onCreateNew={() => router.push("/dashboard/vaults")}
+              />
+            </div>
+          </div>
+        )}
+
         {/* User Section */}
         <div className="border-t-2 border-border p-4 space-y-2">
           {sidebarOpen && user && (
             <div className="px-3 py-2">
-              <p className="text-sm font-medium truncate">{user.name}</p>
+              <p className="text-sm font-medium truncate">
+                {user.firstName || user.lastName
+                  ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                  : user.username || user.email}
+              </p>
               <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
           )}

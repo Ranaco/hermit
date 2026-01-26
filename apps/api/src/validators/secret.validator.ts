@@ -131,4 +131,23 @@ export const getSecretsSchema = z.object({
   vaultId: z
     .string()
     .uuid('Invalid vault ID format'),
+  
+  page: z
+    .string()
+    .regex(/^\d+$/, 'Page must be a number')
+    .transform((val) => parseInt(val, 10))
+    .or(z.number())
+    .optional(),
+  
+  limit: z
+    .string()
+    .regex(/^\d+$/, 'Limit must be a number')
+    .transform((val) => parseInt(val, 10))
+    .or(z.number())
+    .optional(),
+  
+  search: z
+    .string()
+    .max(100, 'Search term too long')
+    .optional(),
 });

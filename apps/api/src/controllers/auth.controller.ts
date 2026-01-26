@@ -3,9 +3,14 @@
  * Handles user registration, login, logout, MFA, and device management
  */
 
-import type { Request, Response } from 'express';
-import { asyncHandler, AuthenticationError, ValidationError, ErrorCode } from '@hermes/error-handling';
-import { authWrapper } from '../wrappers/auth.wrapper';
+import type { Request, Response } from "express";
+import {
+  asyncHandler,
+  AuthenticationError,
+  ValidationError,
+  ErrorCode,
+} from "@hermes/error-handling";
+import { authWrapper } from "../wrappers/auth.wrapper";
 
 /**
  * Register a new user
@@ -64,14 +69,16 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
  * Refresh access token
  * POST /api/v1/auth/refresh
  */
-export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
-  const result = await authWrapper.refreshToken(req.body);
+export const refreshToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await authWrapper.refreshToken(req.body);
 
-  res.json({
-    success: true,
-    data: result,
-  });
-});
+    res.json({
+      success: true,
+      data: result,
+    });
+  },
+);
 
 /**
  * Setup MFA (get QR code)
@@ -87,7 +94,8 @@ export const setupMfa = asyncHandler(async (req: Request, res: Response) => {
   res.json({
     success: true,
     data: result,
-    message: "Scan the QR code with your authenticator app, then verify with a token to enable MFA",
+    message:
+      "Scan the QR code with your authenticator app, then verify with a token to enable MFA",
   });
 });
 
@@ -105,7 +113,8 @@ export const enableMfa = asyncHandler(async (req: Request, res: Response) => {
   res.json({
     success: true,
     data: result,
-    message: "MFA enabled successfully. Save these backup codes in a secure location.",
+    message:
+      "MFA enabled successfully. Save these backup codes in a secure location.",
   });
 });
 
@@ -118,7 +127,11 @@ export const disableMfa = asyncHandler(async (req: Request, res: Response) => {
     throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
   }
 
-  await authWrapper.disableMfa(req.user.id, req.body.password, req.body.mfaToken);
+  await authWrapper.disableMfa(
+    req.user.id,
+    req.body.password,
+    req.body.mfaToken,
+  );
 
   res.json({
     success: true,
@@ -147,15 +160,17 @@ export const getDevices = asyncHandler(async (req: Request, res: Response) => {
  * Remove a device
  * DELETE /api/v1/auth/devices/:id
  */
-export const removeDevice = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  }
+export const removeDevice = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+    }
 
-  await authWrapper.removeDevice(req.user.id, req.params.id);
+    await authWrapper.removeDevice(req.user.id, req.params.id);
 
-  res.json({
-    success: true,
-    message: "Device removed successfully",
-  });
-});
+    res.json({
+      success: true,
+      message: "Device removed successfully",
+    });
+  },
+);

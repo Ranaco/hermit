@@ -3,66 +3,104 @@
  * Contains business logic for organization management and membership
  */
 
-import { AuthenticationError, ValidationError, ErrorCode, NotFoundError, AuthorizationError, ConflictError } from '@hermes/error-handling';
-import getPrismaClient from '../services/prisma.service';
-import { createAuditLog } from '../services/audit.service';
+import {
+  AuthenticationError,
+  ValidationError,
+  ErrorCode,
+  NotFoundError,
+  AuthorizationError,
+  ConflictError,
+} from "@hermes/error-handling";
+import { Role } from "@hermes/prisma";
+import getPrismaClient from "../services/prisma.service";
+import { createAuditLog } from "../services/audit.service";
 
 export const organizationWrapper = {
   /**
    * Create a new organization
    */
-  async createOrganization(userId: string, data: {
-    name: string;
-    description?: string;
-  }, auditData: { ipAddress?: string; userAgent?: string }) {
+  async createOrganization(
+    userId: string,
+    data: {
+      name: string;
+      description?: string;
+    },
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { name, description } = data;
     const { ipAddress, userAgent } = auditData;
 
     if (!name) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Organization name is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Organization name is required",
+      );
     }
 
     const prisma = getPrismaClient();
 
-    const organization = await prisma.organization.create({
-      data: {
-        name,
-        description,
-        members: {
-          create: {
-            userId,
-            role: 'OWNER',
+    // Create organization with default vault in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: {
+          name,
+          description,
+          members: {
+            create: {
+              userId,
+              role: "OWNER",
+              onboardingStatus: "in_progress",
+              onboardingStep: 1,
+            },
           },
         },
-      },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                username: true,
-                firstName: true,
-                lastName: true,
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                },
               },
             },
           },
         },
-      },
+      });
+
+      // Auto-create default vault for the organization
+      const defaultVault = await tx.vault.create({
+        data: {
+          name: "Default Vault",
+          description: "Your default secure vault",
+          organizationId: organization.id,
+          createdById: userId,
+          permissions: {
+            create: {
+              userId,
+              permissionLevel: "ADMIN",
+            },
+          },
+        },
+      });
+
+      return { organization, defaultVault };
     });
 
     await createAuditLog({
       userId,
-      action: 'CREATE',
-      resourceType: 'ORGANIZATION',
-      resourceId: organization.id,
-      details: { name, description },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      action: "CREATE",
+      resourceType: "ORGANIZATION",
+      resourceId: result.organization.id,
+      details: { name, description, defaultVault: result.defaultVault.id },
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
-    return { organization };
+    return { organization: result.organization, vault: result.defaultVault };
   },
 
   /**
@@ -89,7 +127,7 @@ export const organizationWrapper = {
       },
     });
 
-    const organizations = memberships.map(m => ({
+    const organizations = memberships.map((m) => ({
       ...m.organization,
       userRole: m.role,
     }));
@@ -111,21 +149,9 @@ export const organizationWrapper = {
       include: {
         organization: {
           include: {
-            members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    username: true,
-                    firstName: true,
-                    lastName: true,
-                  },
-                },
-              },
-            },
             _count: {
               select: {
+                members: true,
                 vaults: true,
               },
             },
@@ -145,7 +171,6 @@ export const organizationWrapper = {
         description: membership.organization.description,
         createdAt: membership.organization.createdAt,
         updatedAt: membership.organization.updatedAt,
-        members: membership.organization.members,
         _count: membership.organization._count,
         userRole: membership.role,
       },
@@ -153,12 +178,92 @@ export const organizationWrapper = {
   },
 
   /**
+   * Get organization members with pagination
+   */
+  async getMembers(
+    userId: string,
+    organizationId: string,
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+    },
+  ) {
+    const { page = 1, limit = 20, search } = params;
+    const prisma = getPrismaClient();
+
+    // Check membership
+    const membership = await prisma.organizationMember.findFirst({
+      where: {
+        organizationId,
+        userId,
+      },
+    });
+
+    if (!membership) {
+      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS);
+    }
+
+    const where = {
+      organizationId,
+      ...(search
+        ? {
+            user: {
+              OR: [
+                { email: { contains: search, mode: "insensitive" } as any },
+                { firstName: { contains: search, mode: "insensitive" } as any },
+                { lastName: { contains: search, mode: "insensitive" } as any },
+                { username: { contains: search, mode: "insensitive" } as any },
+              ],
+            },
+          }
+        : {}),
+    };
+
+    const [members, total] = await Promise.all([
+      prisma.organizationMember.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      prisma.organizationMember.count({ where }),
+    ]);
+
+    return {
+      members,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
+  /**
    * Update organization
    */
-  async updateOrganization(userId: string, organizationId: string, data: {
-    name?: string;
-    description?: string;
-  }, auditData: { ipAddress?: string; userAgent?: string }) {
+  async updateOrganization(
+    userId: string,
+    organizationId: string,
+    data: {
+      name?: string;
+      description?: string;
+    },
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { name, description } = data;
     const { ipAddress, userAgent } = auditData;
 
@@ -170,7 +275,7 @@ export const organizationWrapper = {
         organizationId,
         userId,
         role: {
-          in: ['ADMIN', 'OWNER'],
+          in: ["ADMIN", "OWNER"],
         },
       },
     });
@@ -190,12 +295,12 @@ export const organizationWrapper = {
 
     await createAuditLog({
       userId,
-      action: 'UPDATE',
-      resourceType: 'ORGANIZATION',
+      action: "UPDATE",
+      resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: { name, description },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { organization };
@@ -204,7 +309,11 @@ export const organizationWrapper = {
   /**
    * Delete organization
    */
-  async deleteOrganization(userId: string, organizationId: string, auditData: { ipAddress?: string; userAgent?: string }) {
+  async deleteOrganization(
+    userId: string,
+    organizationId: string,
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { ipAddress, userAgent } = auditData;
 
     const prisma = getPrismaClient();
@@ -214,12 +323,15 @@ export const organizationWrapper = {
       where: {
         organizationId,
         userId,
-        role: 'OWNER',
+        role: "OWNER",
       },
     });
 
     if (!membership) {
-      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS, 'Only owners can delete organizations');
+      throw new AuthorizationError(
+        ErrorCode.INSUFFICIENT_PERMISSIONS,
+        "Only owners can delete organizations",
+      );
     }
 
     await prisma.organization.delete({
@@ -228,12 +340,12 @@ export const organizationWrapper = {
 
     await createAuditLog({
       userId,
-      action: 'DELETE',
-      resourceType: 'ORGANIZATION',
+      action: "DELETE",
+      resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: {},
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { success: true };
@@ -242,15 +354,23 @@ export const organizationWrapper = {
   /**
    * Invite user to organization
    */
-  async inviteUser(userId: string, organizationId: string, data: {
-    email: string;
-    role?: string;
-  }, auditData: { ipAddress?: string; userAgent?: string }) {
-    const { email, role = 'MEMBER' } = data;
+  async inviteUser(
+    userId: string,
+    organizationId: string,
+    data: {
+      email: string;
+      role?: string;
+    },
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
+    const { email, role = "MEMBER" } = data;
     const { ipAddress, userAgent } = auditData;
 
     if (!email) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Email is required');
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "Email is required",
+      );
     }
 
     const prisma = getPrismaClient();
@@ -261,7 +381,7 @@ export const organizationWrapper = {
         organizationId,
         userId,
         role: {
-          in: ['ADMIN', 'OWNER'],
+          in: ["ADMIN", "OWNER"],
         },
       },
     });
@@ -276,7 +396,7 @@ export const organizationWrapper = {
     });
 
     if (!targetUser) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, 'User not found');
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "User not found");
     }
 
     // Check if already a member
@@ -288,7 +408,10 @@ export const organizationWrapper = {
     });
 
     if (existingMember) {
-      throw new ConflictError(ErrorCode.VALIDATION_ERROR, 'User is already a member');
+      throw new ConflictError(
+        ErrorCode.VALIDATION_ERROR,
+        "User is already a member",
+      );
     }
 
     // Add user to organization
@@ -296,7 +419,7 @@ export const organizationWrapper = {
       data: {
         organizationId,
         userId: targetUser.id,
-        role,
+        role: role as Role,
       },
       include: {
         user: {
@@ -313,12 +436,12 @@ export const organizationWrapper = {
 
     await createAuditLog({
       userId,
-      action: 'CREATE',
-      resourceType: 'ORGANIZATION',
+      action: "CREATE",
+      resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: { userId: targetUser.id, role },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { member: newMember };
@@ -327,7 +450,12 @@ export const organizationWrapper = {
   /**
    * Remove member from organization
    */
-  async removeMember(userId: string, organizationId: string, targetUserId: string, auditData: { ipAddress?: string; userAgent?: string }) {
+  async removeMember(
+    userId: string,
+    organizationId: string,
+    targetUserId: string,
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { ipAddress, userAgent } = auditData;
 
     const prisma = getPrismaClient();
@@ -338,7 +466,7 @@ export const organizationWrapper = {
         organizationId,
         userId,
         role: {
-          in: ['ADMIN', 'OWNER'],
+          in: ["ADMIN", "OWNER"],
         },
       },
     });
@@ -356,18 +484,18 @@ export const organizationWrapper = {
         },
       });
 
-      if (targetMembership?.role === 'OWNER') {
+      if (targetMembership?.role === "OWNER") {
         const ownerCount = await prisma.organizationMember.count({
           where: {
             organizationId,
-            role: 'OWNER',
+            role: "OWNER",
           },
         });
 
         if (ownerCount <= 1) {
           throw new ConflictError(
             ErrorCode.PERMISSION_DENIED,
-            'Cannot remove the last owner. Transfer ownership first.'
+            "Cannot remove the last owner. Transfer ownership first.",
           );
         }
       }
@@ -384,12 +512,12 @@ export const organizationWrapper = {
 
     await createAuditLog({
       userId,
-      action: 'DELETE',
-      resourceType: 'ORGANIZATION',
+      action: "DELETE",
+      resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: { removedUserId: targetUserId },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { success: true };
@@ -398,11 +526,17 @@ export const organizationWrapper = {
   /**
    * Update member role
    */
-  async updateMemberRole(userId: string, organizationId: string, targetUserId: string, role: string, auditData: { ipAddress?: string; userAgent?: string }) {
+  async updateMemberRole(
+    userId: string,
+    organizationId: string,
+    targetUserId: string,
+    role: string,
+    auditData: { ipAddress?: string; userAgent?: string },
+  ) {
     const { ipAddress, userAgent } = auditData;
 
     if (!role) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Role is required');
+      throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Role is required");
     }
 
     const prisma = getPrismaClient();
@@ -412,12 +546,15 @@ export const organizationWrapper = {
       where: {
         organizationId,
         userId,
-        role: 'OWNER',
+        role: "OWNER",
       },
     });
 
     if (!membership) {
-      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS, 'Only owners can change member roles');
+      throw new AuthorizationError(
+        ErrorCode.INSUFFICIENT_PERMISSIONS,
+        "Only owners can change member roles",
+      );
     }
 
     const updatedMember = await prisma.organizationMember.update({
@@ -427,7 +564,7 @@ export const organizationWrapper = {
           userId: targetUserId,
         },
       },
-      data: { role },
+      data: { role: role as Role },
       include: {
         user: {
           select: {
@@ -443,12 +580,12 @@ export const organizationWrapper = {
 
     await createAuditLog({
       userId,
-      action: 'UPDATE',
-      resourceType: 'ORGANIZATION',
+      action: "UPDATE",
+      resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: { targetUserId, newRole: role },
-      ipAddress: ipAddress || 'unknown',
-      userAgent: userAgent || 'unknown',
+      ipAddress: ipAddress || "unknown",
+      userAgent: userAgent || "unknown",
     });
 
     return { member: updatedMember };
