@@ -13,9 +13,8 @@ interface OrganizationSelectorProps {
 
 export function OrganizationSelector({ onCreateNew }: OrganizationSelectorProps) {
   const { data: organizations, isLoading } = useOrganizations();
-  const { currentOrganization, setCurrentOrganization, clearContext } = useOrganizationStore();
+  const { currentOrganization, setCurrentOrganization, clearVault } = useOrganizationStore();
 
-  // Auto-select first organization if none selected
   useEffect(() => {
     if (!currentOrganization && organizations && organizations.length > 0) {
       setCurrentOrganization(organizations[0]);
@@ -23,29 +22,25 @@ export function OrganizationSelector({ onCreateNew }: OrganizationSelectorProps)
   }, [organizations, currentOrganization, setCurrentOrganization]);
 
   const handleSelectOrganization = (orgId: string) => {
-    const org = organizations?.find(o => o.id === orgId);
+    const org = organizations?.find((o) => o.id === orgId);
     if (org) {
       setCurrentOrganization(org);
-      clearContext(); // Clear vault context when switching orgs
+      clearVault();
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 p-2 border rounded-md bg-muted">
+      <div className="flex h-10 items-center gap-2 rounded-xl border border-sidebar-border bg-sidebar-accent/35 px-3 text-xs text-muted-foreground">
         <Building2 className="h-4 w-4" />
-        <span className="text-sm text-muted-foreground">Loading organizations...</span>
+        Loading organizations...
       </div>
     );
   }
 
   if (!organizations || organizations.length === 0) {
     return (
-      <Button
-        variant="outline"
-        className="w-full justify-start"
-        onClick={onCreateNew}
-      >
+      <Button variant="outline" className="h-10 w-full justify-start rounded-xl" onClick={onCreateNew}>
         <Plus className="mr-2 h-4 w-4" />
         Create Organization
       </Button>
@@ -55,14 +50,16 @@ export function OrganizationSelector({ onCreateNew }: OrganizationSelectorProps)
   return (
     <div className="flex gap-2">
       <div className="flex-1">
-        <Label htmlFor="org-select" className="sr-only">Select Organization</Label>
+        <Label htmlFor="org-select" className="sr-only">
+          Select Organization
+        </Label>
         <div className="relative flex items-center">
-          <Building2 className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Building2 className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
           <select
             id="org-select"
             value={currentOrganization?.id || ""}
             onChange={(e) => handleSelectOrganization(e.target.value)}
-            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 w-full appearance-none rounded-xl border border-sidebar-border bg-sidebar/95 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-sidebar-ring"
           >
             <option value="">Select organization</option>
             {organizations.map((org) => (
@@ -73,11 +70,11 @@ export function OrganizationSelector({ onCreateNew }: OrganizationSelectorProps)
           </select>
         </div>
       </div>
-      {onCreateNew && (
-        <Button variant="outline" size="icon" onClick={onCreateNew} title="Create New Organization">
+      {onCreateNew ? (
+        <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={onCreateNew} title="Create organization">
           <Plus className="h-4 w-4" />
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

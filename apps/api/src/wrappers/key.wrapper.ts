@@ -52,9 +52,7 @@ export const keyWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: {
                       userId,
@@ -87,37 +85,48 @@ export const keyWrapper = {
     // Create key in Vault Transit Engine
     await encryptionService.createKey(vaultKeyName);
 
-    // Create key record in database
-    const key = await prisma.key.create({
-      data: {
-        name,
-        description,
-        vault: {
-          connect: { id: vaultId },
+    // Create key and set current version in one transaction
+    const key = await prisma.$transaction(async (tx) => {
+      const createdKey = await tx.key.create({
+        data: {
+          name,
+          description,
+          vault: {
+            connect: { id: vaultId },
+          },
+          createdBy: {
+            connect: { id: userId },
+          },
         },
-        createdBy: {
-          connect: { id: userId },
+      });
+
+      const version = await tx.keyVersion.create({
+        data: {
+          keyId: createdKey.id,
+          versionNumber: 1,
+          encryptedValue: vaultKeyName,
+          encryptionMethod: "vault-transit",
+          createdById: userId,
         },
-        versions: {
-          create: {
-            versionNumber: 1,
-            encryptedValue: vaultKeyName, // Store vault key name in encrypted value
-            encryptionMethod: "vault-transit",
-            createdBy: {
-              connect: { id: userId },
+      });
+
+      return tx.key.update({
+        where: { id: createdKey.id },
+        data: {
+          currentVersionId: version.id,
+        },
+        include: {
+          vault: {
+            select: {
+              id: true,
+              name: true,
             },
           },
-        },
-      },
-      include: {
-        vault: {
-          select: {
-            id: true,
-            name: true,
+          versions: {
+            orderBy: { versionNumber: "desc" },
           },
         },
-        versions: true,
-      },
+      });
     });
 
     await createAuditLog({
@@ -167,9 +176,7 @@ export const keyWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: {
                       userId,
@@ -259,9 +266,7 @@ export const keyWrapper = {
               },
             },
             {
-              permissions: {
-                some: {
-                  group: {
+              permissions: { some: { team: {
                     members: {
                       some: {
                         userId,
@@ -322,9 +327,7 @@ export const keyWrapper = {
               },
             },
             {
-              permissions: {
-                some: {
-                  group: {
+              permissions: { some: { team: {
                     members: {
                       some: {
                         userId,
@@ -363,14 +366,23 @@ export const keyWrapper = {
 
     // Create new version in database
     const latestVersion = key.versions[0];
-    const newVersion = await prisma.keyVersion.create({
-      data: {
-        keyId: key.id,
-        versionNumber: latestVersion.versionNumber + 1,
-        encryptedValue: vaultKeyName,
-        encryptionMethod: "vault-transit",
-        createdById: userId,
-      },
+    const newVersion = await prisma.$transaction(async (tx) => {
+      const createdVersion = await tx.keyVersion.create({
+        data: {
+          keyId: key.id,
+          versionNumber: latestVersion.versionNumber + 1,
+          encryptedValue: vaultKeyName,
+          encryptionMethod: "vault-transit",
+          createdById: userId,
+        },
+      });
+
+      await tx.key.update({
+        where: { id: key.id },
+        data: { currentVersionId: createdVersion.id },
+      });
+
+      return createdVersion;
     });
 
     await createAuditLog({
@@ -383,7 +395,7 @@ export const keyWrapper = {
       userAgent: userAgent || "unknown",
     });
 
-    return { versionNumber: newVersion };
+    return { versionNumber: newVersion.versionNumber };
   },
 
   /**
@@ -421,9 +433,7 @@ export const keyWrapper = {
               },
             },
             {
-              permissions: {
-                some: {
-                  group: {
+              permissions: { some: { team: {
                     members: {
                       some: {
                         userId,
@@ -498,9 +508,7 @@ export const keyWrapper = {
               },
             },
             {
-              permissions: {
-                some: {
-                  group: {
+              permissions: { some: { team: {
                     members: {
                       some: {
                         userId,

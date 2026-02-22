@@ -78,9 +78,7 @@ export const secretWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: { userId },
                   },
@@ -245,9 +243,7 @@ export const secretWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: { userId },
                   },
@@ -388,9 +384,7 @@ export const secretWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: { userId },
                   },
@@ -627,9 +621,7 @@ export const secretWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: { userId },
                   },
@@ -788,9 +780,7 @@ export const secretWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: { userId },
                   },
@@ -867,9 +857,7 @@ export const secretWrapper = {
             },
           },
           {
-            permissions: {
-              some: {
-                group: {
+            permissions: { some: { team: {
                   members: {
                     some: { userId },
                   },

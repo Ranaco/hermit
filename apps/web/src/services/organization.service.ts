@@ -1,20 +1,31 @@
 import { apiClient } from "@/lib/api";
 
-export interface Organization {
+export type Role = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface OrganizationMember {
+  id: string;
+  userId: string;
+  role: Role;
+  user: {
+    id: string;
+    email: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+export interface Team {
   id: string;
   name: string;
   description?: string;
+  organizationId: string;
   createdAt: string;
   updatedAt: string;
-  userRole?: "OWNER" | "ADMIN" | "MEMBER";
-  _count?: {
-    members: number;
-    vaults: number;
-  };
+  _count?: { members: number };
   members?: {
     id: string;
     userId: string;
-    role: "OWNER" | "ADMIN" | "MEMBER";
     user: {
       id: string;
       email: string;
@@ -23,6 +34,22 @@ export interface Organization {
       lastName?: string;
     };
   }[];
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  userRole?: Role;
+  _count?: {
+    members: number;
+    vaults: number;
+    teams?: number;
+  };
+  members?: OrganizationMember[];
+  teams?: Team[];
 }
 
 export interface CreateOrganizationData {
@@ -37,11 +64,21 @@ export interface UpdateOrganizationData {
 
 export interface InviteUserData {
   email: string;
-  role: "OWNER" | "ADMIN" | "MEMBER";
+  role: Role;
 }
 
 export interface UpdateMemberRoleData {
-  role: "OWNER" | "ADMIN" | "MEMBER";
+  role: Role;
+}
+
+export interface CreateTeamData {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateTeamData {
+  name?: string;
+  description?: string;
 }
 
 export const organizationService = {
@@ -60,11 +97,8 @@ export const organizationService = {
     return response.data.data.organization;
   },
 
-  update: async (
-    id: string,
-    data: UpdateOrganizationData,
-  ): Promise<Organization> => {
-    const response = await apiClient.put(`/organizations/${id}`, data);
+  update: async (id: string, data: UpdateOrganizationData): Promise<Organization> => {
+    const response = await apiClient.patch(`/organizations/${id}`, data);
     return response.data.data.organization;
   },
 
@@ -75,27 +109,73 @@ export const organizationService = {
   inviteUser: async (
     organizationId: string,
     data: InviteUserData,
-  ): Promise<void> => {
-    await apiClient.post(`/organizations/${organizationId}/invite`, data);
+  ): Promise<{ invitation: unknown; member?: OrganizationMember }> => {
+    const response = await apiClient.post(
+      `/organizations/${organizationId}/invitations`,
+      data,
+    );
+    return response.data.data;
   },
 
-  removeMember: async (
-    organizationId: string,
-    userId: string,
-  ): Promise<void> => {
-    await apiClient.delete(
-      `/organizations/${organizationId}/members/${userId}`,
-    );
+  acceptInvitation: async (token: string): Promise<void> => {
+    await apiClient.post("/organizations/invitations/accept", { token });
+  },
+
+  removeMember: async (organizationId: string, userId: string): Promise<void> => {
+    await apiClient.delete(`/organizations/${organizationId}/members/${userId}`);
   },
 
   updateMemberRole: async (
     organizationId: string,
     userId: string,
     data: UpdateMemberRoleData,
-  ): Promise<void> => {
-    await apiClient.put(
-      `/organizations/${organizationId}/members/${userId}/role`,
+  ): Promise<OrganizationMember> => {
+    const response = await apiClient.patch(
+      `/organizations/${organizationId}/members/${userId}`,
       data,
     );
+    return response.data.data.member;
+  },
+
+  getTeams: async (organizationId: string): Promise<Team[]> => {
+    const response = await apiClient.get(`/organizations/${organizationId}/teams`);
+    return response.data.data.teams;
+  },
+
+  createTeam: async (organizationId: string, data: CreateTeamData): Promise<Team> => {
+    const response = await apiClient.post(`/organizations/${organizationId}/teams`, data);
+    return response.data.data.team;
+  },
+
+  updateTeam: async (
+    organizationId: string,
+    teamId: string,
+    data: UpdateTeamData,
+  ): Promise<Team> => {
+    const response = await apiClient.patch(
+      `/organizations/${organizationId}/teams/${teamId}`,
+      data,
+    );
+    return response.data.data.team;
+  },
+
+  deleteTeam: async (organizationId: string, teamId: string): Promise<void> => {
+    await apiClient.delete(`/organizations/${organizationId}/teams/${teamId}`);
+  },
+
+  addTeamMember: async (
+    organizationId: string,
+    teamId: string,
+    userId: string,
+  ): Promise<void> => {
+    await apiClient.post(`/organizations/${organizationId}/teams/${teamId}/members`, { userId });
+  },
+
+  removeTeamMember: async (
+    organizationId: string,
+    teamId: string,
+    userId: string,
+  ): Promise<void> => {
+    await apiClient.delete(`/organizations/${organizationId}/teams/${teamId}/members/${userId}`);
   },
 };

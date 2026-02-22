@@ -13,7 +13,10 @@ export function useSecrets(vaultId?: string) {
 export function useRevealSecret(id: string) {
   return useMutation({
     mutationFn: (data?: RevealSecretData) => secretService.reveal(id, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result.requiresPassword) {
+        return;
+      }
       toast.success("Secret revealed successfully");
     },
     onError: (error: unknown) => {

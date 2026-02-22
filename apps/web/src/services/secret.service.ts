@@ -98,14 +98,24 @@ export const secretService = {
     id: string,
     data?: RevealSecretData,
   ): Promise<RevealSecretResponse> => {
-    const response = await apiClient.post(`/secrets/${id}/reveal`, data || {});
-    if (response.data.success === false) {
-      return {
-        requiresPassword: response.data.requiresPassword,
-        error: response.data.error,
-      };
+    try {
+      const response = await apiClient.post(`/secrets/${id}/reveal`, data || {});
+      return response.data.data;
+    } catch (error: unknown) {
+      const payload =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error
+          ? (error as { response?: { data?: { requiresPassword?: "secret" | "vault"; error?: { code: string; message: string } } } }).response?.data
+          : undefined;
+      if (payload?.requiresPassword) {
+        return {
+          requiresPassword: payload.requiresPassword,
+          error: payload.error,
+        };
+      }
+      throw error;
     }
-    return response.data.data;
   },
 
   create: async (data: CreateSecretData): Promise<Secret> => {

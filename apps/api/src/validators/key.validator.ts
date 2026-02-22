@@ -63,22 +63,42 @@ export const decryptDataSchema = z.object({
 
 // Batch encrypt schema
 export const batchEncryptSchema = z.object({
+  plaintexts: z.array(z.string().min(1, 'Plaintext is required'))
+    .min(1, 'At least one plaintext is required')
+    .max(100, 'Maximum 100 plaintexts allowed')
+    .optional(),
   items: z.array(
     z.object({
       plaintext: z.string().min(1, 'Plaintext is required'),
       context: z.string().optional(),
-    })
-  ).min(1, 'At least one item is required').max(100, 'Maximum 100 items allowed'),
+    }),
+  )
+    .min(1, 'At least one item is required')
+    .max(100, 'Maximum 100 items allowed')
+    .optional(),
+}).refine((data) => (data.plaintexts && data.plaintexts.length > 0) || (data.items && data.items.length > 0), {
+  message: 'Either plaintexts or items must be provided',
 });
 
 // Batch decrypt schema
 export const batchDecryptSchema = z.object({
+  ciphertexts: z.array(
+    z.string().min(1, 'Ciphertext is required').regex(/^vault:v\d+:/, 'Invalid ciphertext format'),
+  )
+    .min(1, 'At least one ciphertext is required')
+    .max(100, 'Maximum 100 ciphertexts allowed')
+    .optional(),
   items: z.array(
     z.object({
       ciphertext: z.string().min(1, 'Ciphertext is required').regex(/^vault:v\d+:/, 'Invalid ciphertext format'),
       context: z.string().optional(),
-    })
-  ).min(1, 'At least one item is required').max(100, 'Maximum 100 items allowed'),
+    }),
+  )
+    .min(1, 'At least one item is required')
+    .max(100, 'Maximum 100 items allowed')
+    .optional(),
+}).refine((data) => (data.ciphertexts && data.ciphertexts.length > 0) || (data.items && data.items.length > 0), {
+  message: 'Either ciphertexts or items must be provided',
 });
 
 // Rotate key schema
@@ -92,9 +112,9 @@ export const grantKeyUserPermissionSchema = z.object({
   permissionLevel: permissionLevelSchema,
 });
 
-// Grant group permission schema
-export const grantKeyGroupPermissionSchema = z.object({
-  groupId: uuidSchema,
+// Grant team permission schema
+export const grantKeyTeamPermissionSchema = z.object({
+  teamId: uuidSchema,
   permissionLevel: permissionLevelSchema,
 });
 
@@ -103,9 +123,9 @@ export const keyUserIdParamSchema = z.object({
   userId: uuidSchema,
 });
 
-// Group ID param schema
-export const keyGroupIdParamSchema = z.object({
-  groupId: uuidSchema,
+// Team ID param schema
+export const keyTeamIdParamSchema = z.object({
+  teamId: uuidSchema,
 });
 
 // Get key versions query schema

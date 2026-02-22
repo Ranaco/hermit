@@ -7,7 +7,6 @@ import type { Request, Response } from "express";
 import {
   asyncHandler,
   AuthenticationError,
-  ValidationError,
   ErrorCode,
 } from "@hermes/error-handling";
 import { authWrapper } from "../wrappers/auth.wrapper";

@@ -15,16 +15,18 @@ import {
   inviteMemberSchema,
   orgMemberIdParamSchema,
   updateMemberRoleSchema,
+  acceptInvitationSchema,
+  createTeamSchema,
+  updateTeamSchema,
+  addTeamMemberSchema,
+  orgTeamIdParamSchema,
+  teamMemberIdParamSchema,
 } from "../validators/organization.validator";
 
 const router = Router();
 
-// All organization routes require authentication
 router.use(authenticate);
 
-/**
- * Organization management
- */
 router.post(
   "/",
   generalRateLimiter,
@@ -43,10 +45,7 @@ router.get(
 );
 router.patch(
   "/:id",
-  validate({
-    params: organizationIdParamSchema,
-    body: updateOrganizationSchema,
-  }),
+  validate({ params: organizationIdParamSchema, body: updateOrganizationSchema }),
   orgController.updateOrganization,
 );
 router.delete(
@@ -55,19 +54,20 @@ router.delete(
   orgController.deleteOrganization,
 );
 
-/**
- * Member management
- */
 router.get(
   "/:id/members",
-  validate({ query: getOrganizationsQuerySchema }),
+  validate({ params: organizationIdParamSchema, query: getOrganizationsQuerySchema }),
   orgController.getMembers,
 );
-
 router.post(
   "/:id/invitations",
   validate({ params: organizationIdParamSchema, body: inviteMemberSchema }),
   orgController.inviteUser,
+);
+router.post(
+  "/invitations/accept",
+  validate({ body: acceptInvitationSchema }),
+  orgController.acceptInvitation,
 );
 router.delete(
   "/:id/members/:userId",
@@ -81,6 +81,37 @@ router.patch(
     body: updateMemberRoleSchema,
   }),
   orgController.updateMemberRole,
+);
+
+router.get(
+  "/:id/teams",
+  validate({ params: organizationIdParamSchema }),
+  orgController.getTeams,
+);
+router.post(
+  "/:id/teams",
+  validate({ params: organizationIdParamSchema, body: createTeamSchema }),
+  orgController.createTeam,
+);
+router.patch(
+  "/:id/teams/:teamId",
+  validate({ params: organizationIdParamSchema.merge(orgTeamIdParamSchema), body: updateTeamSchema }),
+  orgController.updateTeam,
+);
+router.delete(
+  "/:id/teams/:teamId",
+  validate({ params: organizationIdParamSchema.merge(orgTeamIdParamSchema) }),
+  orgController.deleteTeam,
+);
+router.post(
+  "/:id/teams/:teamId/members",
+  validate({ params: organizationIdParamSchema.merge(orgTeamIdParamSchema), body: addTeamMemberSchema }),
+  orgController.addTeamMember,
+);
+router.delete(
+  "/:id/teams/:teamId/members/:userId",
+  validate({ params: organizationIdParamSchema.merge(orgTeamIdParamSchema).merge(teamMemberIdParamSchema) }),
+  orgController.removeTeamMember,
 );
 
 export default router;

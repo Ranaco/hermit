@@ -1,6 +1,5 @@
 generator client {
     provider = "prisma-client-js"
-    output = "../../node_modules/@hermes/prisma-client"
 }
 
 datasource db {
@@ -43,15 +42,15 @@ model User {
     loginAttempts     LoginAttempt[]
     mfaRecoveries     MfaRecovery[]
     organizations     OrganizationMember[]
-    vaultPermissions  VaultPermission[]
-    keyPermissions    KeyPermission[]
+    vaultPermissions  VaultBinding[]
+    keyPermissions    KeyBinding[]
     createdVaults     Vault[]             @relation("VaultCreator")
     createdKeys       Key[]               @relation("KeyCreator")
     createdSecrets    Secret[]            @relation("SecretCreator")
     secretVersions    SecretVersion[]     @relation("SecretVersionCreator")
     keyVersions       KeyVersion[]        @relation("KeyVersionCreator")
     activityLogs      AuditLog[]          @relation("UserActivity")
-    groupMemberships  GroupMember[]
+    teamMemberships   TeamMember[]
     sentInvitations   OrganizationInvitation[] @relation("UserInvitations")
     publicKey          String?
     encryptedPrivateKey String?
@@ -161,12 +160,13 @@ enum MfaRecoveryType {
 model Organization {
     id                String   @id @default(uuid())
     name              String
+    slug              String?  @unique
     description       String?
     createdAt         DateTime @default(now())
     updatedAt         DateTime @updatedAt
     members           OrganizationMember[]
     vaults            Vault[]
-    groups            Group[]
+    teams             Team[]
     invitations       OrganizationInvitation[]
 }
 
@@ -199,7 +199,7 @@ model OrganizationMember {
     updatedAt         DateTime @updatedAt
     organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    onboardingStatus  String   @default("in_progress")
+    onboardingState   OnboardingState @default(IN_PROGRESS) @map("onboardingStatus")
     onboardingStep    Int      @default(1)
     onboardingCompletedAt DateTime?
     @@index([organizationId])
@@ -220,7 +220,7 @@ model Vault {
     organization      Organization @relation(fields: [organizationId], references: [id])
     createdBy         User @relation("VaultCreator", fields: [createdById], references: [id])
     keys              Key[]
-    permissions       VaultPermission[]
+    permissions       VaultBinding[]
     secrets           Secret[]
     @@unique([organizationId, name])
 }
@@ -241,7 +241,7 @@ model Key {
     createdBy         User @relation("KeyCreator", fields: [createdById], references: [id])
     versions          KeyVersion[]
     currentVersion    KeyVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
-    permissions       KeyPermission[]
+    permissions       KeyBinding[]
     shares            KeyShare[]
     oneTimeShares     OneTimeShare[]
     secrets           Secret[]
@@ -272,19 +272,19 @@ model KeyShare {
     id                       String   @id @default(uuid())
     keyId                    String
     userId                   String?
-    groupId                  String?
+    teamId                   String?   @map("groupId")
     encryptedDataKey        String
     algorithm                String
     createdAt                DateTime @default(now())
     revokedAt                DateTime?
     key                      Key      @relation(fields: [keyId], references: [id], onDelete: Cascade)
     user                     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    group                    Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    team                     Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
     @@index([keyId])
     @@index([userId])
-    @@index([groupId])
+    @@index([teamId])
     @@unique([keyId, userId])
-    @@unique([keyId, groupId])
+    @@unique([keyId, teamId])
 }
 
 model OneTimeShare {
@@ -339,37 +339,39 @@ model TemporaryKey {
     @@index([isUsed])
 }
 
-model VaultPermission {
+model VaultBinding {
     id                String         @id @default(uuid())
     userId            String?
-    groupId           String?
+    teamId            String?        @map("groupId")
     vaultId           String
     permissionLevel   PermissionLevel
     createdAt         DateTime       @default(now())
     updatedAt         DateTime       @updatedAt
     user              User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-    group             Group?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    team              Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
     vault             Vault          @relation(fields: [vaultId], references: [id], onDelete: Cascade)
     @@unique([userId, vaultId])
-    @@unique([groupId, vaultId])
+    @@unique([teamId, vaultId])
+    @@map("VaultPermission")
 }
 
-model KeyPermission {
+model KeyBinding {
     id                String         @id @default(uuid())
     userId            String?
-    groupId           String?
+    teamId            String?        @map("groupId")
     keyId             String
     permissionLevel   PermissionLevel
     createdAt         DateTime       @default(now())
     updatedAt         DateTime       @updatedAt
     user              User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-    group             Group?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    team              Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
     key               Key            @relation(fields: [keyId], references: [id], onDelete: Cascade)
     @@unique([userId, keyId])
-    @@unique([groupId, keyId])
+    @@unique([teamId, keyId])
+    @@map("KeyPermission")
 }
 
-model Group {
+model Team {
     id                String   @id @default(uuid())
     name              String
     description       String?
@@ -377,21 +379,23 @@ model Group {
     createdAt         DateTime @default(now())
     updatedAt         DateTime @updatedAt
     organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    members           GroupMember[]
-    vaultPermissions  VaultPermission[]
-    keyPermissions    KeyPermission[]
+    members           TeamMember[]
+    vaultBindings     VaultBinding[]
+    keyBindings       KeyBinding[]
     keyShares         KeyShare[]
     @@unique([organizationId, name])
+    @@map("Group")
 }
 
-model GroupMember {
+model TeamMember {
     id                String   @id @default(uuid())
-    groupId           String
+    teamId            String   @map("groupId")
     userId            String
     createdAt         DateTime @default(now())
-    group             Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    team              Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
     user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    @@unique([groupId, userId])
+    @@unique([teamId, userId])
+    @@map("GroupMember")
 }
 
 model AuditLog {
@@ -416,6 +420,11 @@ enum Role {
     MEMBER
 }
 
+enum OnboardingState {
+    IN_PROGRESS
+    COMPLETED
+}
+
 enum KeyValueType {
     STRING
     JSON
@@ -430,7 +439,7 @@ enum ResourceType {
     KEY
     SECRET
     USER
-    GROUP
+    TEAM
     KEY_VERSION
     SESSION
     DEVICE

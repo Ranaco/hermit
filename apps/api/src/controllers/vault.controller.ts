@@ -184,3 +184,55 @@ export const revokeUserPermission = asyncHandler(async (req: Request, res: Respo
   });
 });
 
+/**
+ * Grant vault permissions to a team
+ * POST /api/v1/vaults/:id/permissions/teams
+ */
+export const grantTeamPermission = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  }
+
+  const { id } = req.params;
+  const { teamId, permissionLevel } = req.body;
+
+  if (!teamId || !permissionLevel) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Team ID and permission level are required');
+  }
+
+  const result = await vaultWrapper.grantTeamPermission(req.user.id, id, {
+    targetTeamId: teamId,
+    permissionLevel,
+  }, {
+    ipAddress: req.ip || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown',
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { permission: result.permission },
+    message: 'Team permission granted successfully',
+  });
+});
+
+/**
+ * Revoke vault permissions from a team
+ * DELETE /api/v1/vaults/:id/permissions/teams/:teamId
+ */
+export const revokeTeamPermission = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  }
+
+  const { id, teamId } = req.params;
+
+  await vaultWrapper.revokeTeamPermission(req.user.id, id, teamId, {
+    ipAddress: req.ip || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown',
+  });
+
+  res.json({
+    success: true,
+    message: 'Team permission revoked successfully',
+  });
+});

@@ -13,6 +13,7 @@ interface OrganizationState {
   currentVault: { id: string; name: string; organizationId: string } | null;
   setCurrentOrganization: (organization: Organization | null) => void;
   setCurrentVault: (vault: { id: string; name: string; organizationId: string } | null) => void;
+  clearVault: () => void;
   clearContext: () => void;
 }
 
@@ -23,6 +24,7 @@ export const useOrganizationStore = create<OrganizationState>()(
       currentVault: null,
       setCurrentOrganization: (organization) => set({ currentOrganization: organization }),
       setCurrentVault: (vault) => set({ currentVault: vault }),
+      clearVault: () => set({ currentVault: null }),
       clearContext: () => set({ currentOrganization: null, currentVault: null }),
     }),
     {

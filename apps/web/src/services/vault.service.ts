@@ -11,7 +11,7 @@ export interface Vault {
     id: string;
     name: string;
   };
-  permissions?: VaultPermission[];
+  permissions?: VaultBinding[];
   _count?: {
     keys: number;
   };
@@ -23,10 +23,10 @@ export interface CreateVaultData {
   organizationId: string;
 }
 
-export interface VaultPermission {
+export interface VaultBinding {
   id: string;
   userId?: string;
-  groupId?: string;
+  teamId?: string;
   vaultId: string;
   permissionLevel: "VIEW" | "USE" | "EDIT" | "ADMIN";
   createdAt: string;
@@ -38,7 +38,7 @@ export interface VaultPermission {
     firstName?: string;
     lastName?: string;
   };
-  group?: {
+  team?: {
     id: string;
     name: string;
   };
@@ -46,6 +46,11 @@ export interface VaultPermission {
 
 export interface GrantPermissionData {
   userId: string;
+  permissionLevel: "VIEW" | "USE" | "EDIT" | "ADMIN";
+}
+
+export interface GrantTeamPermissionData {
+  teamId: string;
   permissionLevel: "VIEW" | "USE" | "EDIT" | "ADMIN";
 }
 
@@ -82,7 +87,7 @@ export const vaultService = {
   grantPermission: async (
     vaultId: string,
     data: GrantPermissionData,
-  ): Promise<VaultPermission> => {
+  ): Promise<VaultBinding> => {
     const response = await apiClient.post(
       `/vaults/${vaultId}/permissions/users`,
       data,
@@ -92,5 +97,20 @@ export const vaultService = {
 
   revokePermission: async (vaultId: string, userId: string): Promise<void> => {
     await apiClient.delete(`/vaults/${vaultId}/permissions/users/${userId}`);
+  },
+
+  grantTeamPermission: async (
+    vaultId: string,
+    data: GrantTeamPermissionData,
+  ): Promise<VaultBinding> => {
+    const response = await apiClient.post(
+      `/vaults/${vaultId}/permissions/teams`,
+      data,
+    );
+    return response.data.data.permission;
+  },
+
+  revokeTeamPermission: async (vaultId: string, teamId: string): Promise<void> => {
+    await apiClient.delete(`/vaults/${vaultId}/permissions/teams/${teamId}`);
   },
 };

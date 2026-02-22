@@ -13,7 +13,9 @@ import {
   getVaultsQuerySchema,
   vaultIdParamSchema,
   grantUserPermissionSchema,
+  grantTeamPermissionSchema,
   vaultUserIdParamSchema,
+  vaultTeamIdParamSchema,
 } from "../validators/vault.validator";
 
 const router = Router();
@@ -63,6 +65,16 @@ router.delete(
   "/:id/permissions/users/:userId",
   validate({ params: vaultIdParamSchema.merge(vaultUserIdParamSchema) }),
   vaultController.revokeUserPermission,
+);
+router.post(
+  "/:id/permissions/teams",
+  validate({ params: vaultIdParamSchema, body: grantTeamPermissionSchema }),
+  vaultController.grantTeamPermission,
+);
+router.delete(
+  "/:id/permissions/teams/:teamId",
+  validate({ params: vaultIdParamSchema.merge(vaultTeamIdParamSchema) }),
+  vaultController.revokeTeamPermission,
 );
 
 export default router;

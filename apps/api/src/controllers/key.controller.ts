@@ -161,7 +161,11 @@ export const batchEncrypt = asyncHandler(async (req: Request, res: Response) => 
   }
 
   const { id } = req.params;
-  const { plaintexts } = req.body;
+  const plaintexts = Array.isArray(req.body.plaintexts)
+    ? req.body.plaintexts
+    : Array.isArray(req.body.items)
+      ? req.body.items.map((item: { plaintext: string }) => item.plaintext)
+      : [];
 
   if (!Array.isArray(plaintexts) || plaintexts.length === 0) {
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Plaintexts array is required');
@@ -185,7 +189,11 @@ export const batchDecrypt = asyncHandler(async (req: Request, res: Response) => 
   }
 
   const { id } = req.params;
-  const { ciphertexts } = req.body;
+  const ciphertexts = Array.isArray(req.body.ciphertexts)
+    ? req.body.ciphertexts
+    : Array.isArray(req.body.items)
+      ? req.body.items.map((item: { ciphertext: string }) => item.ciphertext)
+      : [];
 
   if (!Array.isArray(ciphertexts) || ciphertexts.length === 0) {
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Ciphertexts array is required');
@@ -217,5 +225,4 @@ export const deleteKey = asyncHandler(async (req: Request, res: Response) => {
     message: 'Key deleted successfully',
   });
 });
-
 

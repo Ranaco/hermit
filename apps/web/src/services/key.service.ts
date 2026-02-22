@@ -58,7 +58,7 @@ export const keyService = {
     await apiClient.delete(`/keys/${id}`);
   },
 
-  rotate: async (id: string): Promise<{ versionNumber: KeyVersion }> => {
+  rotate: async (id: string): Promise<{ versionNumber: number }> => {
     const response = await apiClient.post(`/keys/${id}/rotate`);
     return { versionNumber: response.data.data.versionNumber };
   },

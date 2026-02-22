@@ -1,10 +1,10 @@
 /**
  * Organization Wrapper
- * Contains business logic for organization management and membership
+ * Business logic for organizations, members, invitations, and teams.
  */
 
+import crypto from "crypto";
 import {
-  AuthenticationError,
   ValidationError,
   ErrorCode,
   NotFoundError,
@@ -15,22 +15,53 @@ import { Role } from "@hermes/prisma";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 
+const ADMIN_ROLES: Role[] = ["ADMIN", "OWNER"];
+
+function toSlug(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+async function requireMembership(userId: string, organizationId: string) {
+  const prisma = getPrismaClient();
+  const membership = await prisma.organizationMember.findUnique({
+    where: { organizationId_userId: { organizationId, userId } },
+  });
+
+  if (!membership) {
+    throw new AuthorizationError(
+      ErrorCode.NOT_ORGANIZATION_MEMBER,
+      "You are not a member of this organization",
+    );
+  }
+
+  return membership;
+}
+
+async function requireOrgAdmin(userId: string, organizationId: string) {
+  const membership = await requireMembership(userId, organizationId);
+  if (!ADMIN_ROLES.includes(membership.role)) {
+    throw new AuthorizationError(
+      ErrorCode.INSUFFICIENT_PERMISSIONS,
+      "Admin or Owner role required",
+    );
+  }
+  return membership;
+}
+
 export const organizationWrapper = {
-  /**
-   * Create a new organization
-   */
   async createOrganization(
     userId: string,
-    data: {
-      name: string;
-      description?: string;
-    },
+    data: { name: string; description?: string },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
     const { name, description } = data;
-    const { ipAddress, userAgent } = auditData;
 
-    if (!name) {
+    if (!name?.trim()) {
       throw new ValidationError(
         ErrorCode.VALIDATION_ERROR,
         "Organization name is required",
@@ -39,43 +70,27 @@ export const organizationWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Create organization with default vault in a transaction
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
-          name,
+          name: name.trim(),
+          slug: `${toSlug(name)}-${crypto.randomBytes(3).toString("hex")}`,
           description,
           members: {
             create: {
               userId,
               role: "OWNER",
-              onboardingStatus: "in_progress",
+              onboardingState: "IN_PROGRESS",
               onboardingStep: 1,
-            },
-          },
-        },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  username: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
             },
           },
         },
       });
 
-      // Auto-create default vault for the organization
       const defaultVault = await tx.vault.create({
         data: {
           name: "Default Vault",
-          description: "Your default secure vault",
+          description: "Default secure vault",
           organizationId: organization.id,
           createdById: userId,
           permissions: {
@@ -95,24 +110,19 @@ export const organizationWrapper = {
       action: "CREATE",
       resourceType: "ORGANIZATION",
       resourceId: result.organization.id,
-      details: { name, description, defaultVault: result.defaultVault.id },
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
+      details: { name, defaultVaultId: result.defaultVault.id },
+      ipAddress: auditData.ipAddress || "unknown",
+      userAgent: auditData.userAgent || "unknown",
     });
 
     return { organization: result.organization, vault: result.defaultVault };
   },
 
-  /**
-   * Get organizations user is a member of
-   */
   async getOrganizations(userId: string) {
     const prisma = getPrismaClient();
 
     const memberships = await prisma.organizationMember.findMany({
-      where: {
-        userId,
-      },
+      where: { userId },
       include: {
         organization: {
           include: {
@@ -120,100 +130,114 @@ export const organizationWrapper = {
               select: {
                 members: true,
                 vaults: true,
+                teams: true,
               },
+            },
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: "asc" },
             },
           },
         },
       },
+      orderBy: { createdAt: "asc" },
     });
 
-    const organizations = memberships.map((m) => ({
-      ...m.organization,
-      userRole: m.role,
-    }));
-
-    return { organizations };
+    return {
+      organizations: memberships.map((m) => ({
+        ...m.organization,
+        userRole: m.role,
+      })),
+    };
   },
 
-  /**
-   * Get a specific organization
-   */
   async getOrganization(userId: string, organizationId: string) {
+    const membership = await requireMembership(userId, organizationId);
     const prisma = getPrismaClient();
 
-    const membership = await prisma.organizationMember.findFirst({
-      where: {
-        organizationId,
-        userId,
-      },
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
       include: {
-        organization: {
+        _count: {
+          select: {
+            members: true,
+            vaults: true,
+            teams: true,
+          },
+        },
+        members: {
           include: {
-            _count: {
+            user: {
               select: {
-                members: true,
-                vaults: true,
+                id: true,
+                email: true,
+                username: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
+          orderBy: { createdAt: "asc" },
+        },
+        teams: {
+          include: {
+            _count: { select: { members: true } },
+          },
+          orderBy: { createdAt: "asc" },
         },
       },
     });
 
-    if (!membership) {
+    if (!organization) {
       throw new NotFoundError(ErrorCode.ORGANIZATION_NOT_FOUND);
     }
 
     return {
       organization: {
-        id: membership.organization.id,
-        name: membership.organization.name,
-        description: membership.organization.description,
-        createdAt: membership.organization.createdAt,
-        updatedAt: membership.organization.updatedAt,
-        _count: membership.organization._count,
+        ...organization,
         userRole: membership.role,
       },
     };
   },
 
-  /**
-   * Get organization members with pagination
-   */
   async getMembers(
     userId: string,
     organizationId: string,
-    params: {
-      page?: number;
-      limit?: number;
-      search?: string;
-    },
+    params: { page?: number; limit?: number; search?: string },
   ) {
-    const { page = 1, limit = 20, search } = params;
+    await requireMembership(userId, organizationId);
     const prisma = getPrismaClient();
 
-    // Check membership
-    const membership = await prisma.organizationMember.findFirst({
-      where: {
-        organizationId,
-        userId,
-      },
-    });
-
-    if (!membership) {
-      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS);
-    }
-
+    const { page = 1, limit = 20, search } = params;
     const where = {
       organizationId,
       ...(search
         ? {
             user: {
               OR: [
-                { email: { contains: search, mode: "insensitive" } as any },
-                { firstName: { contains: search, mode: "insensitive" } as any },
-                { lastName: { contains: search, mode: "insensitive" } as any },
-                { username: { contains: search, mode: "insensitive" } as any },
+                { email: { contains: search, mode: "insensitive" as const } },
+                {
+                  firstName: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+                {
+                  lastName: { contains: search, mode: "insensitive" as const },
+                },
+                {
+                  username: { contains: search, mode: "insensitive" as const },
+                },
               ],
             },
           }
@@ -234,9 +258,9 @@ export const organizationWrapper = {
             },
           },
         },
-        orderBy: { createdAt: "desc" },
         take: limit,
         skip: (page - 1) * limit,
+        orderBy: { createdAt: "asc" },
       }),
       prisma.organizationMember.count({ where }),
     ]);
@@ -244,53 +268,29 @@ export const organizationWrapper = {
     return {
       members,
       meta: {
-        total,
         page,
         limit,
+        total,
         totalPages: Math.ceil(total / limit),
       },
     };
   },
 
-  /**
-   * Update organization
-   */
   async updateOrganization(
     userId: string,
     organizationId: string,
-    data: {
-      name?: string;
-      description?: string;
-    },
+    data: { name?: string; description?: string },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { name, description } = data;
-    const { ipAddress, userAgent } = auditData;
-
+    await requireOrgAdmin(userId, organizationId);
     const prisma = getPrismaClient();
-
-    // Check if user is admin or owner
-    const membership = await prisma.organizationMember.findFirst({
-      where: {
-        organizationId,
-        userId,
-        role: {
-          in: ["ADMIN", "OWNER"],
-        },
-      },
-    });
-
-    if (!membership) {
-      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS);
-    }
-
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
 
     const organization = await prisma.organization.update({
       where: { id: organizationId },
-      data: updateData,
+      data: {
+        ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+      },
     });
 
     await createAuditLog({
@@ -298,45 +298,29 @@ export const organizationWrapper = {
       action: "UPDATE",
       resourceType: "ORGANIZATION",
       resourceId: organizationId,
-      details: { name, description },
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
+      details: data,
+      ipAddress: auditData.ipAddress || "unknown",
+      userAgent: auditData.userAgent || "unknown",
     });
 
     return { organization };
   },
 
-  /**
-   * Delete organization
-   */
   async deleteOrganization(
     userId: string,
     organizationId: string,
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { ipAddress, userAgent } = auditData;
-
-    const prisma = getPrismaClient();
-
-    // Only owners can delete
-    const membership = await prisma.organizationMember.findFirst({
-      where: {
-        organizationId,
-        userId,
-        role: "OWNER",
-      },
-    });
-
-    if (!membership) {
+    const membership = await requireMembership(userId, organizationId);
+    if (membership.role !== "OWNER") {
       throw new AuthorizationError(
         ErrorCode.INSUFFICIENT_PERMISSIONS,
-        "Only owners can delete organizations",
+        "Only owners can delete an organization",
       );
     }
 
-    await prisma.organization.delete({
-      where: { id: organizationId },
-    });
+    const prisma = getPrismaClient();
+    await prisma.organization.delete({ where: { id: organizationId } });
 
     await createAuditLog({
       userId,
@@ -344,93 +328,95 @@ export const organizationWrapper = {
       resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: {},
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
+      ipAddress: auditData.ipAddress || "unknown",
+      userAgent: auditData.userAgent || "unknown",
     });
 
     return { success: true };
   },
 
-  /**
-   * Invite user to organization
-   */
   async inviteUser(
     userId: string,
     organizationId: string,
-    data: {
-      email: string;
-      role?: string;
-    },
+    data: { email: string; role?: Role },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { email, role = "MEMBER" } = data;
-    const { ipAddress, userAgent } = auditData;
-
-    if (!email) {
-      throw new ValidationError(
-        ErrorCode.VALIDATION_ERROR,
-        "Email is required",
-      );
-    }
-
+    await requireOrgAdmin(userId, organizationId);
     const prisma = getPrismaClient();
 
-    // Check if user is admin or owner
-    const membership = await prisma.organizationMember.findFirst({
+    const email = data.email.toLowerCase().trim();
+    const role = data.role || "MEMBER";
+
+    const existingInvite = await prisma.organizationInvitation.findFirst({
       where: {
         organizationId,
-        userId,
-        role: {
-          in: ["ADMIN", "OWNER"],
-        },
+        email,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
       },
     });
 
-    if (!membership) {
-      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS);
-    }
-
-    // Check if target user exists
-    const targetUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-
-    if (!targetUser) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "User not found");
-    }
-
-    // Check if already a member
-    const existingMember = await prisma.organizationMember.findFirst({
-      where: {
-        organizationId,
-        userId: targetUser.id,
-      },
-    });
-
-    if (existingMember) {
+    if (existingInvite) {
       throw new ConflictError(
         ErrorCode.VALIDATION_ERROR,
-        "User is already a member",
+        "A pending invitation already exists for this email",
       );
     }
 
-    // Add user to organization
-    const newMember = await prisma.organizationMember.create({
-      data: {
-        organizationId,
-        userId: targetUser.id,
-        role: role as Role,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            firstName: true,
-            lastName: true,
+    const token = crypto.randomBytes(24).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const targetUser = await prisma.user.findUnique({ where: { email } });
+
+    let member: unknown = null;
+
+    if (targetUser) {
+      const existingMember = await prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId,
+            userId: targetUser.id,
           },
         },
+      });
+
+      if (existingMember) {
+        throw new ConflictError(
+          ErrorCode.VALIDATION_ERROR,
+          "User is already a member of this organization",
+        );
+      }
+
+      member = await prisma.organizationMember.create({
+        data: {
+          organizationId,
+          userId: targetUser.id,
+          role,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+    }
+
+    const invitation = await prisma.organizationInvitation.create({
+      data: {
+        email,
+        organizationId,
+        invitedById: userId,
+        role,
+        token,
+        expiresAt,
+        acceptedAt: targetUser ? new Date() : null,
       },
     });
 
@@ -439,65 +425,97 @@ export const organizationWrapper = {
       action: "CREATE",
       resourceType: "ORGANIZATION",
       resourceId: organizationId,
-      details: { userId: targetUser.id, role },
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
+      details: {
+        type: "invitation",
+        email,
+        role,
+        autoAccepted: !!targetUser,
+      },
+      ipAddress: auditData.ipAddress || "unknown",
+      userAgent: auditData.userAgent || "unknown",
     });
 
-    return { member: newMember };
+    return { invitation, member };
   },
 
-  /**
-   * Remove member from organization
-   */
+  async acceptInvitation(userId: string, token: string) {
+    const prisma = getPrismaClient();
+
+    const invitation = await prisma.organizationInvitation.findFirst({
+      where: {
+        token,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        "Invitation token is invalid or expired",
+      );
+    }
+
+    const existing = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: invitation.organizationId,
+          userId,
+        },
+      },
+    });
+
+    if (!existing) {
+      await prisma.organizationMember.create({
+        data: {
+          organizationId: invitation.organizationId,
+          userId,
+          role: invitation.role,
+        },
+      });
+    }
+
+    const updated = await prisma.organizationInvitation.update({
+      where: { id: invitation.id },
+      data: { acceptedAt: new Date() },
+    });
+
+    return { invitation: updated };
+  },
+
   async removeMember(
     userId: string,
     organizationId: string,
     targetUserId: string,
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { ipAddress, userAgent } = auditData;
-
+    await requireOrgAdmin(userId, organizationId);
     const prisma = getPrismaClient();
 
-    // Check if user is admin or owner
-    const membership = await prisma.organizationMember.findFirst({
+    const target = await prisma.organizationMember.findUnique({
       where: {
-        organizationId,
-        userId,
-        role: {
-          in: ["ADMIN", "OWNER"],
+        organizationId_userId: {
+          organizationId,
+          userId: targetUserId,
         },
       },
     });
 
-    if (!membership) {
-      throw new AuthorizationError(ErrorCode.INSUFFICIENT_PERMISSIONS);
+    if (!target) {
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Member not found");
     }
 
-    // Check if target is the last owner
-    if (targetUserId !== userId) {
-      const targetMembership = await prisma.organizationMember.findFirst({
-        where: {
-          organizationId,
-          userId: targetUserId,
-        },
+    if (target.role === "OWNER") {
+      const ownerCount = await prisma.organizationMember.count({
+        where: { organizationId, role: "OWNER" },
       });
 
-      if (targetMembership?.role === "OWNER") {
-        const ownerCount = await prisma.organizationMember.count({
-          where: {
-            organizationId,
-            role: "OWNER",
-          },
-        });
-
-        if (ownerCount <= 1) {
-          throw new ConflictError(
-            ErrorCode.PERMISSION_DENIED,
-            "Cannot remove the last owner. Transfer ownership first.",
-          );
-        }
+      if (ownerCount <= 1) {
+        throw new ConflictError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Cannot remove the last organization owner",
+        );
       }
     }
 
@@ -516,45 +534,53 @@ export const organizationWrapper = {
       resourceType: "ORGANIZATION",
       resourceId: organizationId,
       details: { removedUserId: targetUserId },
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
+      ipAddress: auditData.ipAddress || "unknown",
+      userAgent: auditData.userAgent || "unknown",
     });
 
     return { success: true };
   },
 
-  /**
-   * Update member role
-   */
   async updateMemberRole(
     userId: string,
     organizationId: string,
     targetUserId: string,
-    role: string,
+    role: Role,
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { ipAddress, userAgent } = auditData;
-
-    if (!role) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Role is required");
+    const membership = await requireMembership(userId, organizationId);
+    if (membership.role !== "OWNER") {
+      throw new AuthorizationError(
+        ErrorCode.INSUFFICIENT_PERMISSIONS,
+        "Only owners can update member roles",
+      );
     }
 
     const prisma = getPrismaClient();
-
-    // Only owners can change roles
-    const membership = await prisma.organizationMember.findFirst({
+    const target = await prisma.organizationMember.findUnique({
       where: {
-        organizationId,
-        userId,
-        role: "OWNER",
+        organizationId_userId: {
+          organizationId,
+          userId: targetUserId,
+        },
       },
     });
 
-    if (!membership) {
-      throw new AuthorizationError(
-        ErrorCode.INSUFFICIENT_PERMISSIONS,
-        "Only owners can change member roles",
-      );
+    if (!target) {
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Member not found");
+    }
+
+    if (target.role === "OWNER" && role !== "OWNER") {
+      const ownerCount = await prisma.organizationMember.count({
+        where: { organizationId, role: "OWNER" },
+      });
+
+      if (ownerCount <= 1) {
+        throw new ConflictError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Cannot demote the last owner",
+        );
+      }
     }
 
     const updatedMember = await prisma.organizationMember.update({
@@ -564,7 +590,7 @@ export const organizationWrapper = {
           userId: targetUserId,
         },
       },
-      data: { role: role as Role },
+      data: { role },
       include: {
         user: {
           select: {
@@ -583,11 +609,205 @@ export const organizationWrapper = {
       action: "UPDATE",
       resourceType: "ORGANIZATION",
       resourceId: organizationId,
-      details: { targetUserId, newRole: role },
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
+      details: { targetUserId, role },
+      ipAddress: auditData.ipAddress || "unknown",
+      userAgent: auditData.userAgent || "unknown",
     });
 
     return { member: updatedMember };
+  },
+
+  async getTeams(userId: string, organizationId: string) {
+    await requireMembership(userId, organizationId);
+    const prisma = getPrismaClient();
+
+    const teams = await prisma.team.findMany({
+      where: { organizationId },
+      include: {
+        _count: { select: { members: true } },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return { teams };
+  },
+
+  async createTeam(
+    userId: string,
+    organizationId: string,
+    data: { name: string; description?: string },
+  ) {
+    await requireOrgAdmin(userId, organizationId);
+    const prisma = getPrismaClient();
+
+    const team = await prisma.team.create({
+      data: {
+        organizationId,
+        name: data.name.trim(),
+        description: data.description,
+      },
+      include: {
+        _count: { select: { members: true } },
+      },
+    });
+
+    return { team };
+  },
+
+  async updateTeam(
+    userId: string,
+    organizationId: string,
+    teamId: string,
+    data: { name?: string; description?: string },
+  ) {
+    await requireOrgAdmin(userId, organizationId);
+    const prisma = getPrismaClient();
+
+    const existingTeam = await prisma.team.findFirst({
+      where: { id: teamId, organizationId },
+      select: { id: true },
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team not found");
+    }
+
+    const team = await prisma.team.update({
+      where: { id: teamId },
+      data: {
+        ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+      },
+      include: {
+        _count: { select: { members: true } },
+      },
+    });
+
+    return { team };
+  },
+
+  async deleteTeam(userId: string, organizationId: string, teamId: string) {
+    await requireOrgAdmin(userId, organizationId);
+    const prisma = getPrismaClient();
+
+    const existingTeam = await prisma.team.findFirst({
+      where: { id: teamId, organizationId },
+      select: { id: true },
+    });
+
+    if (!existingTeam) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team not found");
+    }
+
+    await prisma.team.delete({
+      where: { id: teamId },
+    });
+
+    return { success: true };
+  },
+
+  async addTeamMember(
+    userId: string,
+    organizationId: string,
+    teamId: string,
+    targetUserId: string,
+  ) {
+    await requireOrgAdmin(userId, organizationId);
+    const prisma = getPrismaClient();
+
+    const team = await prisma.team.findFirst({
+      where: { id: teamId, organizationId },
+      select: { id: true },
+    });
+
+    if (!team) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team not found");
+    }
+
+    const orgMember = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId,
+          userId: targetUserId,
+        },
+      },
+    });
+
+    if (!orgMember) {
+      throw new ValidationError(
+        ErrorCode.NOT_ORGANIZATION_MEMBER,
+        "User must be an organization member before being added to a team",
+      );
+    }
+
+    const membership = await prisma.teamMember.upsert({
+      where: {
+        teamId_userId: {
+          teamId,
+          userId: targetUserId,
+        },
+      },
+      create: {
+        teamId,
+        userId: targetUserId,
+      },
+      update: {},
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return { membership };
+  },
+
+  async removeTeamMember(
+    userId: string,
+    organizationId: string,
+    teamId: string,
+    targetUserId: string,
+  ) {
+    await requireOrgAdmin(userId, organizationId);
+    const prisma = getPrismaClient();
+
+    const team = await prisma.team.findFirst({
+      where: { id: teamId, organizationId },
+      select: { id: true },
+    });
+
+    if (!team) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team not found");
+    }
+
+    await prisma.teamMember.delete({
+      where: {
+        teamId_userId: {
+          teamId,
+          userId: targetUserId,
+        },
+      },
+    });
+
+    return { success: true };
   },
 };

@@ -86,12 +86,12 @@ export const revokeInvitationSchema = z.object({
   invitationId: uuidSchema,
 });
 
-// Create group schema
-export const createGroupSchema = z.object({
+// Create team schema
+export const createTeamSchema = z.object({
   name: z
     .string()
-    .min(1, "Group name is required")
-    .max(100, "Group name must be at most 100 characters"),
+    .min(1, "Team name is required")
+    .max(100, "Team name must be at most 100 characters"),
   description: z
     .string()
     .max(500, "Description must be at most 500 characters")
@@ -99,12 +99,12 @@ export const createGroupSchema = z.object({
     .nullable(),
 });
 
-// Update group schema
-export const updateGroupSchema = z.object({
+// Update team schema
+export const updateTeamSchema = z.object({
   name: z
     .string()
-    .min(1, "Group name is required")
-    .max(100, "Group name must be at most 100 characters")
+    .min(1, "Team name is required")
+    .max(100, "Team name must be at most 100 characters")
     .optional(),
   description: z
     .string()
@@ -113,17 +113,17 @@ export const updateGroupSchema = z.object({
     .nullable(),
 });
 
-// Add group member schema
-export const addGroupMemberSchema = z.object({
+// Add team member schema
+export const addTeamMemberSchema = z.object({
   userId: uuidSchema,
 });
 
-// Group ID param schema
-export const orgGroupIdParamSchema = z.object({
-  groupId: uuidSchema,
+// Team ID param schema
+export const orgTeamIdParamSchema = z.object({
+  teamId: uuidSchema,
 });
 
-// Group member ID param schema
-export const groupMemberIdParamSchema = z.object({
+// Team member ID param schema
+export const teamMemberIdParamSchema = z.object({
   userId: uuidSchema,
 });

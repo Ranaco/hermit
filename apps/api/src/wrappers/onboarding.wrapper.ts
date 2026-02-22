@@ -13,6 +13,15 @@ import {
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 
+function toSlug(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 export const onboardingWrapper = {
   /**
    * Get onboarding status for user
@@ -48,7 +57,7 @@ export const onboardingWrapper = {
 
     const onboardingComplete =
       hasOrganization &&
-      firstMembership.onboardingStatus === "completed" &&
+      firstMembership.onboardingState === "COMPLETED" &&
       hasVault;
 
     return {
@@ -99,12 +108,13 @@ export const onboardingWrapper = {
       const organization = await tx.organization.create({
         data: {
           name,
+          slug: `${toSlug(name)}-${Math.random().toString(36).slice(2, 8)}`,
           description,
           members: {
             create: {
               userId,
               role: "OWNER",
-              onboardingStatus: "in_progress",
+              onboardingState: "IN_PROGRESS",
               onboardingStep: 2, // Move to step 2 after org creation
             },
           },
@@ -194,7 +204,7 @@ export const onboardingWrapper = {
         id: membership.id,
       },
       data: {
-        onboardingStatus: "completed",
+        onboardingState: "COMPLETED",
         onboardingStep: 3,
         onboardingCompletedAt: new Date(),
       },

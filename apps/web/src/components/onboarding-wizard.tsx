@@ -82,7 +82,7 @@ export function OnboardingWizard() {
         <CardHeader>
           <CardTitle className="text-2xl">Welcome to Hermes KMS</CardTitle>
           <CardDescription>
-            Let's set up your secure key management system
+            Let&apos;s set up your secure key management system
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -217,7 +217,7 @@ export function OnboardingWizard() {
 
                 <div className="p-4 bg-blue-500/10 border-2 border-blue-500/20 rounded-lg">
                   <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
-                    What's Next?
+                    What&apos;s Next?
                   </h4>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">

@@ -1,44 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useVaults, useCreateVault, useDeleteVault } from "@/hooks/use-vaults";
 import { useOrganizationStore } from "@/store/organization.store";
-import {
-  Plus,
-  Trash2,
-  Search,
-  Vault as VaultIcon,
-  Building2,
-} from "lucide-react";
+import { Plus, Trash2, Search, Vault as VaultIcon, Building2, Loader2, KeyRound } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 export default function VaultsPage() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [newVault, setNewVault] = useState({
-    name: "",
-    description: "",
-  });
-
   const { currentOrganization } = useOrganizationStore();
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newVault, setNewVault] = useState({ name: "", description: "" });
+
   const { data: vaults, isLoading } = useVaults(currentOrganization?.id);
   const { mutate: createVault, isPending: isCreating } = useCreateVault();
   const { mutate: deleteVault } = useDeleteVault();
 
-  const filteredVaults = vaults?.filter((vault) =>
-    vault.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredVaults = useMemo(
+    () => vaults?.filter((vault) => vault.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [vaults, searchQuery],
   );
 
   const handleCreateVault = (e: React.FormEvent) => {
@@ -52,7 +39,7 @@ export default function VaultsPage() {
       },
       {
         onSuccess: () => {
-          setShowCreateDialog(false);
+          setShowCreateForm(false);
           setNewVault({ name: "", description: "" });
         },
       },
@@ -62,19 +49,9 @@ export default function VaultsPage() {
   if (!currentOrganization) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Card className="shadow-md max-w-md">
-            <CardContent className="py-12 text-center">
-              <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground text-lg mb-4">
-                Select an organization to view vaults
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Use the organization selector in the sidebar to choose an
-                organization.
-              </p>
-            </CardContent>
-          </Card>
+        <div className="rounded-2xl border border-dashed border-border/80 px-6 py-20 text-center text-muted-foreground">
+          <Building2 className="mx-auto mb-3 h-8 w-8" />
+          Select an organization to manage vaults.
         </div>
       </DashboardLayout>
     );
@@ -83,163 +60,118 @@ export default function VaultsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Vaults</h1>
-            <p className="text-muted-foreground text-lg">
-              Secure storage containers for{" "}
-              <strong>{currentOrganization.name}</strong>
-            </p>
+        <section className="kms-panel">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="kms-title">Vaults</h1>
+              <p className="kms-subtitle mt-2">
+                Isolated storage domains for keys and secrets across your organization.
+              </p>
+            </div>
+            <Button className="rounded-xl" onClick={() => setShowCreateForm((v) => !v)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Vault
+            </Button>
           </div>
-          <Button
-            onClick={() => setShowCreateDialog(!showCreateDialog)}
-            className="shadow-md"
-            size="lg"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create Vault
-          </Button>
-        </div>
 
-        {/* Create Vault Form */}
-        {showCreateDialog && (
-          <Card className="shadow-lg border-primary/20">
-            <CardHeader>
-              <CardTitle>Create New Vault</CardTitle>
-              <CardDescription>
-                Create a new secure storage vault in {currentOrganization.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateVault} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="vault-name">Vault Name</Label>
-                  <Input
-                    id="vault-name"
-                    placeholder="Production Vault"
-                    value={newVault.name}
-                    onChange={(e) =>
-                      setNewVault({ ...newVault, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vault-description">Description</Label>
-                  <Input
-                    id="vault-description"
-                    placeholder="Vault for production secrets"
-                    value={newVault.description}
-                    onChange={(e) =>
-                      setNewVault({ ...newVault, description: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateDialog(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isCreating || !newVault.name}>
-                    {isCreating ? "Creating..." : "Create Vault"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+          {showCreateForm ? (
+            <form onSubmit={handleCreateVault} className="mt-5 grid gap-3 rounded-2xl border border-border/70 bg-background/55 p-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="vault-name">Name</Label>
+                <Input
+                  id="vault-name"
+                  value={newVault.name}
+                  onChange={(e) => setNewVault({ ...newVault, name: e.target.value })}
+                  placeholder="production-vault"
+                  required
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="vault-description">Description</Label>
+                <Input
+                  id="vault-description"
+                  value={newVault.description}
+                  onChange={(e) => setNewVault({ ...newVault, description: e.target.value })}
+                  placeholder="Critical runtime and database secrets"
+                />
+              </div>
+              <div className="md:col-span-3 flex gap-2">
+                <Button type="submit" disabled={isCreating || !newVault.name}>
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setNewVault({ name: "", description: "" });
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </section>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <section className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search vaults..."
+            placeholder="Search vaults"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
-        </div>
+        </section>
 
-        {/* Vaults Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {isLoading ? (
-            <Card className="shadow-md">
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Loading vaults...
-              </CardContent>
-            </Card>
+            <div className="md:col-span-2 xl:col-span-3 flex h-40 items-center justify-center rounded-2xl border border-border/70 bg-card/80">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
           ) : filteredVaults && filteredVaults.length > 0 ? (
             filteredVaults.map((vault) => (
-              <Card
-                key={vault.id}
-                className="shadow-md hover:shadow-lg transition-shadow"
-              >
+              <Card key={vault.id} className="kms-kpi border-border/80">
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="p-3 bg-accent/10 border-2 border-border">
-                      <VaultIcon className="h-8 w-8 text-accent" />
+                    <div className="rounded-xl bg-blue-500/10 p-2 text-blue-600">
+                      <VaultIcon className="h-4 w-4" />
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        if (
-                          confirm(
-                            `Are you sure you want to delete "${vault.name}"?`,
-                          )
-                        ) {
+                        if (confirm(`Delete vault \"${vault.name}\"?`)) {
                           deleteVault(vault.id);
                         }
                       }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
-                  <CardTitle className="mt-4">{vault.name}</CardTitle>
-                  <CardDescription>{vault.description}</CardDescription>
+                  <CardTitle className="truncate text-lg tracking-tight">{vault.name}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Keys
-                      </span>
-                      <Badge variant="outline">
-                        {vault._count?.keys || 0} keys
-                      </Badge>
-                    </div>
-                    <div className="pt-3 border-t-2 border-border">
-                      <p className="text-xs text-muted-foreground">
-                        Created: {formatDateTime(vault.createdAt)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        ID: {vault.id}
-                      </p>
-                    </div>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">{vault.description || "No description"}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Managed keys</span>
+                    <Badge variant="outline" className="rounded-md text-[11px]">
+                      <KeyRound className="mr-1 h-3 w-3" />
+                      {vault._count?.keys || 0}
+                    </Badge>
                   </div>
+                  <p className="text-xs text-muted-foreground">Created {formatDateTime(vault.createdAt)}</p>
                 </CardContent>
               </Card>
             ))
           ) : (
-            <Card className="shadow-md md:col-span-2 lg:col-span-3">
-              <CardContent className="py-12 text-center">
-                <VaultIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground text-lg">
-                  {searchQuery
-                    ? "No vaults found matching your search"
-                    : "No vaults yet"}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Create your first vault to start storing keys and secrets.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-border/80 px-6 py-14 text-center text-muted-foreground">
+              <VaultIcon className="mx-auto mb-2 h-6 w-6" />
+              {searchQuery ? "No vaults match your search." : "No vaults yet. Create your first vault."}
+            </div>
           )}
-        </div>
+        </section>
       </div>
     </DashboardLayout>
   );

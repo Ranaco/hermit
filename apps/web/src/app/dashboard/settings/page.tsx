@@ -1,102 +1,121 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Bell, Shield, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Shield, User, KeyRound, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export default function SettingsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Settings</h1>
-          <p className="text-muted-foreground text-lg">
-            Configure your account and application preferences
+        <section className="kms-panel">
+          <h1 className="kms-title">Settings</h1>
+          <p className="kms-subtitle mt-2">
+            Control account profile, authentication posture, and operational notifications.
           </p>
-        </div>
+        </section>
 
-        <div className="grid gap-6">
-          {/* Profile Settings */}
-          <Card className="shadow-md">
+        <section className="grid gap-6 xl:grid-cols-2">
+          <Card className="kms-surface border-border/80">
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 border-2 border-border">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Profile Settings</CardTitle>
-                  <CardDescription>Update your personal information</CardDescription>
-                </div>
-              </div>
+              <CardTitle className="inline-flex items-center gap-2 text-lg tracking-tight">
+                <User className="h-4 w-4 text-blue-600" />
+                Profile
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" placeholder="John Doe" />
+                  <Label htmlFor="name">Display name</Label>
+                  <Input id="name" placeholder="Jane Doe" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="john@example.com" />
+                  <Input id="email" type="email" placeholder="jane@company.com" />
                 </div>
               </div>
-              <Button>Save Changes</Button>
+              <Button>Save Profile</Button>
             </CardContent>
           </Card>
 
-          {/* Security Settings */}
-          <Card className="shadow-md">
+          <Card className="kms-surface border-border/80">
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-accent/10 border-2 border-border">
-                  <Shield className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>Manage your security preferences</CardDescription>
-                </div>
-              </div>
+              <CardTitle className="inline-flex items-center gap-2 text-lg tracking-tight">
+                <Shield className="h-4 w-4 text-indigo-600" />
+                Security
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
+                <Label htmlFor="current-password">Current password</Label>
                 <Input id="current-password" type="password" />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                  <Label htmlFor="new-password">New password</Label>
                   <Input id="new-password" type="password" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Label htmlFor="confirm-password">Confirm password</Label>
                   <Input id="confirm-password" type="password" />
                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="secondary" className="rounded-md">
+                  <KeyRound className="mr-1 h-3 w-3" />
+                  MFA recommended
+                </Badge>
+                <Badge variant="outline" className="rounded-md">
+                  Session timeout: 30m
+                </Badge>
               </div>
               <Button>Update Password</Button>
             </CardContent>
           </Card>
+        </section>
 
-          {/* Notification Settings */}
-          <Card className="shadow-md">
+        <section className="grid gap-6 xl:grid-cols-2">
+          <Card className="kms-surface border-border/80">
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-secondary/10 border-2 border-border">
-                  <Bell className="h-5 w-5 text-secondary" />
-                </div>
-                <div>
-                  <CardTitle>Notification Settings</CardTitle>
-                  <CardDescription>Configure how you receive notifications</CardDescription>
-                </div>
-              </div>
+              <CardTitle className="inline-flex items-center gap-2 text-lg tracking-tight">
+                <Bell className="h-4 w-4 text-emerald-600" />
+                Notifications
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Notification preferences coming soon...</p>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3 py-2.5 text-sm">
+                <span>Security alerts</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3 py-2.5 text-sm">
+                <span>Key rotation reminders</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3 py-2.5 text-sm">
+                <span>Secret access anomalies</span>
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+              </div>
             </CardContent>
           </Card>
-        </div>
+
+          <Card className="kms-surface border-border/80">
+            <CardHeader>
+              <CardTitle className="text-lg tracking-tight">Operational Defaults</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p className="rounded-xl border border-border/70 bg-background/60 px-3 py-2.5">
+                Secret values remain masked by default and reveal operations should always be audited.
+              </p>
+              <p className="rounded-xl border border-border/70 bg-background/60 px-3 py-2.5">
+                Prefer team-scoped permissions over direct user grants for safer long-term access control.
+              </p>
+            </CardContent>
+          </Card>
+        </section>
       </div>
     </DashboardLayout>
   );

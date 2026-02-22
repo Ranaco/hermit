@@ -25,7 +25,7 @@ export const createVaultSchema = z.object({
     .max(500, "Description must be at most 500 characters")
     .optional()
     .nullable(),
-  organizationId: uuidSchema.optional(),
+  organizationId: uuidSchema,
 });
 
 // Update vault schema
@@ -60,9 +60,9 @@ export const grantUserPermissionSchema = z.object({
   permissionLevel: permissionLevelSchema,
 });
 
-// Grant group permission schema
-export const grantGroupPermissionSchema = z.object({
-  groupId: uuidSchema,
+// Grant team permission schema
+export const grantTeamPermissionSchema = z.object({
+  teamId: uuidSchema,
   permissionLevel: permissionLevelSchema,
 });
 
@@ -71,7 +71,7 @@ export const vaultUserIdParamSchema = z.object({
   userId: uuidSchema,
 });
 
-// Group ID param schema
-export const vaultGroupIdParamSchema = z.object({
-  groupId: uuidSchema,
+// Team ID param schema
+export const vaultTeamIdParamSchema = z.object({
+  teamId: uuidSchema,
 });

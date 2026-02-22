@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { vaultService, type CreateVaultData } from "@/services/vault.service";
+import {
+  vaultService,
+  type CreateVaultData,
+  type GrantPermissionData,
+  type GrantTeamPermissionData,
+} from "@/services/vault.service";
 import { toast } from "sonner";
 
 export function useVaults(organizationId?: string) {
@@ -60,6 +65,66 @@ export function useDeleteVault() {
     },
     onError: () => {
       toast.error("Failed to delete vault");
+    },
+  });
+}
+
+export function useGrantVaultUserPermission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ vaultId, data }: { vaultId: string; data: GrantPermissionData }) =>
+      vaultService.grantPermission(vaultId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vaults"] });
+      toast.success("Vault permission granted");
+    },
+    onError: () => {
+      toast.error("Failed to grant vault permission");
+    },
+  });
+}
+
+export function useRevokeVaultUserPermission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ vaultId, userId }: { vaultId: string; userId: string }) =>
+      vaultService.revokePermission(vaultId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vaults"] });
+      toast.success("Vault permission revoked");
+    },
+    onError: () => {
+      toast.error("Failed to revoke vault permission");
+    },
+  });
+}
+
+export function useGrantVaultTeamPermission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ vaultId, data }: { vaultId: string; data: GrantTeamPermissionData }) =>
+      vaultService.grantTeamPermission(vaultId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vaults"] });
+      toast.success("Team vault permission granted");
+    },
+    onError: () => {
+      toast.error("Failed to grant team permission");
+    },
+  });
+}
+
+export function useRevokeVaultTeamPermission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ vaultId, teamId }: { vaultId: string; teamId: string }) =>
+      vaultService.revokeTeamPermission(vaultId, teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vaults"] });
+      toast.success("Team vault permission revoked");
+    },
+    onError: () => {
+      toast.error("Failed to revoke team permission");
     },
   });
 }

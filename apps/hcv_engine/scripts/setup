@@ -1,4 +1,3 @@
-hermes/apps/hcv_engine/src/setup
 #!/bin/bash
 
 set -e
@@ -207,3 +206,6 @@ echo "  • Read-only: Use RoleID + unwrap SecretID, then login"
 echo "  • Write: Use RoleID + unwrap SecretID, then login"
 echo "  • Credentials are scoped to secret/data/medusa_vault/*"
 echo ""
+
+# Revoke root token to reduce long-lived privileged credentials.
+vault token revoke "$ROOT_TOKEN" >/dev/null 2>&1 || true

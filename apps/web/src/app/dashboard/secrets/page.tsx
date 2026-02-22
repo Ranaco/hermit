@@ -1,45 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  useSecrets,
-  useCreateSecret,
-  useDeleteSecret,
-} from "@/hooks/use-secrets";
+import { useSecrets, useCreateSecret, useDeleteSecret } from "@/hooks/use-secrets";
 import { secretService } from "@/services/secret.service";
 import { useKeys } from "@/hooks/use-keys";
 import { useOrganizationStore } from "@/store/organization.store";
-import {
-  Plus,
-  Trash2,
-  Search,
-  Lock,
-  Eye,
-  EyeOff,
-  Vault,
-  Key,
-} from "lucide-react";
+import { Plus, Trash2, Search, Lock, Eye, EyeOff, Vault, KeyRound, Loader2, Copy } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function SecretsPage() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const { currentVault } = useOrganizationStore();
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
-  const [revealedSecrets, setRevealedSecrets] = useState<
-    Record<string, string>
-  >({});
+  const [revealedSecrets, setRevealedSecrets] = useState<Record<string, string>>({});
   const [newSecret, setNewSecret] = useState({
     name: "",
     description: "",
@@ -47,46 +29,51 @@ export default function SecretsPage() {
     keyId: "",
   });
 
-  const { currentVault } = useOrganizationStore();
-  const { data: secrets, isLoading: secretsLoading } = useSecrets(
-    currentVault?.id,
-  );
+  const { data: secrets, isLoading: secretsLoading } = useSecrets(currentVault?.id);
   const { data: keys } = useKeys(currentVault?.id);
   const { mutate: createSecret, isPending: isCreating } = useCreateSecret();
   const { mutate: deleteSecret } = useDeleteSecret();
 
-  const filteredSecrets = secrets?.secrets?.filter((secret) =>
-    secret.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredSecrets = useMemo(
+    () => secrets?.secrets?.filter((secret) => secret.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [secrets?.secrets, searchQuery],
   );
 
   const toggleSecretVisibility = async (secretId: string) => {
-    const newVisible = new Set(visibleSecrets);
-    if (newVisible.has(secretId)) {
-      newVisible.delete(secretId);
-      setVisibleSecrets(newVisible);
-      // Remove from revealed secrets
+    const nextVisible = new Set(visibleSecrets);
+
+    if (nextVisible.has(secretId)) {
+      nextVisible.delete(secretId);
+      setVisibleSecrets(nextVisible);
       setRevealedSecrets((prev) => {
         const updated = { ...prev };
         delete updated[secretId];
         return updated;
       });
-    } else {
-      // Reveal the secret using the service directly
-      try {
-        const response = await secretService.reveal(secretId);
-        if (response.secret?.value) {
-          newVisible.add(secretId);
-          setVisibleSecrets(newVisible);
-          setRevealedSecrets((prev) => ({
-            ...prev,
-            [secretId]: response.secret?.value || "",
-          }));
-        }
-      } catch (error) {
-        console.error("Failed to reveal secret:", error);
-        // Could show a toast here
-      }
+      return;
     }
+
+    const response = await secretService.reveal(secretId);
+    if (response.requiresPassword) {
+      toast.error("Secret requires additional password verification");
+      return;
+    }
+
+    if (response.secret?.value) {
+      nextVisible.add(secretId);
+      setVisibleSecrets(nextVisible);
+      setRevealedSecrets((prev) => ({ ...prev, [secretId]: response.secret?.value || "" }));
+      return;
+    }
+
+    toast.error("Unable to reveal secret value");
+  };
+
+  const copySecret = async (secretId: string) => {
+    const value = revealedSecrets[secretId];
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    toast.success("Secret copied");
   };
 
   const handleCreateSecret = (e: React.FormEvent) => {
@@ -100,7 +87,7 @@ export default function SecretsPage() {
       },
       {
         onSuccess: () => {
-          setShowCreateDialog(false);
+          setShowCreateForm(false);
           setNewSecret({ name: "", description: "", value: "", keyId: "" });
         },
       },
@@ -110,18 +97,9 @@ export default function SecretsPage() {
   if (!currentVault) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Card className="shadow-md max-w-md">
-            <CardContent className="py-12 text-center">
-              <Vault className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground text-lg mb-4">
-                Select a vault to view secrets
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Use the vault selector in the sidebar to choose a vault.
-              </p>
-            </CardContent>
-          </Card>
+        <div className="rounded-2xl border border-dashed border-border/80 px-6 py-20 text-center text-muted-foreground">
+          <Vault className="mx-auto mb-3 h-8 w-8" />
+          Select a vault to manage secrets.
         </div>
       </DashboardLayout>
     );
@@ -130,239 +108,170 @@ export default function SecretsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Secrets</h1>
-            <p className="text-muted-foreground text-lg">
-              Manage encrypted secrets in <strong>{currentVault.name}</strong>
-            </p>
+        <section className="kms-panel">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="kms-title">Secrets</h1>
+              <p className="kms-subtitle mt-2">
+                Values stay masked by default and reveal actions remain audit-aware.
+              </p>
+            </div>
+            <Button className="rounded-xl" onClick={() => setShowCreateForm((v) => !v)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Secret
+            </Button>
           </div>
-          <Button
-            onClick={() => setShowCreateDialog(!showCreateDialog)}
-            className="shadow-md"
-            size="lg"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create Secret
-          </Button>
-        </div>
 
-        {/* Create Secret Form */}
-        {showCreateDialog && (
-          <Card className="shadow-lg border-primary/20">
-            <CardHeader>
-              <CardTitle>Create New Secret</CardTitle>
-              <CardDescription>
-                Store a new secret securely in {currentVault.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateSecret} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="secret-name">Secret Name</Label>
-                    <Input
-                      id="secret-name"
-                      placeholder="DATABASE_PASSWORD"
-                      value={newSecret.name}
-                      onChange={(e) =>
-                        setNewSecret({ ...newSecret, name: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="secret-key">Encryption Key</Label>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <select
-                        id="secret-key"
-                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        value={newSecret.keyId}
-                        onChange={(e) =>
-                          setNewSecret({ ...newSecret, keyId: e.target.value })
-                        }
-                        required
-                      >
-                        <option value="">Select a key</option>
-                        {keys?.map((key) => (
-                          <option key={key.id} value={key.id}>
-                            {key.name} ({key.valueType})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="secret-description">Description</Label>
-                    <Input
-                      id="secret-description"
-                      placeholder="Database connection password"
-                      value={newSecret.description}
-                      onChange={(e) =>
-                        setNewSecret({
-                          ...newSecret,
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="secret-value">Secret Value</Label>
-                    <Input
-                      id="secret-value"
-                      type="password"
-                      placeholder="your-secret-value"
-                      value={newSecret.value}
-                      onChange={(e) =>
-                        setNewSecret({ ...newSecret, value: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateDialog(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={
-                      isCreating ||
-                      !newSecret.name ||
-                      !newSecret.value ||
-                      !newSecret.keyId
-                    }
-                  >
-                    {isCreating ? "Creating..." : "Create Secret"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+          {showCreateForm ? (
+            <form onSubmit={handleCreateSecret} className="mt-5 grid gap-3 rounded-2xl border border-border/70 bg-background/55 p-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="secret-name">Name</Label>
+                <Input
+                  id="secret-name"
+                  value={newSecret.name}
+                  onChange={(e) => setNewSecret({ ...newSecret, name: e.target.value })}
+                  placeholder="DATABASE_PASSWORD"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="secret-key">Encryption key</Label>
+                <select
+                  id="secret-key"
+                  className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm"
+                  value={newSecret.keyId}
+                  onChange={(e) => setNewSecret({ ...newSecret, keyId: e.target.value })}
+                  required
+                >
+                  <option value="">Select key</option>
+                  {keys?.map((key) => (
+                    <option key={key.id} value={key.id}>
+                      {key.name} ({key.valueType})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-description">Description</Label>
+                <Input
+                  id="secret-description"
+                  value={newSecret.description}
+                  onChange={(e) => setNewSecret({ ...newSecret, description: e.target.value })}
+                  placeholder="Production database password"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-value">Value</Label>
+                <Input
+                  id="secret-value"
+                  type="password"
+                  value={newSecret.value}
+                  onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2 flex gap-2">
+                <Button type="submit" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId}>
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setNewSecret({ name: "", description: "", value: "", keyId: "" });
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </section>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <section className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search secrets..."
+            placeholder="Search secrets"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
-        </div>
+        </section>
 
-        {/* Secrets List */}
-        <div className="grid gap-4">
+        <section className="space-y-3">
           {secretsLoading ? (
-            <Card className="shadow-md">
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Loading secrets...
-              </CardContent>
-            </Card>
+            <div className="flex h-40 items-center justify-center rounded-2xl border border-border/70 bg-card/80">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
           ) : filteredSecrets && filteredSecrets.length > 0 ? (
             filteredSecrets.map((secret) => (
-              <Card
-                key={secret.id}
-                className="shadow-md hover:shadow-lg transition-shadow"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="p-3 bg-secondary/10 border-2 border-border">
-                        <Lock className="h-6 w-6 text-secondary" />
+              <Card key={secret.id} className="kms-surface border-border/80">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="rounded-xl bg-indigo-500/10 p-2 text-indigo-600">
+                        <Lock className="h-4 w-4" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold mb-1">
-                          {secret.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium tracking-tight">{secret.name}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="rounded-md text-[11px]">
                             v{secret.currentVersion?.versionNumber || 1}
                           </Badge>
-                          {secret.key && (
-                            <Badge variant="secondary">
-                              <Key className="h-3 w-3 mr-1" />
+                          {secret.key ? (
+                            <Badge variant="outline" className="rounded-md text-[11px]">
+                              <KeyRound className="mr-1 h-3 w-3" />
                               {secret.key.name}
                             </Badge>
-                          )}
+                          ) : null}
                         </div>
-                        {secret.description && (
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {secret.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mb-2">
-                          <code className="text-sm bg-muted px-3 py-1 border-2 border-border font-mono flex-1">
-                            {visibleSecrets.has(secret.id)
-                              ? revealedSecrets[secret.id] || "Loading..."
-                              : "••••••••••••••••"}
+                        <p className="mt-2 text-xs text-muted-foreground">{secret.description || "No description"}</p>
+
+                        <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-2 py-1.5">
+                          <code className="min-w-0 flex-1 truncate text-xs">
+                            {visibleSecrets.has(secret.id) ? revealedSecrets[secret.id] || "loading..." : "••••••••••••••••"}
                           </code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => toggleSecretVisibility(secret.id)}
-                          >
-                            {visibleSecrets.has(secret.id) ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
+                          <Button variant="ghost" size="icon" onClick={() => toggleSecretVisibility(secret.id)}>
+                            {visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
+                          {visibleSecrets.has(secret.id) ? (
+                            <Button variant="ghost" size="icon" onClick={() => copySecret(secret.id)}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>
-                            Updated: {formatDateTime(secret.updatedAt)}
-                          </span>
-                          <span>ID: {secret.id.slice(0, 8)}...</span>
-                        </div>
+
+                        <p className="mt-2 text-xs text-muted-foreground">Updated {formatDateTime(secret.updatedAt)}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Are you sure you want to delete "${secret.name}"?`,
-                            )
-                          ) {
-                            deleteSecret(secret.id);
-                          }
-                        }}
-                        title="Delete Secret"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm(`Delete secret \"${secret.name}\"?`)) {
+                          deleteSecret(secret.id);
+                        }
+                      }}
+                      title="Delete secret"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))
           ) : (
-            <Card className="shadow-md">
-              <CardContent className="py-12 text-center">
-                <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground text-lg">
-                  {searchQuery
-                    ? "No secrets found matching your search"
-                    : "No secrets yet"}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Create your first secret to start storing sensitive data
-                  securely.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-dashed border-border/80 px-6 py-14 text-center text-muted-foreground">
+              <Lock className="mx-auto mb-2 h-6 w-6" />
+              {searchQuery ? "No secrets match your search." : "No secrets yet. Create your first secret."}
+            </div>
           )}
-        </div>
+        </section>
       </div>
     </DashboardLayout>
   );

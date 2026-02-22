@@ -1,219 +1,250 @@
 /**
  * Organization Controller
- * Handles organization management and membership
  */
 
-import type { Request, Response } from 'express';
-import { asyncHandler, AuthenticationError, ValidationError, ErrorCode, NotFoundError, AuthorizationError, ConflictError } from '@hermes/error-handling';
-import { organizationWrapper } from '../wrappers/organization.wrapper';
+import type { Request, Response } from "express";
+import {
+  asyncHandler,
+  AuthenticationError,
+  ValidationError,
+  ErrorCode,
+} from "@hermes/error-handling";
+import { organizationWrapper } from "../wrappers/organization.wrapper";
 
-/**
- * Create a new organization
- * POST /api/v1/organizations
- */
-export const createOrganization = asyncHandler(async (req: Request, res: Response) => {
+function assertUser(req: Request) {
   if (!req.user) {
     throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
   }
+  return req.user;
+}
+
+export const createOrganization = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
 
   const { name, description } = req.body;
-
   if (!name) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Organization name is required');
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Organization name is required");
   }
 
-  const result = await organizationWrapper.createOrganization(req.user.id, { name, description }, {
-    ipAddress: req.ip || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
-  });
+  const result = await organizationWrapper.createOrganization(
+    user.id,
+    { name, description },
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
 
   res.status(201).json({
     success: true,
-    data: { organization: result.organization },
-    message: 'Organization created successfully',
+    data: { organization: result.organization, vault: result.vault },
+    message: "Organization created successfully",
   });
 });
 
-/**
- * Get organizations user is a member of
- * GET /api/v1/organizations
- */
 export const getOrganizations = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  }
-
-  const result = await organizationWrapper.getOrganizations(req.user.id);
-
-  res.json({
-    success: true,
-    data: { organizations: result.organizations },
-  });
+  const user = assertUser(req);
+  const result = await organizationWrapper.getOrganizations(user.id);
+  res.json({ success: true, data: result });
 });
 
-/**
- * Get a specific organization
- * GET /api/v1/organizations/:id
- */
 export const getOrganization = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  }
-
-  const { id } = req.params;
-
-  const result = await organizationWrapper.getOrganization(req.user.id, id);
-
-  res.json({
-    success: true,
-    data: { organization: result.organization },
-  });
+  const user = assertUser(req);
+  const result = await organizationWrapper.getOrganization(user.id, req.params.id);
+  res.json({ success: true, data: result });
 });
 
-/**
- * Get organization members
- * GET /api/v1/organizations/:id/members
- */
 export const getMembers = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  }
-
-  const { id } = req.params;
+  const user = assertUser(req);
   const { page, limit, search } = req.query;
 
-  const result = await organizationWrapper.getMembers(req.user.id, id, {
-    page: page ? parseInt(page as string) : undefined,
-    limit: limit ? parseInt(limit as string) : undefined,
+  const result = await organizationWrapper.getMembers(user.id, req.params.id, {
+    page: page ? parseInt(page as string, 10) : undefined,
+    limit: limit ? parseInt(limit as string, 10) : undefined,
     search: search as string,
   });
+
+  res.json({ success: true, data: result });
+});
+
+export const updateOrganization = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+
+  const result = await organizationWrapper.updateOrganization(
+    user.id,
+    req.params.id,
+    { name: req.body.name, description: req.body.description },
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
 
   res.json({
     success: true,
     data: result,
+    message: "Organization updated successfully",
   });
 });
 
-/**
- * Update organization
- * PATCH /api/v1/organizations/:id
- */
-export const updateOrganization = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+export const deleteOrganization = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+
+  await organizationWrapper.deleteOrganization(
+    user.id,
+    req.params.id,
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
+
+  res.json({ success: true, message: "Organization deleted successfully" });
+});
+
+export const inviteUser = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+
+  const { email, role = "MEMBER" } = req.body;
+  if (!email) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Email is required");
   }
 
-  const { id } = req.params;
+  const result = await organizationWrapper.inviteUser(
+    user.id,
+    req.params.id,
+    { email, role },
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
+
+  res.status(201).json({
+    success: true,
+    data: result,
+    message: result.member
+      ? "User added to organization successfully"
+      : "Invitation created successfully",
+  });
+});
+
+export const acceptInvitation = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const { token } = req.body;
+
+  if (!token) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Invitation token is required");
+  }
+
+  const result = await organizationWrapper.acceptInvitation(user.id, token);
+
+  res.json({
+    success: true,
+    data: result,
+    message: "Invitation accepted successfully",
+  });
+});
+
+export const removeMember = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+
+  await organizationWrapper.removeMember(
+    user.id,
+    req.params.id,
+    req.params.userId,
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
+
+  res.json({ success: true, message: "Member removed successfully" });
+});
+
+export const updateMemberRole = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const { role } = req.body;
+
+  if (!role) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Role is required");
+  }
+
+  const result = await organizationWrapper.updateMemberRole(
+    user.id,
+    req.params.id,
+    req.params.userId,
+    role,
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
+
+  res.json({
+    success: true,
+    data: result,
+    message: "Member role updated successfully",
+  });
+});
+
+export const getTeams = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.getTeams(user.id, req.params.id);
+  res.json({ success: true, data: result });
+});
+
+export const createTeam = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
   const { name, description } = req.body;
 
-  const result = await organizationWrapper.updateOrganization(req.user.id, id, { name, description }, {
-    ipAddress: req.ip || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
-  });
-
-  res.json({
-    success: true,
-    data: { organization: result.organization },
-    message: 'Organization updated successfully',
-  });
-});
-
-/**
- * Delete organization
- * DELETE /api/v1/organizations/:id
- */
-export const deleteOrganization = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  if (!name) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Team name is required");
   }
 
-  const { id } = req.params;
-
-  await organizationWrapper.deleteOrganization(req.user.id, id, {
-    ipAddress: req.ip || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
-  });
-
-  res.json({
-    success: true,
-    message: 'Organization deleted successfully',
-  });
-});
-
-/**
- * Invite user to organization
- * POST /api/v1/organizations/:id/invitations
- */
-export const inviteUser = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  }
-
-  const { id } = req.params;
-  const { email, role = 'MEMBER' } = req.body;
-
-  if (!email) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Email is required');
-  }
-
-  const result = await organizationWrapper.inviteUser(req.user.id, id, { email, role }, {
-    ipAddress: req.ip || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
+  const result = await organizationWrapper.createTeam(user.id, req.params.id, {
+    name,
+    description,
   });
 
   res.status(201).json({
     success: true,
-    data: { member: result.member },
-    message: 'User added to organization successfully',
+    data: result,
+    message: "Team created successfully",
   });
 });
 
-/**
- * Remove member from organization
- * DELETE /api/v1/organizations/:id/members/:userId
- */
-export const removeMember = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+export const updateTeam = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.updateTeam(
+    user.id,
+    req.params.id,
+    req.params.teamId,
+    { name: req.body.name, description: req.body.description },
+  );
+
+  res.json({ success: true, data: result, message: "Team updated successfully" });
+});
+
+export const deleteTeam = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  await organizationWrapper.deleteTeam(user.id, req.params.id, req.params.teamId);
+  res.json({ success: true, message: "Team deleted successfully" });
+});
+
+export const addTeamMember = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const { userId } = req.body;
+
+  if (!userId) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "User ID is required");
   }
 
-  const { id, userId } = req.params;
+  const result = await organizationWrapper.addTeamMember(
+    user.id,
+    req.params.id,
+    req.params.teamId,
+    userId,
+  );
 
-  await organizationWrapper.removeMember(req.user.id, id, userId, {
-    ipAddress: req.ip || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
-  });
-
-  res.json({
+  res.status(201).json({
     success: true,
-    message: 'Member removed successfully',
+    data: result,
+    message: "Team member added successfully",
   });
 });
 
-/**
- * Update member role
- * PATCH /api/v1/organizations/:id/members/:userId
- */
-export const updateMemberRole = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  }
+export const removeTeamMember = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
 
-  const { id, userId } = req.params;
-  const { role } = req.body;
+  await organizationWrapper.removeTeamMember(
+    user.id,
+    req.params.id,
+    req.params.teamId,
+    req.params.userId,
+  );
 
-  if (!role) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Role is required');
-  }
-
-  const result = await organizationWrapper.updateMemberRole(req.user.id, id, userId, role, {
-    ipAddress: req.ip || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
-  });
-
-  res.json({
-    success: true,
-    data: { member: result.member },
-    message: 'Member role updated successfully',
-  });
+  res.json({ success: true, message: "Team member removed successfully" });
 });

@@ -10,6 +10,14 @@ import {
 } from "@/services/onboarding.service";
 import { toast } from "sonner";
 
+type ApiErrorShape = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
 /**
  * Get onboarding status
  */
@@ -35,9 +43,10 @@ export function useCreateFirstOrganization() {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       toast.success("Organization created successfully!");
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const apiError = error as ApiErrorShape;
       toast.error(
-        error?.response?.data?.message ||
+        apiError?.response?.data?.message ||
           "Failed to create organization"
       );
     },
@@ -57,9 +66,10 @@ export function useCompleteOnboarding() {
       queryClient.invalidateQueries({ queryKey: ["onboarding", "status"] });
       toast.success("Welcome! Your account is all set up.");
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const apiError = error as ApiErrorShape;
       toast.error(
-        error?.response?.data?.message || "Failed to complete onboarding"
+        apiError?.response?.data?.message || "Failed to complete onboarding"
       );
     },
   });

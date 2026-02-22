@@ -3,7 +3,7 @@
  * Singleton Prisma Client instance
  */
 
-import { PrismaClient } from '@hermes/prisma-client';
+import { PrismaClient } from '@prisma/client';
 import { log } from '@hermes/logger';
 
 let prisma: PrismaClient | null = null;
