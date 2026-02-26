@@ -5,6 +5,7 @@
 
 import { log } from "@hermes/logger";
 import { createServer, initializeApp, gracefulShutdown } from "./server";
+import { cleanupOldAuditLogs } from "./services/audit.service";
 import config from "./config";
 
 const port = config.app.port;
@@ -33,6 +34,10 @@ async function start(): Promise<void> {
       );
       log.info(`❤️  Health check: http://localhost:${port}/health`);
       log.info(`📊 Status check: http://localhost:${port}/status`);
+      
+      // Schedule background workers
+      cleanupOldAuditLogs().catch(() => {});
+      setInterval(() => cleanupOldAuditLogs().catch(() => {}), 24 * 60 * 60 * 1000); // Daily
     });
 
     // Graceful shutdown handlers

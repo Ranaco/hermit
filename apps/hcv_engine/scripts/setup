@@ -9,7 +9,7 @@ NC='\033[0m'
 
 # Configuration
 VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}"
-WEBHOOK_URL="${WEBHOOK_URL:-https://webhook.site/bb2a265c-f628-49c2-853e-607085caebaf}"
+WEBHOOK_URL="${WEBHOOK_URL:-https://webhook.site/c849a567-a6be-45be-bfc9-959fb0d3f1a1}"
 CREDENTIALS_FILE="${CREDENTIALS_FILE:-./vault_credentials.json}"
 VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-true}"
 WEBHOOK_SECRET="${WEBHOOK_SECRET:-your-shared-secret-key-here}"
@@ -62,6 +62,15 @@ vault auth enable approle
 echo -e "${YELLOW}Enabling Transit secrets engine...${NC}"
 vault secrets enable transit
 
+# Enable KV-v2 secrets engine
+echo -e "${YELLOW}Enabling KV-v2 secrets engine...${NC}"
+vault secrets enable -path=secret kv-v2
+
+# Enable AWS and Database engines for dynamic secrets
+echo -e "${YELLOW}Enabling AWS and Database secrets engines...${NC}"
+vault secrets enable aws || true
+vault secrets enable database || true
+
 # Create transit policy for encryption operations
 echo -e "${YELLOW}Creating transit policy...${NC}"
 vault policy write transit-policy - <<EOF
@@ -88,7 +97,7 @@ EOF
 # Create read-only policy
 echo -e "${YELLOW}Creating read-only policy...${NC}"
 vault policy write read-only-policy - <<EOF
-path "secret/data/medusa_vault/*" {
+path "secret/data/hermes_vault/*" {
   capabilities = ["read", "list"]
 }
 EOF
@@ -96,11 +105,17 @@ EOF
 # Create write policy
 echo -e "${YELLOW}Creating write policy...${NC}"
 vault policy write write-policy - <<EOF
-path "secret/data/medusa_vault/*" {
+path "secret/data/hermes_vault/*" {
   capabilities = ["create", "update", "read", "list"]
 }
 path "transit/*" {
   capabilities = ["create", "read", "update", "list"]
+}
+path "aws/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "database/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
 }
 EOF
 
@@ -204,8 +219,13 @@ echo ""
 echo -e "${YELLOW}AppRole Usage:${NC}"
 echo "  • Read-only: Use RoleID + unwrap SecretID, then login"
 echo "  • Write: Use RoleID + unwrap SecretID, then login"
-echo "  • Credentials are scoped to secret/data/medusa_vault/*"
+echo "  • Credentials are scoped to secret/data/hermes_vault/* and dynamic engines"
 echo ""
 
-# Revoke root token to reduce long-lived privileged credentials.
-vault token revoke "$ROOT_TOKEN" >/dev/null 2>&1 || true
+# Revoke root token to reduce long-lived privileged credentials (production only).
+# For development, we keep the root token active for easier debugging and testing.
+if [ "${ENV:-development}" == "production" ]; then
+  vault token revoke "$ROOT_TOKEN" >/dev/null 2>&1 || true
+else
+  echo -e "${GREEN}✓ Root token retained for development environment${NC}"
+fi

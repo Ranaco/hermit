@@ -37,9 +37,9 @@ export const validate = (schemas: ValidationSchemas) => {
         const messages = error.errors
           .map((err) => `${err.path.join(".")}: ${err.message}`)
           .join(", ");
-        throw new ValidationError(ErrorCode.VALIDATION_ERROR, messages);
+        return next(new ValidationError(ErrorCode.VALIDATION_ERROR, messages));
       }
-      throw error;
+      return next(error);
     }
   };
 };

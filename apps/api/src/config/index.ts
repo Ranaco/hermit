@@ -31,6 +31,12 @@ const config = {
     transitMount: process.env.VAULT_TRANSIT_MOUNT || "transit",
     requestTimeout: parseInt(process.env.VAULT_REQUEST_TIMEOUT || "5000", 10),
     keyName: process.env.VAULT_KEY_NAME || "hermes-master-key",
+    appRole: {
+      readRoleId: process.env.VAULT_APPROLE_ROLE_ID_READ || "",
+      readSecretId: process.env.VAULT_APPROLE_SECRET_ID_READ || "",
+      writeRoleId: process.env.VAULT_APPROLE_ROLE_ID_WRITE || "",
+      writeSecretId: process.env.VAULT_APPROLE_SECRET_ID_WRITE || "",
+    },
   },
 
   // JWT Authentication

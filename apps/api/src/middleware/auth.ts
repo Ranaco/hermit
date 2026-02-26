@@ -195,13 +195,14 @@ export function requireRole(minimumRole: 'MEMBER' | 'ADMIN' | 'OWNER') {
         organizationId,
         userId: req.user.id,
       },
+      include: { role: true },
     });
 
     if (!membership) {
       throw new AuthenticationError(ErrorCode.NOT_ORGANIZATION_MEMBER);
     }
 
-    if (roleHierarchy[membership.role] < roleHierarchy[minimumRole]) {
+    if (!membership.role || roleHierarchy[membership.role.name as keyof typeof roleHierarchy] < roleHierarchy[minimumRole as keyof typeof roleHierarchy]) {
       throw new AuthenticationError(
         ErrorCode.INSUFFICIENT_PERMISSIONS,
         `${minimumRole} role required`

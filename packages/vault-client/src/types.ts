@@ -5,10 +5,15 @@
 
 export interface VaultConfig {
   endpoint: string;
-  token: string;
+  token?: string; // Optional if using AppRole
   namespace?: string;
   transitMount?: string;
   requestTimeout?: number;
+  appRole?: {
+    roleId: string;
+    secretId: string;
+    mountPoint?: string; // Defaults to 'approle'
+  };
 }
 
 export interface EncryptOptions {

@@ -26,6 +26,11 @@ export const createVaultSchema = z.object({
     .optional()
     .nullable(),
   organizationId: uuidSchema,
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be at most 100 characters")
+    .optional(),
 });
 
 // Update vault schema
@@ -38,6 +43,12 @@ export const updateVaultSchema = z.object({
   description: z
     .string()
     .max(500, "Description must be at most 500 characters")
+    .optional()
+    .nullable(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be at most 100 characters")
     .optional()
     .nullable(),
 });

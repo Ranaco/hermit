@@ -27,6 +27,9 @@ END $$;
 
 -- Convert onboarding status text to enum values
 ALTER TABLE "OrganizationMember"
+ALTER COLUMN "onboardingStatus" DROP DEFAULT;
+
+ALTER TABLE "OrganizationMember"
 ALTER COLUMN "onboardingStatus" TYPE "OnboardingState"
 USING (
   CASE

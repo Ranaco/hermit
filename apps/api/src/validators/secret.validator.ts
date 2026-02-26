@@ -33,6 +33,11 @@ export const createSecretSchema = z.object({
     .string()
     .uuid('Invalid key ID format'),
   
+  secretGroupId: z
+    .string()
+    .uuid('Invalid secret group ID format')
+    .optional(),
+  
   password: z
     .string()
     .min(8, 'Secret password must be at least 8 characters')
@@ -122,6 +127,12 @@ export const updateSecretSchema = z.object({
     .string()
     .max(500, 'Commit message must be less than 500 characters')
     .optional(),
+  
+  secretGroupId: z
+    .string()
+    .uuid('Invalid secret group ID format')
+    .nullable()
+    .optional(),
 });
 
 /**
@@ -132,17 +143,22 @@ export const getSecretsSchema = z.object({
     .string()
     .uuid('Invalid vault ID format'),
   
+  secretGroupId: z
+    .string()
+    .uuid('Invalid secret group ID format')
+    .optional(),
+  
   page: z
     .string()
     .regex(/^\d+$/, 'Page must be a number')
-    .transform((val) => parseInt(val, 10))
+    .transform((val) => Number.parseInt(val, 10))
     .or(z.number())
     .optional(),
   
   limit: z
     .string()
     .regex(/^\d+$/, 'Limit must be a number')
-    .transform((val) => parseInt(val, 10))
+    .transform((val) => Number.parseInt(val, 10))
     .or(z.number())
     .optional(),
   

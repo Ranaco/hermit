@@ -27,6 +27,7 @@ import organizationRoutes from "./routes/organization.routes";
 import vaultRoutes from "./routes/vault.routes";
 import keyRoutes from "./routes/key.routes";
 import secretRoutes from "./routes/secret.routes";
+import secretGroupRoutes from "./routes/secret-group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 
 /**
@@ -113,6 +114,7 @@ export const createServer = (): Express => {
   app.use(`${config.app.apiPrefix}/users`, userRoutes);
   app.use(`${config.app.apiPrefix}/organizations`, organizationRoutes);
   app.use(`${config.app.apiPrefix}/vaults`, vaultRoutes);
+  app.use(`${config.app.apiPrefix}/vaults/:vaultId/groups`, secretGroupRoutes);
   app.use(`${config.app.apiPrefix}/keys`, keyRoutes);
   app.use(`${config.app.apiPrefix}/secrets`, secretRoutes);
   app.use(`${config.app.apiPrefix}/onboarding`, onboardingRoutes);

@@ -15,108 +15,113 @@ enum MfaMethod {
 }
 
 model User {
-    id                String              @id @default(uuid())
-    email             String              @unique
-    username          String              @unique
-    passwordHash      String
-    firstName         String?
-    lastName          String?
-    isActive          Boolean             @default(true)
-    isEmailVerified   Boolean             @default(false)
-    isLocked          Boolean             @default(false)
-    lockedUntil       DateTime?
-    consecutiveFailedLogins Int           @default(0)
-    lastLoginAt       DateTime?
-    isTwoFactorEnabled Boolean            @default(false)
-    twoFactorSecret   String?
-    twoFactorMethod   MfaMethod           @default(TOTP)
-    backupCodes       String[]            @default([])
-    requiresMfaForSensitiveOps Boolean    @default(true)
-    passwordChangedAt DateTime?
-    createdAt         DateTime            @default(now())
-    updatedAt         DateTime            @updatedAt
-    devices           Device[]
-    sessions          Session[]
-    passwordResets    PasswordReset[]
-    emailVerifications EmailVerification[]
-    loginAttempts     LoginAttempt[]
-    mfaRecoveries     MfaRecovery[]
-    organizations     OrganizationMember[]
-    vaultPermissions  VaultBinding[]
-    keyPermissions    KeyBinding[]
-    createdVaults     Vault[]             @relation("VaultCreator")
-    createdKeys       Key[]               @relation("KeyCreator")
-    createdSecrets    Secret[]            @relation("SecretCreator")
-    secretVersions    SecretVersion[]     @relation("SecretVersionCreator")
-    keyVersions       KeyVersion[]        @relation("KeyVersionCreator")
-    activityLogs      AuditLog[]          @relation("UserActivity")
-    teamMemberships   TeamMember[]
-    sentInvitations   OrganizationInvitation[] @relation("UserInvitations")
-    publicKey          String?
-    encryptedPrivateKey String?
-    kdfParams          Json?
-    keyShares          KeyShare[]
-    oneTimeSharesCreated OneTimeShare[]
-    temporaryKeys      TemporaryKey[]
+    id                         String                   @id @default(uuid())
+    email                      String                   @unique
+    username                   String                   @unique
+    passwordHash               String
+    firstName                  String?
+    lastName                   String?
+    isActive                   Boolean                  @default(true)
+    isEmailVerified            Boolean                  @default(false)
+    isLocked                   Boolean                  @default(false)
+    lockedUntil                DateTime?
+    consecutiveFailedLogins    Int                      @default(0)
+    lastLoginAt                DateTime?
+    isTwoFactorEnabled         Boolean                  @default(false)
+    twoFactorSecret            String?
+    twoFactorMethod            MfaMethod                @default(TOTP)
+    backupCodes                String[]                 @default([])
+    requiresMfaForSensitiveOps Boolean                  @default(true)
+    passwordChangedAt          DateTime?
+    createdAt                  DateTime                 @default(now())
+    updatedAt                  DateTime                 @updatedAt
+    devices                    Device[]
+    sessions                   Session[]
+    passwordResets             PasswordReset[]
+    emailVerifications         EmailVerification[]
+    loginAttempts              LoginAttempt[]
+    mfaRecoveries              MfaRecovery[]
+    organizations              OrganizationMember[]
+    vaultPermissions           VaultBinding[]
+    keyPermissions             KeyBinding[]
+    createdVaults              Vault[]                  @relation("VaultCreator")
+    createdKeys                Key[]                    @relation("KeyCreator")
+    createdSecrets             Secret[]                 @relation("SecretCreator")
+    secretVersions             SecretVersion[]          @relation("SecretVersionCreator")
+    keyVersions                KeyVersion[]             @relation("KeyVersionCreator")
+    activityLogs               AuditLog[]               @relation("UserActivity")
+    teamMemberships            TeamMember[]
+    sentInvitations            OrganizationInvitation[] @relation("UserInvitations")
+    publicKey                  String?
+    encryptedPrivateKey        String?
+    kdfParams                  Json?
+    keyShares                  KeyShare[]
+    oneTimeSharesCreated       OneTimeShare[]
+    temporaryKeys              TemporaryKey[]
+    secretGroupBindings        SecretGroupBinding[]
 }
 
 model Device {
-    id                String   @id @default(uuid())
-    userId            String
-    name              String?
-    fingerprint       String
-    lastUsedAt        DateTime @updatedAt
-    isTrusted         Boolean  @default(false)
-    userAgent         String?
-    ipAddress         String?
-    createdAt         DateTime @default(now())
-    user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    sessions          Session[]
+    id          String    @id @default(uuid())
+    userId      String
+    name        String?
+    fingerprint String
+    lastUsedAt  DateTime  @updatedAt
+    isTrusted   Boolean   @default(false)
+    userAgent   String?
+    ipAddress   String?
+    createdAt   DateTime  @default(now())
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    sessions    Session[]
+
     @@unique([userId, fingerprint])
     @@index([fingerprint])
 }
 
 model Session {
-    id                String   @id @default(uuid())
-    userId            String
-    deviceId          String
-    refreshToken      String   @unique
-    expiresAt         DateTime
-    isValid           Boolean  @default(true)
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    lastUsedAt        DateTime @default(now())
-    user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    device            Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+    id           String   @id @default(uuid())
+    userId       String
+    deviceId     String
+    refreshToken String   @unique
+    expiresAt    DateTime
+    isValid      Boolean  @default(true)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    lastUsedAt   DateTime @default(now())
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    device       Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
     @@index([refreshToken])
     @@index([userId, deviceId])
 }
 
 model PasswordReset {
-    id                String   @id @default(uuid())
-    userId            String
-    token             String   @unique
-    expiresAt         DateTime
-    isUsed            Boolean  @default(false)
-    createdAt         DateTime @default(now())
-    usedAt            DateTime?
-    ipRequested       String?
-    ipUsed            String?
-    user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id          String    @id @default(uuid())
+    userId      String
+    token       String    @unique
+    expiresAt   DateTime
+    isUsed      Boolean   @default(false)
+    createdAt   DateTime  @default(now())
+    usedAt      DateTime?
+    ipRequested String?
+    ipUsed      String?
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@index([token])
     @@index([userId])
 }
 
 model EmailVerification {
-    id                String   @id @default(uuid())
-    userId            String
-    email             String
-    token             String   @unique
-    expiresAt         DateTime
-    isVerified        Boolean  @default(false)
-    createdAt         DateTime @default(now())
-    verifiedAt        DateTime?
-    user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id         String    @id @default(uuid())
+    userId     String
+    email      String
+    token      String    @unique
+    expiresAt  DateTime
+    isVerified Boolean   @default(false)
+    createdAt  DateTime  @default(now())
+    verifiedAt DateTime?
+    user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@index([token])
     @@index([userId, email])
 }
@@ -132,6 +137,7 @@ model LoginAttempt {
     createdAt         DateTime @default(now())
     userId            String?
     user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
     @@index([email])
     @@index([ipAddress])
     @@index([userId])
@@ -139,15 +145,16 @@ model LoginAttempt {
 }
 
 model MfaRecovery {
-    id                String   @id @default(uuid())
-    userId            String
-    type              MfaRecoveryType
-    code              String
-    isUsed            Boolean  @default(false)
-    createdAt         DateTime @default(now())
-    usedAt            DateTime?
-    expiresAt         DateTime?
-    user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id        String          @id @default(uuid())
+    userId    String
+    type      MfaRecoveryType
+    code      String
+    isUsed    Boolean         @default(false)
+    createdAt DateTime        @default(now())
+    usedAt    DateTime?
+    expiresAt DateTime?
+    user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@index([userId, type])
     @@index([code, isUsed])
 }
@@ -158,32 +165,34 @@ enum MfaRecoveryType {
 }
 
 model Organization {
-    id                String   @id @default(uuid())
-    name              String
-    slug              String?  @unique
-    description       String?
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    members           OrganizationMember[]
-    vaults            Vault[]
-    teams             Team[]
-    invitations       OrganizationInvitation[]
+    id          String                   @id @default(uuid())
+    name        String
+    slug        String?                  @unique
+    description String?
+    createdAt   DateTime                 @default(now())
+    updatedAt   DateTime                 @updatedAt
+    members     OrganizationMember[]
+    vaults      Vault[]
+    teams       Team[]
+    invitations OrganizationInvitation[]
+    roles       OrganizationRole[]
 }
 
 model OrganizationInvitation {
-    id                String   @id @default(uuid())
-    email             String
-    organizationId    String
-    invitedById       String
-    role              Role     @default(MEMBER)
-    token             String   @unique
-    expiresAt         DateTime
-    acceptedAt        DateTime?
-    revokedAt         DateTime?
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    invitedBy         User @relation("UserInvitations", fields: [invitedById], references: [id])
+    id             String       @id @default(uuid())
+    email          String
+    organizationId String
+    invitedById    String
+    roleId         String?
+    token          String       @unique
+    expiresAt      DateTime
+    acceptedAt     DateTime?
+    revokedAt      DateTime?
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    invitedBy      User         @relation("UserInvitations", fields: [invitedById], references: [id])
+
     @@unique([email, organizationId])
     @@index([token])
     @@index([email])
@@ -191,65 +200,70 @@ model OrganizationInvitation {
 }
 
 model OrganizationMember {
-    id                String   @id @default(uuid())
-    organizationId    String
-    userId            String
-    role              Role     @default(MEMBER)
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
-    onboardingState   OnboardingState @default(IN_PROGRESS) @map("onboardingStatus")
-    onboardingStep    Int      @default(1)
+    id                    String            @id @default(uuid())
+    organizationId        String
+    userId                String
+    roleId                String?
+    createdAt             DateTime          @default(now())
+    updatedAt             DateTime          @updatedAt
+    organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    role                  OrganizationRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+    onboardingState       OnboardingState   @default(IN_PROGRESS) @map("onboardingStatus")
+    onboardingStep        Int               @default(1)
     onboardingCompletedAt DateTime?
+
+    @@unique([organizationId, userId])
     @@index([organizationId])
     @@index([userId])
-    @@unique([organizationId, userId])
 }
 
 model Vault {
-    id                String   @id @default(uuid())
-    name              String
-    description       String?
-    organizationId    String
-    createdById       String
-    passwordHash      String?
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    tags              String[] @default([])
-    organization      Organization @relation(fields: [organizationId], references: [id])
-    createdBy         User @relation("VaultCreator", fields: [createdById], references: [id])
-    keys              Key[]
-    permissions       VaultBinding[]
-    secrets           Secret[]
+    id             String         @id @default(uuid())
+    name           String
+    description    String?
+    organizationId String
+    createdById    String
+    passwordHash   String?
+    createdAt      DateTime       @default(now())
+    updatedAt      DateTime       @updatedAt
+    tags           String[]       @default([])
+    organization   Organization   @relation(fields: [organizationId], references: [id])
+    createdBy      User           @relation("VaultCreator", fields: [createdById], references: [id])
+    keys           Key[]
+    permissions    VaultBinding[]
+    secrets        Secret[]
+    secretGroups   SecretGroup[]
+
     @@unique([organizationId, name])
 }
 
 model Key {
-    id                String   @id @default(uuid())
-    name              String
-    description       String?
-    vaultId           String
-    createdById       String
-    currentVersionId  String?
-    valueType         KeyValueType @default(STRING)
-    tags              String[]
-    metadata          Json?
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    vault             Vault @relation(fields: [vaultId], references: [id], onDelete: Cascade)
-    createdBy         User @relation("KeyCreator", fields: [createdById], references: [id])
-    versions          KeyVersion[]
-    currentVersion    KeyVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
-    permissions       KeyBinding[]
-    shares            KeyShare[]
-    oneTimeShares     OneTimeShare[]
-    secrets           Secret[]
+    id               String         @id @default(uuid())
+    name             String
+    description      String?
+    vaultId          String
+    createdById      String
+    currentVersionId String?
+    valueType        KeyValueType   @default(STRING)
+    tags             String[]
+    metadata         Json?
+    createdAt        DateTime       @default(now())
+    updatedAt        DateTime       @updatedAt
+    vault            Vault          @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+    createdBy        User           @relation("KeyCreator", fields: [createdById], references: [id])
+    versions         KeyVersion[]
+    currentVersion   KeyVersion?    @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+    permissions      KeyBinding[]
+    shares           KeyShare[]
+    oneTimeShares    OneTimeShare[]
+    secrets          Secret[]
+
     @@unique([vaultId, name])
 }
 
 model KeyVersion {
-    id                String   @id @default(uuid())
+    id                String         @id @default(uuid())
     keyId             String
     versionNumber     Int
     encryptedValue    String
@@ -258,46 +272,48 @@ model KeyVersion {
     kmsProvider       String?
     createdById       String
     commitMessage     String?
-    createdAt         DateTime @default(now())
+    createdAt         DateTime       @default(now())
     expiresAt         DateTime?
     rotatedAt         DateTime?
-    key               Key @relation(fields: [keyId], references: [id], onDelete: Cascade)
-    createdBy         User @relation("KeyVersionCreator", fields: [createdById], references: [id])
-    currentVersionFor Key[] @relation("CurrentVersion")
+    key               Key            @relation(fields: [keyId], references: [id], onDelete: Cascade)
+    createdBy         User           @relation("KeyVersionCreator", fields: [createdById], references: [id])
+    currentVersionFor Key[]          @relation("CurrentVersion")
     oneTimeShares     OneTimeShare[]
+
     @@unique([keyId, versionNumber])
 }
 
 model KeyShare {
-    id                       String   @id @default(uuid())
-    keyId                    String
-    userId                   String?
-    teamId                   String?   @map("groupId")
-    encryptedDataKey        String
-    algorithm                String
-    createdAt                DateTime @default(now())
-    revokedAt                DateTime?
-    key                      Key      @relation(fields: [keyId], references: [id], onDelete: Cascade)
-    user                     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    team                     Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    id               String    @id @default(uuid())
+    keyId            String
+    userId           String?
+    teamId           String?   @map("groupId")
+    encryptedDataKey String
+    algorithm        String
+    createdAt        DateTime  @default(now())
+    revokedAt        DateTime?
+    key              Key       @relation(fields: [keyId], references: [id], onDelete: Cascade)
+    user             User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    team             Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+    @@unique([keyId, userId])
+    @@unique([keyId, teamId])
     @@index([keyId])
     @@index([userId])
     @@index([teamId])
-    @@unique([keyId, userId])
-    @@unique([keyId, teamId])
 }
 
 model OneTimeShare {
-    id                 String   @id @default(uuid())
+    id                 String      @id @default(uuid())
     keyId              String
     keyVersionId       String?
     createdById        String
-    token              String   @unique
-    requirePassphrase  Boolean  @default(false)
+    token              String      @unique
+    requirePassphrase  Boolean     @default(false)
     expiresAt          DateTime
     consumedAt         DateTime?
     consumedByIp       String?
-    redemptionAttempts Int      @default(0)
+    redemptionAttempts Int         @default(0)
     lastAttemptAt      DateTime?
     audienceEmail      String?
     note               String?
@@ -306,109 +322,117 @@ model OneTimeShare {
     encryptedDataKey   String?
     encryptedValue     String?
     encryptedBlob      String?
-    createdAt          DateTime @default(now())
-    updatedAt          DateTime @updatedAt
-    key                Key      @relation(fields: [keyId], references: [id], onDelete: Cascade)
+    createdAt          DateTime    @default(now())
+    updatedAt          DateTime    @updatedAt
+    key                Key         @relation(fields: [keyId], references: [id], onDelete: Cascade)
     keyVersion         KeyVersion? @relation(fields: [keyVersionId], references: [id], onDelete: SetNull)
-    createdBy          User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+    createdBy          User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
     @@index([keyId])
     @@index([expiresAt])
     @@index([consumedAt])
 }
 
 model TemporaryKey {
-    id                String   @id @default(uuid())
-    name              String?
-    encryptedValue    String
-    encryptionMethod  String
-    createdById       String
-    token             String   @unique
-    expiresAt         DateTime
-    isUsed            Boolean  @default(false)
-    usedAt            DateTime?
-    usedByIp          String?
-    redemptionAttempts Int     @default(0)
-    lastAttemptAt     DateTime?
-    audienceEmail     String?
-    note              String?
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    createdBy         User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+    id                 String    @id @default(uuid())
+    name               String?
+    encryptedValue     String
+    encryptionMethod   String
+    createdById        String
+    token              String    @unique
+    expiresAt          DateTime
+    isUsed             Boolean   @default(false)
+    usedAt             DateTime?
+    usedByIp           String?
+    redemptionAttempts Int       @default(0)
+    lastAttemptAt      DateTime?
+    audienceEmail      String?
+    note               String?
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime  @updatedAt
+    createdBy          User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
     @@index([token])
     @@index([expiresAt])
     @@index([isUsed])
 }
 
 model VaultBinding {
-    id                String         @id @default(uuid())
-    userId            String?
-    teamId            String?        @map("groupId")
-    vaultId           String
-    permissionLevel   PermissionLevel
-    createdAt         DateTime       @default(now())
-    updatedAt         DateTime       @updatedAt
-    user              User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-    team              Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-    vault             Vault          @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+    id              String          @id @default(uuid())
+    userId          String?
+    teamId          String?         @map("groupId")
+    vaultId         String
+    permissionLevel PermissionLevel
+    createdAt       DateTime        @default(now())
+    updatedAt       DateTime        @updatedAt
+    user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    team            Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    vault           Vault           @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
     @@unique([userId, vaultId])
     @@unique([teamId, vaultId])
     @@map("VaultPermission")
 }
 
 model KeyBinding {
-    id                String         @id @default(uuid())
-    userId            String?
-    teamId            String?        @map("groupId")
-    keyId             String
-    permissionLevel   PermissionLevel
-    createdAt         DateTime       @default(now())
-    updatedAt         DateTime       @updatedAt
-    user              User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-    team              Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-    key               Key            @relation(fields: [keyId], references: [id], onDelete: Cascade)
+    id              String          @id @default(uuid())
+    userId          String?
+    teamId          String?         @map("groupId")
+    keyId           String
+    permissionLevel PermissionLevel
+    createdAt       DateTime        @default(now())
+    updatedAt       DateTime        @updatedAt
+    user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    team            Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    key             Key             @relation(fields: [keyId], references: [id], onDelete: Cascade)
+
     @@unique([userId, keyId])
     @@unique([teamId, keyId])
     @@map("KeyPermission")
 }
 
 model Team {
-    id                String   @id @default(uuid())
-    name              String
-    description       String?
-    organizationId    String
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    members           TeamMember[]
-    vaultBindings     VaultBinding[]
-    keyBindings       KeyBinding[]
-    keyShares         KeyShare[]
+    id                  String               @id @default(uuid())
+    name                String
+    description         String?
+    organizationId      String
+    createdAt           DateTime             @default(now())
+    updatedAt           DateTime             @updatedAt
+    organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    members             TeamMember[]
+    vaultBindings       VaultBinding[]
+    keyBindings         KeyBinding[]
+    secretGroupBindings SecretGroupBinding[]
+    keyShares           KeyShare[]
+
     @@unique([organizationId, name])
     @@map("Group")
 }
 
 model TeamMember {
-    id                String   @id @default(uuid())
-    teamId            String   @map("groupId")
-    userId            String
-    createdAt         DateTime @default(now())
-    team              Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-    user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id        String   @id @default(uuid())
+    teamId    String   @map("groupId")
+    userId    String
+    createdAt DateTime @default(now())
+    team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@unique([teamId, userId])
     @@map("GroupMember")
 }
 
 model AuditLog {
-    id                String      @id @default(uuid())
-    userId            String?
-    action            AuditAction
-    resourceType      ResourceType
-    resourceId        String?
-    details           Json
-    ipAddress         String?
-    userAgent         String?
-    createdAt         DateTime    @default(now())
-    user              User?       @relation("UserActivity", fields: [userId], references: [id], onDelete: SetNull)
+    id           String       @id @default(uuid())
+    userId       String?
+    action       AuditAction
+    resourceType ResourceType
+    resourceId   String?
+    details      Json
+    ipAddress    String?
+    userAgent    String?
+    createdAt    DateTime     @default(now())
+    user         User?        @relation("UserActivity", fields: [userId], references: [id], onDelete: SetNull)
+
     @@index([createdAt])
     @@index([userId])
     @@index([resourceType, resourceId])
@@ -445,6 +469,8 @@ enum ResourceType {
     DEVICE
     ONBOARDING
     TEMPORARY_KEY
+    SECRET_GROUP
+    ORGANIZATION_ROLE
 }
 
 enum PermissionLevel {
@@ -476,29 +502,38 @@ enum AuditAction {
     UPDATE_SECRET
     DELETE_SECRET
     ROTATE_SECRET
+    CREATE_SECRET_GROUP
+    UPDATE_SECRET_GROUP
+    DELETE_SECRET_GROUP
+    CREATE_ORG_ROLE
+    UPDATE_ORG_ROLE
+    DELETE_ORG_ROLE
 }
 
 model Secret {
-    id                String   @id @default(uuid())
-    name              String
-    description       String?
-    vaultId           String
-    keyId             String
-    currentVersionId  String?
-    passwordHash      String?
-    createdById       String
-    metadata          Json?
-    tags              String[] @default([])
-    expiresAt         DateTime?
-    lastAccessedAt    DateTime?
-    accessCount       Int      @default(0)
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    vault             Vault @relation(fields: [vaultId], references: [id], onDelete: Cascade)
-    key               Key @relation(fields: [keyId], references: [id], onDelete: Restrict)
-    createdBy         User @relation("SecretCreator", fields: [createdById], references: [id])
-    versions          SecretVersion[]
-    currentVersion    SecretVersion? @relation("CurrentSecretVersion", fields: [currentVersionId], references: [id])
+    id               String          @id @default(uuid())
+    name             String
+    description      String?
+    vaultId          String
+    secretGroupId    String?
+    keyId            String
+    currentVersionId String?
+    passwordHash     String?
+    createdById      String
+    metadata         Json?
+    tags             String[]        @default([])
+    expiresAt        DateTime?
+    lastAccessedAt   DateTime?
+    accessCount      Int             @default(0)
+    createdAt        DateTime        @default(now())
+    updatedAt        DateTime        @updatedAt
+    vault            Vault           @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+    secretGroup      SecretGroup?    @relation(fields: [secretGroupId], references: [id], onDelete: SetNull)
+    key              Key             @relation(fields: [keyId], references: [id], onDelete: Restrict)
+    createdBy        User            @relation("SecretCreator", fields: [createdById], references: [id])
+    versions         SecretVersion[]
+    currentVersion   SecretVersion?  @relation("CurrentSecretVersion", fields: [currentVersionId], references: [id])
+
     @@unique([vaultId, name])
     @@index([keyId])
     @@index([createdById])
@@ -506,19 +541,68 @@ model Secret {
 }
 
 model SecretVersion {
-    id                String   @id @default(uuid())
+    id                String    @id @default(uuid())
     secretId          String
     versionNumber     Int
     encryptedValue    String
     encryptionContext Json?
     createdById       String
     commitMessage     String?
-    createdAt         DateTime @default(now())
+    createdAt         DateTime  @default(now())
     expiresAt         DateTime?
-    secret            Secret @relation(fields: [secretId], references: [id], onDelete: Cascade)
-    createdBy         User @relation("SecretVersionCreator", fields: [createdById], references: [id])
-    currentVersionFor Secret[] @relation("CurrentSecretVersion")
+    secret            Secret    @relation(fields: [secretId], references: [id], onDelete: Cascade)
+    createdBy         User      @relation("SecretVersionCreator", fields: [createdById], references: [id])
+    currentVersionFor Secret[]  @relation("CurrentSecretVersion")
+
     @@unique([secretId, versionNumber])
     @@index([secretId])
     @@index([createdById])
+}
+
+model OrganizationRole {
+    id             String               @id @default(uuid())
+    organizationId String
+    name           String
+    description    String?
+    permissions    Json                 @default("[]")
+    isDefault      Boolean              @default(false)
+    createdAt      DateTime             @default(now())
+    updatedAt      DateTime             @updatedAt
+    organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    members        OrganizationMember[]
+
+    @@unique([organizationId, name])
+}
+
+model SecretGroup {
+    id          String               @id @default(uuid())
+    name        String
+    description String?
+    vaultId     String
+    parentId    String?
+    createdAt   DateTime             @default(now())
+    updatedAt   DateTime             @updatedAt
+    vault       Vault                @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+    parent      SecretGroup?         @relation("SecretGroupHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+    children    SecretGroup[]        @relation("SecretGroupHierarchy")
+    secrets     Secret[]
+    bindings    SecretGroupBinding[]
+
+    @@unique([vaultId, parentId, name])
+}
+
+model SecretGroupBinding {
+    id              String          @id @default(uuid())
+    userId          String?
+    teamId          String?         @map("groupId")
+    secretGroupId   String
+    permissionLevel PermissionLevel
+    createdAt       DateTime        @default(now())
+    updatedAt       DateTime        @updatedAt
+    user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    team            Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+    secretGroup     SecretGroup     @relation(fields: [secretGroupId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, secretGroupId])
+    @@unique([teamId, secretGroupId])
 }

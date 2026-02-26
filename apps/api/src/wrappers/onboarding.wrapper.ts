@@ -12,6 +12,7 @@ import {
 } from "@hermes/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
+import { RolePermissions } from "../constants/permissions";
 
 function toSlug(input: string): string {
   return input
@@ -34,6 +35,7 @@ export const onboardingWrapper = {
       include: {
         organizations: {
           include: {
+            role: true,
             organization: {
               include: {
                 vaults: {
@@ -69,7 +71,7 @@ export const onboardingWrapper = {
         ? {
             id: firstMembership.organization.id,
             name: firstMembership.organization.name,
-            role: firstMembership.role,
+            role: firstMembership.role?.name,
           }
         : null,
     };
@@ -110,14 +112,45 @@ export const onboardingWrapper = {
           name,
           slug: `${toSlug(name)}-${Math.random().toString(36).slice(2, 8)}`,
           description,
-          members: {
-            create: {
-              userId,
-              role: "OWNER",
-              onboardingState: "IN_PROGRESS",
-              onboardingStep: 2, // Move to step 2 after org creation
-            },
+        },
+      });
+
+      const ownerRole = await tx.organizationRole.create({
+        data: {
+          organizationId: organization.id,
+          name: "OWNER",
+          description: "Full administrative access",
+          permissions: RolePermissions["OWNER"],
+          isDefault: false,
+        },
+      });
+
+      await tx.organizationRole.createMany({
+        data: [
+          {
+            organizationId: organization.id,
+            name: "ADMIN",
+            description: "Administrative access",
+            permissions: RolePermissions["ADMIN"],
+            isDefault: false,
           },
+          {
+            organizationId: organization.id,
+            name: "MEMBER",
+            description: "Standard member access",
+            permissions: RolePermissions["MEMBER"],
+            isDefault: true,
+          },
+        ],
+      });
+
+      await tx.organizationMember.create({
+        data: {
+          organizationId: organization.id,
+          userId,
+          roleId: ownerRole.id,
+          onboardingState: "IN_PROGRESS",
+          onboardingStep: 2, // Move to step 2 after org creation
         },
       });
 

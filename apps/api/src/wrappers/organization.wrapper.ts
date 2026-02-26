@@ -11,11 +11,11 @@ import {
   AuthorizationError,
   ConflictError,
 } from "@hermes/error-handling";
-import { Role } from "@hermes/prisma";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
+import { RolePermissions } from "../constants/permissions";
 
-const ADMIN_ROLES: Role[] = ["ADMIN", "OWNER"];
+const ADMIN_ROLES: string[] = ["ADMIN", "OWNER"];
 
 function toSlug(input: string): string {
   return input
@@ -30,6 +30,7 @@ async function requireMembership(userId: string, organizationId: string) {
   const prisma = getPrismaClient();
   const membership = await prisma.organizationMember.findUnique({
     where: { organizationId_userId: { organizationId, userId } },
+    include: { role: true },
   });
 
   if (!membership) {
@@ -44,7 +45,7 @@ async function requireMembership(userId: string, organizationId: string) {
 
 async function requireOrgAdmin(userId: string, organizationId: string) {
   const membership = await requireMembership(userId, organizationId);
-  if (!ADMIN_ROLES.includes(membership.role)) {
+  if (!membership.role || !ADMIN_ROLES.includes(membership.role.name)) {
     throw new AuthorizationError(
       ErrorCode.INSUFFICIENT_PERMISSIONS,
       "Admin or Owner role required",
@@ -76,14 +77,45 @@ export const organizationWrapper = {
           name: name.trim(),
           slug: `${toSlug(name)}-${crypto.randomBytes(3).toString("hex")}`,
           description,
-          members: {
-            create: {
-              userId,
-              role: "OWNER",
-              onboardingState: "IN_PROGRESS",
-              onboardingStep: 1,
-            },
+        },
+      });
+
+      const ownerRole = await tx.organizationRole.create({
+        data: {
+          organizationId: organization.id,
+          name: "OWNER",
+          description: "Full administrative access",
+          permissions: RolePermissions["OWNER"],
+          isDefault: false,
+        },
+      });
+
+      await tx.organizationRole.createMany({
+        data: [
+          {
+            organizationId: organization.id,
+            name: "ADMIN",
+            description: "Administrative access",
+            permissions: RolePermissions["ADMIN"],
+            isDefault: false,
           },
+          {
+            organizationId: organization.id,
+            name: "MEMBER",
+            description: "Standard member access",
+            permissions: RolePermissions["MEMBER"],
+            isDefault: true,
+          },
+        ],
+      });
+
+      await tx.organizationMember.create({
+        data: {
+          organizationId: organization.id,
+          userId,
+          roleId: ownerRole.id,
+          onboardingState: "IN_PROGRESS",
+          onboardingStep: 1,
         },
       });
 
@@ -124,6 +156,7 @@ export const organizationWrapper = {
     const memberships = await prisma.organizationMember.findMany({
       where: { userId },
       include: {
+        role: true,
         organization: {
           include: {
             _count: {
@@ -156,7 +189,7 @@ export const organizationWrapper = {
     return {
       organizations: memberships.map((m) => ({
         ...m.organization,
-        userRole: m.role,
+        userRole: m.role?.name,
       })),
     };
   },
@@ -205,7 +238,7 @@ export const organizationWrapper = {
     return {
       organization: {
         ...organization,
-        userRole: membership.role,
+        userRole: membership.role?.name,
       },
     };
   },
@@ -312,7 +345,7 @@ export const organizationWrapper = {
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
     const membership = await requireMembership(userId, organizationId);
-    if (membership.role !== "OWNER") {
+    if (membership.role?.name !== "OWNER") {
       throw new AuthorizationError(
         ErrorCode.INSUFFICIENT_PERMISSIONS,
         "Only owners can delete an organization",
@@ -338,7 +371,7 @@ export const organizationWrapper = {
   async inviteUser(
     userId: string,
     organizationId: string,
-    data: { email: string; role?: Role },
+    data: { email: string; role?: string },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
     await requireOrgAdmin(userId, organizationId);
@@ -368,6 +401,7 @@ export const organizationWrapper = {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const targetUser = await prisma.user.findUnique({ where: { email } });
+    const targetRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: role } });
 
     let member: unknown = null;
 
@@ -392,7 +426,7 @@ export const organizationWrapper = {
         data: {
           organizationId,
           userId: targetUser.id,
-          role,
+          roleId: targetRole?.id,
         },
         include: {
           user: {
@@ -413,7 +447,7 @@ export const organizationWrapper = {
         email,
         organizationId,
         invitedById: userId,
-        role,
+        roleId: targetRole?.id,
         token,
         expiresAt,
         acceptedAt: targetUser ? new Date() : null,
@@ -471,7 +505,7 @@ export const organizationWrapper = {
         data: {
           organizationId: invitation.organizationId,
           userId,
-          role: invitation.role,
+          roleId: invitation.roleId,
         },
       });
     }
@@ -500,15 +534,17 @@ export const organizationWrapper = {
           userId: targetUserId,
         },
       },
+      include: { role: true },
     });
 
     if (!target) {
       throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Member not found");
     }
 
-    if (target.role === "OWNER") {
+    if (target.role?.name === "OWNER") {
+      const ownerRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: "OWNER" }});
       const ownerCount = await prisma.organizationMember.count({
-        where: { organizationId, role: "OWNER" },
+        where: { organizationId, roleId: ownerRole?.id },
       });
 
       if (ownerCount <= 1) {
@@ -545,11 +581,11 @@ export const organizationWrapper = {
     userId: string,
     organizationId: string,
     targetUserId: string,
-    role: Role,
+    role: string,
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
     const membership = await requireMembership(userId, organizationId);
-    if (membership.role !== "OWNER") {
+    if (membership.role?.name !== "OWNER") {
       throw new AuthorizationError(
         ErrorCode.INSUFFICIENT_PERMISSIONS,
         "Only owners can update member roles",
@@ -564,15 +600,17 @@ export const organizationWrapper = {
           userId: targetUserId,
         },
       },
+      include: { role: true },
     });
 
     if (!target) {
       throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Member not found");
     }
 
-    if (target.role === "OWNER" && role !== "OWNER") {
+    if (target.role?.name === "OWNER" && role !== "OWNER") {
+      const ownerRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: "OWNER" }});
       const ownerCount = await prisma.organizationMember.count({
-        where: { organizationId, role: "OWNER" },
+        where: { organizationId, roleId: ownerRole?.id },
       });
 
       if (ownerCount <= 1) {
@@ -583,6 +621,9 @@ export const organizationWrapper = {
       }
     }
 
+    const targetRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: role } });
+    if (!targetRole) throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Target role not found");
+
     const updatedMember = await prisma.organizationMember.update({
       where: {
         organizationId_userId: {
@@ -590,7 +631,7 @@ export const organizationWrapper = {
           userId: targetUserId,
         },
       },
-      data: { role },
+      data: { roleId: targetRole.id },
       include: {
         user: {
           select: {

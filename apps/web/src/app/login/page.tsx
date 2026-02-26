@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLogin, useRegister } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,11 @@ import {
 } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl");
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +37,7 @@ export default function LoginPage() {
       login(
         { email, password },
         {
-          onSuccess: () => router.push("/dashboard"),
+          onSuccess: () => router.push(returnUrl || "/dashboard"),
         },
       );
     } else {
@@ -47,7 +50,7 @@ export default function LoginPage() {
           username: username || undefined,
         },
         {
-          onSuccess: () => router.push("/onboarding"),
+          onSuccess: () => router.push(returnUrl || "/onboarding"),
         },
       );
     }
@@ -147,5 +150,17 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/50 to-accent/10 p-4">
+        Loading...
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -9,17 +9,12 @@ const encryptedPayload = JSON.parse(
   fs.readFileSync("./encrypted_body.json", "utf8"),
 ).encrypted_payload;
 
-const password = process.argv[2];
+const password = process.argv[2] || ""; // Allow empty password for unencrypted keys
 const argPrivateKeyPath = process.argv[3];
-
-if (!password) {
-  console.error("Usage: node decrypt_payload.js <password>");
-  process.exit(1);
-}
 
 const privateKeyPath =
   argPrivateKeyPath ??
-  path.join(__dirname, "apps", "hcv_engine", "src", "private_key.pem");
+  path.join(__dirname, "apps", "hcv_engine", "scripts", "key.pem");
 
 try {
   const privateKeyPem = fs.readFileSync(privateKeyPath, "utf8");
@@ -27,7 +22,8 @@ try {
   const tempEncFile = path.join(__dirname, "temp_encrypted.der");
   fs.writeFileSync(tempEncFile, Buffer.from(encryptedPayload, "base64"));
 
-  const command = `openssl smime -decrypt -in "${tempEncFile}" -inform DER -inkey "${privateKeyPath}" -passin pass:"${password}"`;
+  const passinArg = password ? ` -passin pass:"${password}"` : "";
+  const command = `openssl smime -decrypt -in "${tempEncFile}" -inform DER -inkey "${privateKeyPath}"${passinArg}`;
 
   try {
     const decryptedData = execSync(command, { encoding: "utf8" });

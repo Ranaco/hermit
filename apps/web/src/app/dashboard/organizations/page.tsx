@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
   useOrganizations,
@@ -158,10 +159,24 @@ export default function OrganizationsPage() {
         data: { email: inviteEmail, role: inviteRole },
       },
       {
-        onSuccess: () => {
+        onSuccess: (data: any) => {
           setInviteEmail("");
           setInviteRole("MEMBER");
           setShowInviteForm(false);
+          
+          if (data?.invitation?.token) {
+            const inviteLink = `${window.location.origin}/invite?token=${data.invitation.token}`;
+            toast.success("User invited successfully!", {
+              description: "Share this link: " + inviteLink,
+              duration: 10000,
+              action: {
+                label: "Copy Link",
+                onClick: () => navigator.clipboard.writeText(inviteLink),
+              },
+            });
+          } else {
+            toast.success("User added to organization successfully");
+          }
         },
       },
     );

@@ -1,4 +1,4 @@
-path "secret/data/medusa_vault/*" {
+path "secret/data/hermes_vault/*" {
   capabilities = ["read", "list"]
 }
 

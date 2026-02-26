@@ -16,7 +16,7 @@ export const createKey = asyncHandler(async (req: Request, res: Response) => {
     throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
   }
 
-  const { name, description, vaultId } = req.body;
+  const { name, description, vaultId, valueType, tags, metadata } = req.body;
 
   if (!name || !vaultId) {
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Name and vault ID are required');
@@ -26,6 +26,9 @@ export const createKey = asyncHandler(async (req: Request, res: Response) => {
     name,
     description,
     vaultId,
+    valueType,
+    tags,
+    metadata,
   }, {
     ipAddress: req.ip || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown',

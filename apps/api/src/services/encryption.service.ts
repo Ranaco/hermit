@@ -9,9 +9,19 @@ import config from "../config";
 // Initialize Vault service using factory exported by the vault-client package
 const vaultService = createVaultService({
   endpoint: config.vault.endpoint,
-  token: config.vault.token ?? "",
+  token: config.vault.token || undefined,
   namespace: config.vault.namespace,
   transitMount: config.vault.transitMount,
+  appRole: (config.vault.appRole.readRoleId && config.vault.appRole.readSecretId) ? {
+    roleId: config.vault.appRole.readRoleId, // Using read role for base ops right now
+    secretId: config.vault.appRole.readSecretId,
+  } : undefined,
+} as any); // Cast to any because the exported types from the built package might not be immediately synced
+
+// Immediately initialize the service when imported so it establishes AppRole token if needed
+(vaultService as any).initialize().catch((err: any) => {
+  // We log this but don't strictly crash the node process since VaultHealth middleware handles the 503s gracefully
+  console.error("Failed to initialize VaultService (AppRole token fetch)", err);
 });
 
 /**

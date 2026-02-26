@@ -1,5 +1,10 @@
 # Bug Fixes Summary
 
+## Latest Versioned Update
+
+- `2026-02-22`: KMS hard revamp summary and current project state  
+  See: `docs/updates/2026-02-22-kms-hard-revamp/README.md`
+
 ## Issues Fixed
 
 ### Issue 1: Vault Transit Engine Key Name Error ✅

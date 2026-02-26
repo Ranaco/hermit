@@ -16,7 +16,7 @@ export const createVault = asyncHandler(async (req: Request, res: Response) => {
     throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
   }
 
-  const { name, description, organizationId } = req.body;
+  const { name, description, organizationId, password } = req.body;
 
   if (!name) {
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, 'Vault name is required');
@@ -30,6 +30,7 @@ export const createVault = asyncHandler(async (req: Request, res: Response) => {
     name,
     description,
     organizationId,
+    password,
   }, {
     ipAddress: req.ip || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown',
@@ -92,11 +93,12 @@ export const updateVault = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const { id } = req.params;
-  const { name, description } = req.body;
+  const { name, description, password } = req.body;
 
   const result = await vaultWrapper.updateVault(req.user.id, id, {
     name,
     description,
+    password,
   }, {
     ipAddress: req.ip || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown',

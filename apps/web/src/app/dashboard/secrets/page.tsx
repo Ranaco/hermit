@@ -22,11 +22,15 @@ export default function SecretsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
   const [revealedSecrets, setRevealedSecrets] = useState<Record<string, string>>({});
+  const [activePrompt, setActivePrompt] = useState<string | null>(null);
+  const [revealPassword, setRevealPassword] = useState("");
+  const [isRevealing, setIsRevealing] = useState<string | null>(null);
   const [newSecret, setNewSecret] = useState({
     name: "",
     description: "",
     value: "",
     keyId: "",
+    password: "",
   });
 
   const { data: secrets, isLoading: secretsLoading } = useSecrets(currentVault?.id);
@@ -39,10 +43,10 @@ export default function SecretsPage() {
     [secrets?.secrets, searchQuery],
   );
 
-  const toggleSecretVisibility = async (secretId: string) => {
+  const toggleSecretVisibility = async (secretId: string, providedPassword?: string) => {
     const nextVisible = new Set(visibleSecrets);
 
-    if (nextVisible.has(secretId)) {
+    if (nextVisible.has(secretId) && !providedPassword) {
       nextVisible.delete(secretId);
       setVisibleSecrets(nextVisible);
       setRevealedSecrets((prev) => {
@@ -50,23 +54,35 @@ export default function SecretsPage() {
         delete updated[secretId];
         return updated;
       });
+      setActivePrompt(null);
+      setRevealPassword("");
       return;
     }
 
-    const response = await secretService.reveal(secretId);
-    if (response.requiresPassword) {
-      toast.error("Secret requires additional password verification");
-      return;
+    setIsRevealing(secretId);
+    try {
+      const response = await secretService.reveal(secretId, { password: providedPassword });
+      
+      if (response.requiresPassword) {
+        setActivePrompt(secretId);
+        if (providedPassword) {
+          toast.error("Incorrect password");
+          setRevealPassword("");
+        }
+      } else if (response.secret?.value) {
+        nextVisible.add(secretId);
+        setVisibleSecrets(nextVisible);
+        setRevealedSecrets((prev) => ({ ...prev, [secretId]: response.secret?.value || "" }));
+        setActivePrompt(null);
+        setRevealPassword("");
+      } else {
+        toast.error("Unable to reveal secret value");
+      }
+    } catch (error) {
+      toast.error("Failed to reveal secret");
+    } finally {
+      setIsRevealing(null);
     }
-
-    if (response.secret?.value) {
-      nextVisible.add(secretId);
-      setVisibleSecrets(nextVisible);
-      setRevealedSecrets((prev) => ({ ...prev, [secretId]: response.secret?.value || "" }));
-      return;
-    }
-
-    toast.error("Unable to reveal secret value");
   };
 
   const copySecret = async (secretId: string) => {
@@ -83,12 +99,13 @@ export default function SecretsPage() {
     createSecret(
       {
         ...newSecret,
+        password: newSecret.password || undefined,
         vaultId: currentVault.id,
       },
       {
         onSuccess: () => {
           setShowCreateForm(false);
-          setNewSecret({ name: "", description: "", value: "", keyId: "" });
+          setNewSecret({ name: "", description: "", value: "", keyId: "", password: "" });
         },
       },
     );
@@ -171,8 +188,19 @@ export default function SecretsPage() {
                   required
                 />
               </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-password">Protection Password (Optional)</Label>
+                <Input
+                  id="secret-password"
+                  type="password"
+                  value={newSecret.password}
+                  onChange={(e) => setNewSecret({ ...newSecret, password: e.target.value })}
+                  placeholder="Leave blank for no password"
+                  minLength={8}
+                />
+              </div>
               <div className="md:col-span-2 flex gap-2">
-                <Button type="submit" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId}>
+                <Button type="submit" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId || (newSecret.password.length > 0 && newSecret.password.length < 8)}>
                   {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Create
                 </Button>
@@ -181,7 +209,7 @@ export default function SecretsPage() {
                   variant="outline"
                   onClick={() => {
                     setShowCreateForm(false);
-                    setNewSecret({ name: "", description: "", value: "", keyId: "" });
+                    setNewSecret({ name: "", description: "", value: "", keyId: "", password: "" });
                   }}
                 >
                   Cancel
@@ -231,19 +259,57 @@ export default function SecretsPage() {
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">{secret.description || "No description"}</p>
 
-                        <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-2 py-1.5">
-                          <code className="min-w-0 flex-1 truncate text-xs">
-                            {visibleSecrets.has(secret.id) ? revealedSecrets[secret.id] || "loading..." : "••••••••••••••••"}
-                          </code>
-                          <Button variant="ghost" size="icon" onClick={() => toggleSecretVisibility(secret.id)}>
-                            {visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                          {visibleSecrets.has(secret.id) ? (
-                            <Button variant="ghost" size="icon" onClick={() => copySecret(secret.id)}>
-                              <Copy className="h-4 w-4" />
+                        {activePrompt === secret.id ? (
+                          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-2 py-1.5">
+                            <Input
+                              type="password"
+                              placeholder="Enter secret password..."
+                              className="h-7 text-xs"
+                              value={revealPassword}
+                              onChange={(e) => setRevealPassword(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  toggleSecretVisibility(secret.id, revealPassword);
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              className="h-7"
+                              disabled={isRevealing === secret.id || !revealPassword}
+                              onClick={() => toggleSecretVisibility(secret.id, revealPassword)}
+                            >
+                              {isRevealing === secret.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
                             </Button>
-                          ) : null}
-                        </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => {
+                                setActivePrompt(null);
+                                setRevealPassword("");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-2 py-1.5">
+                            <code className="min-w-0 flex-1 truncate text-xs">
+                              {visibleSecrets.has(secret.id) ? revealedSecrets[secret.id] || "loading..." : "••••••••••••••••"}
+                            </code>
+                            <Button variant="ghost" size="icon" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
+                              {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            {visibleSecrets.has(secret.id) ? (
+                              <Button variant="ghost" size="icon" onClick={() => copySecret(secret.id)}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            ) : null}
+                          </div>
+                        )}
 
                         <p className="mt-2 text-xs text-muted-foreground">Updated {formatDateTime(secret.updatedAt)}</p>
                       </div>

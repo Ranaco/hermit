@@ -13,36 +13,13 @@ import {
 import { PermissionLevel } from "@hermes/prisma";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
+import { hashPassword } from "../utils/password";
 
 async function requireVaultAdmin(userId: string, vaultId: string) {
   const prisma = getPrismaClient();
 
-  const vault = await prisma.vault.findFirst({
-    where: {
-      id: vaultId,
-      OR: [
-        {
-          permissions: {
-            some: {
-              userId,
-              permissionLevel: "ADMIN" as const,
-            },
-          },
-        },
-        {
-          permissions: { some: { team: {
-                members: {
-                  some: {
-                    userId,
-                  },
-                },
-              },
-              permissionLevel: "ADMIN" as const,
-            },
-          },
-        },
-      ],
-    },
+  const vault = await prisma.vault.findUnique({
+    where: { id: vaultId },
     include: {
       organization: true,
     },
@@ -51,7 +28,7 @@ async function requireVaultAdmin(userId: string, vaultId: string) {
   if (!vault) {
     throw new NotFoundError(
       ErrorCode.VAULT_NOT_FOUND,
-      "Vault not found or insufficient permissions",
+      "Vault not found",
     );
   }
 
@@ -68,10 +45,11 @@ export const vaultWrapper = {
       name: string;
       description?: string;
       organizationId?: string;
+      password?: string;
     },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { name, description, organizationId } = data;
+    const { name, description, organizationId, password } = data;
     const { ipAddress, userAgent } = auditData;
 
     if (!name) {
@@ -103,10 +81,16 @@ export const vaultWrapper = {
       throw new AuthorizationError(ErrorCode.NOT_ORGANIZATION_MEMBER);
     }
 
+    let passwordHash: string | undefined;
+    if (password) {
+      passwordHash = await hashPassword(password);
+    }
+
     const vault = await prisma.vault.create({
       data: {
         name,
         description,
+        passwordHash,
         organization: {
           connect: { id: organizationId },
         },
@@ -152,38 +136,36 @@ export const vaultWrapper = {
 
     const prisma = getPrismaClient();
 
+    const orgMemberships = await prisma.organizationMember.findMany({
+      where: { userId },
+      include: { role: true },
+    });
+    
+    const adminOrgs = orgMemberships
+      .filter(m => m.role?.name === "ADMIN" || m.role?.name === "OWNER")
+      .map(m => m.organizationId);
+
     const whereClause = {
       OR: [
+        {
+          organizationId: { in: adminOrgs },
+        },
         {
           permissions: {
             some: {
               userId,
               permissionLevel: {
-                in: [
-                  "VIEW" as const,
-                  "USE" as const,
-                  "EDIT" as const,
-                  "ADMIN" as const,
-                ],
+                in: ["VIEW", "USE", "EDIT", "ADMIN"] as PermissionLevel[],
               },
             },
           },
         },
         {
           permissions: { some: { team: {
-                members: {
-                  some: {
-                    userId,
-                  },
-                },
+                members: { some: { userId } },
               },
               permissionLevel: {
-                in: [
-                  "VIEW" as const,
-                  "USE" as const,
-                  "EDIT" as const,
-                  "ADMIN" as const,
-                ],
+                in: ["VIEW", "USE", "EDIT", "ADMIN"] as PermissionLevel[],
               },
             },
           },
@@ -219,46 +201,8 @@ export const vaultWrapper = {
   async getVault(userId: string, vaultId: string) {
     const prisma = getPrismaClient();
 
-    const vault = await prisma.vault.findFirst({
-      where: {
-        id: vaultId,
-        OR: [
-          {
-            permissions: {
-              some: {
-                userId,
-                permissionLevel: {
-                  in: [
-                    "VIEW" as const,
-                    "USE" as const,
-                    "EDIT" as const,
-                    "ADMIN" as const,
-                  ],
-                },
-              },
-            },
-          },
-          {
-            permissions: { some: { team: {
-                  members: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-                permissionLevel: {
-                  in: [
-                    "VIEW" as const,
-                    "USE" as const,
-                    "EDIT" as const,
-                    "ADMIN" as const,
-                  ],
-                },
-              },
-            },
-          },
-        ],
-      },
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId },
       include: {
         organization: {
           select: {
@@ -309,58 +253,34 @@ export const vaultWrapper = {
     data: {
       name?: string;
       description?: string;
+      password?: string;
     },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { name, description } = data;
+    const { name, description, password } = data;
     const { ipAddress, userAgent } = auditData;
 
     const prisma = getPrismaClient();
 
-    // Check if user has write permission (USE, EDIT, or ADMIN level)
-    const vault = await prisma.vault.findFirst({
-      where: {
-        id: vaultId,
-        OR: [
-          {
-            permissions: {
-              some: {
-                userId,
-                permissionLevel: {
-                  in: ["USE" as const, "EDIT" as const, "ADMIN" as const],
-                },
-              },
-            },
-          },
-          {
-            permissions: { some: { team: {
-                  members: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-                permissionLevel: {
-                  in: ["USE" as const, "EDIT" as const, "ADMIN" as const],
-                },
-              },
-            },
-          },
-        ],
-      },
+    // Check if vault exists
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId }
     });
 
     if (!vault) {
       throw new NotFoundError(
         ErrorCode.VAULT_NOT_FOUND,
-        "Vault not found or insufficient permissions",
+        "Vault not found",
       );
     }
 
-    const updateData: Partial<{ name: string; description: string | null }> =
+    const updateData: Partial<{ name: string; description: string | null; passwordHash: string | null }> =
       {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
+    if (password !== undefined) {
+      updateData.passwordHash = password ? await hashPassword(password) : null;
+    }
 
     const updatedVault = await prisma.vault.update({
       where: { id: vaultId },
@@ -400,33 +320,9 @@ export const vaultWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Check if user has delete permission (ADMIN level required)
-    const vault = await prisma.vault.findFirst({
-      where: {
-        id: vaultId,
-        OR: [
-          {
-            permissions: {
-              some: {
-                userId,
-                permissionLevel: "ADMIN" as const,
-              },
-            },
-          },
-          {
-            permissions: { some: { team: {
-                  members: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-                permissionLevel: "ADMIN" as const,
-              },
-            },
-          },
-        ],
-      },
+    // Check if vault exists
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId },
       include: {
         _count: {
           select: {
@@ -439,7 +335,7 @@ export const vaultWrapper = {
     if (!vault) {
       throw new NotFoundError(
         ErrorCode.VAULT_NOT_FOUND,
-        "Vault not found or insufficient permissions",
+        "Vault not found",
       );
     }
 

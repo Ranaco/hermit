@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useVaults, useCreateVault, useDeleteVault } from "@/hooks/use-vaults";
+import { useOrganizations } from "@/hooks/use-organizations";
 import { useOrganizationStore } from "@/store/organization.store";
 import { Plus, Trash2, Search, Vault as VaultIcon, Building2, Loader2, KeyRound } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
@@ -17,8 +18,13 @@ export default function VaultsPage() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [newVault, setNewVault] = useState({ name: "", description: "" });
+  const [newVault, setNewVault] = useState({ 
+    name: "", 
+    description: "", 
+    organizationId: currentOrganization?.id || "" 
+  });
 
+  const { data: organizations } = useOrganizations();
   const { data: vaults, isLoading } = useVaults(currentOrganization?.id);
   const { mutate: createVault, isPending: isCreating } = useCreateVault();
   const { mutate: deleteVault } = useDeleteVault();
@@ -30,17 +36,19 @@ export default function VaultsPage() {
 
   const handleCreateVault = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrganization) return;
+    const targetOrgId = newVault.organizationId || currentOrganization?.id;
+    if (!targetOrgId) return;
 
     createVault(
       {
-        ...newVault,
-        organizationId: currentOrganization.id,
+        name: newVault.name,
+        description: newVault.description,
+        organizationId: targetOrgId,
       },
       {
         onSuccess: () => {
           setShowCreateForm(false);
-          setNewVault({ name: "", description: "" });
+          setNewVault({ name: "", description: "", organizationId: currentOrganization?.id || "" });
         },
       },
     );
@@ -86,7 +94,26 @@ export default function VaultsPage() {
                   required
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
+                <Label htmlFor="vault-org">Organization</Label>
+                <select
+                  id="vault-org"
+                  value={newVault.organizationId || currentOrganization?.id || ""}
+                  onChange={(e) => setNewVault({ ...newVault, organizationId: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm disabled:opacity-50"
+                  disabled={!organizations || organizations.length <= 1}
+                >
+                  {organizations?.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                  {(!organizations || organizations.length === 0) && currentOrganization && (
+                    <option value={currentOrganization.id}>{currentOrganization.name}</option>
+                  )}
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="vault-description">Description</Label>
                 <Input
                   id="vault-description"
@@ -105,7 +132,7 @@ export default function VaultsPage() {
                   variant="outline"
                   onClick={() => {
                     setShowCreateForm(false);
-                    setNewVault({ name: "", description: "" });
+                    setNewVault({ name: "", description: "", organizationId: currentOrganization?.id || "" });
                   }}
                 >
                   Cancel

@@ -37,6 +37,7 @@ export class VaultService {
   private client: vault.client;
   private transitMount: string;
   private config: VaultConfig;
+  private tokenRenewalTimer?: NodeJS.Timeout;
 
   constructor(config: VaultConfig) {
     this.config = config;
@@ -46,7 +47,7 @@ export class VaultService {
     this.client = vault({
       apiVersion: "v1",
       endpoint: config.endpoint,
-      token: config.token,
+      token: config.token, // Can be undefined initially if using approle
       namespace: config.namespace,
       requestOptions: {
         timeout: config.requestTimeout || 5000,
@@ -58,6 +59,107 @@ export class VaultService {
       transitMount: this.transitMount,
       namespace: config.namespace,
     });
+  }
+
+  /**
+   * Initialize service, performs AppRole login if configured
+   */
+  async initialize(): Promise<void> {
+    if (!this.config.token && this.config.appRole) {
+      await this.loginWithAppRole();
+    } else if (this.config.token) {
+      // If we provided a token, try to schedule renewal for it assuming it's renewable
+      await this.scheduleTokenRenewal();
+    }
+  }
+
+  /**
+   * Authenticate with Vault using AppRole
+   */
+  private async loginWithAppRole(): Promise<void> {
+    if (!this.config.appRole) {
+      throw new Error("AppRole configuration missing");
+    }
+
+    try {
+      const { roleId, secretId, mountPoint = "approle" } = this.config.appRole;
+      
+      const response = await this.client.write(`auth/${mountPoint}/login`, {
+        role_id: roleId,
+        secret_id: secretId,
+      });
+
+      const clientToken = response.auth.client_token;
+      
+      // Update client with new token
+      this.client = vault({
+        apiVersion: "v1",
+        endpoint: this.config.endpoint,
+        token: clientToken,
+        namespace: this.config.namespace,
+        requestOptions: {
+          timeout: this.config.requestTimeout || 5000,
+        },
+      });
+
+      log.info("Successfully authenticated with Vault via AppRole");
+      await this.scheduleTokenRenewal(response.auth);
+    } catch (error: any) {
+      if (error?.code === 'ECONNREFUSED' || error?.message?.includes('ECONNREFUSED')) {
+         log.error("Vault connection refused during AppRole login");
+      } else {
+         log.error("Vault AppRole login failed", { error });
+      }
+      // Cannot throw here easily if we want graceful degradation, 
+      // but without a token future calls will fail. The healthcheck middleware handles this safely.
+    }
+  }
+
+  /**
+   * Schedule Vault token renewal
+   */
+  private async scheduleTokenRenewal(authInfo?: any): Promise<void> {
+    if (this.tokenRenewalTimer) {
+      clearTimeout(this.tokenRenewalTimer);
+    }
+
+    try {
+      // If authInfo isn't provided, try to look up the current token
+      const info = authInfo || (await this.client.tokenLookupSelf()).data;
+      
+      if (!info.renewable) {
+        log.debug("Vault token is not renewable");
+        return;
+      }
+
+      // Renew at 90% of the TTL
+      const ttl = info.lease_duration;
+      if (!ttl || ttl === 0) return; // Root tokens or non-expiring
+
+      const renewalDelayMs = Math.max((ttl * 0.9) * 1000, 5000); // At least 5 seconds
+
+      this.tokenRenewalTimer = setTimeout(async () => {
+        try {
+          await this.client.tokenRenewSelf();
+          log.debug("Successfully renewed Vault token");
+          await this.scheduleTokenRenewal(); // Schedule the next one
+        } catch (err) {
+          log.error("Failed to renew Vault token", { error: err });
+          // If renewal fails, attempt to re-login via AppRole if configured
+          if (this.config.appRole) {
+             log.info("Attempting AppRole re-login due to failed token renewal");
+             await this.loginWithAppRole();
+          }
+        }
+      }, renewalDelayMs);
+
+      // Prevent timer from keeping Node process alive
+      if (this.tokenRenewalTimer.unref) {
+        this.tokenRenewalTimer.unref();
+      }
+    } catch (error) {
+      log.error("Failed to schedule Vault token renewal", { error });
+    }
   }
 
   /**

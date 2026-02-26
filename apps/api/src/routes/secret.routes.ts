@@ -5,6 +5,8 @@
 
 import express from "express";
 import { authenticate } from "../middleware/auth";
+import { requireVaultHealth } from "../middleware/vault-health";
+import { requireVaultPermission } from "../middleware/rbac";
 import { validate } from "../validators/validation.middleware";
 import {
   createSecretSchema,
@@ -36,22 +38,33 @@ router.options("/:id/reveal", (req, res) => {
   res.status(200).end();
 });
 
-// All routes require authentication
+// All routes require authentication and vault health
 router.use(authenticate);
+router.use(requireVaultHealth);
 
 /**
  * @route   POST /api/v1/secrets
  * @desc    Create a new encrypted secret
  * @access  Private (requires EDIT or ADMIN permission on vault)
  */
-router.post("/", validate({ body: createSecretSchema }), createSecret);
+router.post(
+  "/",
+  validate({ body: createSecretSchema }),
+  requireVaultPermission("EDIT"),
+  createSecret
+);
 
 /**
  * @route   GET /api/v1/secrets
  * @desc    Get all secrets in a vault (metadata only, no values)
  * @access  Private (requires VIEW permission on vault)
  */
-router.get("/", validate({ query: getSecretsSchema }), getSecrets);
+router.get(
+  "/",
+  validate({ query: getSecretsSchema }),
+  requireVaultPermission("VIEW"),
+  getSecrets
+);
 
 /**
  * @route   POST /api/v1/secrets/:id/reveal
@@ -61,6 +74,9 @@ router.get("/", validate({ query: getSecretsSchema }), getSecrets);
 router.post(
   "/:id/reveal",
   validate({ body: revealSecretSchema }),
+  // In `revealSecret` the ID refers to the secret ID, not the vault. Since the secret is tied to a vault, we don't have VaultID natively in URL.
+  // We'll perform authorization directly in controller if vault binding check is needed, or we adapt RBAC. Current middleware requires vaultId in params/body.
+  // Actually, wait, secrets are children of vaults. We'll verify permissions inside `revealSecret` wrapper / controller since we need DB lookup to find vaultId from secretId.
   revealSecret,
 );
 
@@ -69,7 +85,12 @@ router.post(
  * @desc    Update secret (creates new version)
  * @access  Private (requires EDIT or ADMIN permission)
  */
-router.put("/:id", validate({ body: updateSecretSchema }), updateSecret);
+router.put(
+  "/:id",
+  validate({ body: updateSecretSchema }),
+  // Handled in controller using Secret's parent Vault ID
+  updateSecret
+);
 
 /**
  * @route   DELETE /api/v1/secrets/:id

@@ -412,13 +412,13 @@ export const userWrapper = {
     const ownerships = await prisma.organizationMember.findMany({
       where: {
         userId,
-        role: 'OWNER',
+        role: { name: 'OWNER' },
       },
       include: {
         organization: {
           include: {
             members: {
-              where: { role: 'OWNER' },
+              where: { role: { name: 'OWNER' } },
             },
           },
         },

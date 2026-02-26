@@ -23,10 +23,13 @@ export const keyWrapper = {
       name: string;
       description?: string;
       vaultId: string;
+      valueType?: "STRING" | "JSON" | "NUMBER" | "BOOLEAN" | "MULTILINE";
+      tags?: string[];
+      metadata?: any;
     },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
-    const { name, description, vaultId } = data;
+    const { name, description, vaultId, valueType = "STRING", tags = [], metadata = {} } = data;
     const { ipAddress, userAgent } = auditData;
 
     if (!name || !vaultId) {
@@ -38,39 +41,15 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Check if user has permission to manage keys in this vault
-    const vault = await prisma.vault.findFirst({
-      where: {
-        id: vaultId,
-        OR: [
-          {
-            permissions: {
-              some: {
-                userId,
-                permissionLevel: { in: ["EDIT" as const, "ADMIN" as const] },
-              },
-            },
-          },
-          {
-            permissions: { some: { team: {
-                  members: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-                permissionLevel: { in: ["EDIT" as const, "ADMIN" as const] },
-              },
-            },
-          },
-        ],
-      },
+    // Check if vault exists
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId }
     });
 
     if (!vault) {
       throw new NotFoundError(
         ErrorCode.VAULT_NOT_FOUND,
-        "Vault not found or insufficient permissions",
+        "Vault not found",
       );
     }
 
@@ -94,6 +73,9 @@ export const keyWrapper = {
           vault: {
             connect: { id: vaultId },
           },
+          valueType,
+          tags,
+          metadata,
           createdBy: {
             connect: { id: userId },
           },
@@ -155,53 +137,15 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Check if user has read permission on the vault
-    const vault = await prisma.vault.findFirst({
-      where: {
-        id: vaultId,
-        OR: [
-          {
-            permissions: {
-              some: {
-                userId,
-                permissionLevel: {
-                  in: [
-                    "VIEW" as const,
-                    "USE" as const,
-                    "EDIT" as const,
-                    "ADMIN" as const,
-                  ],
-                },
-              },
-            },
-          },
-          {
-            permissions: { some: { team: {
-                  members: {
-                    some: {
-                      userId,
-                    },
-                  },
-                },
-                permissionLevel: {
-                  in: [
-                    "VIEW" as const,
-                    "USE" as const,
-                    "EDIT" as const,
-                    "ADMIN" as const,
-                  ],
-                },
-              },
-            },
-          },
-        ],
-      },
+    // Check if vault exists
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId }
     });
 
     if (!vault) {
       throw new NotFoundError(
         ErrorCode.VAULT_NOT_FOUND,
-        "Vault not found or insufficient permissions",
+        "Vault not found",
       );
     }
 
@@ -245,41 +189,8 @@ export const keyWrapper = {
   async getKey(userId: string, keyId: string) {
     const prisma = getPrismaClient();
 
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: {
-                    in: [
-                      "VIEW" as const,
-                      "USE" as const,
-                      "EDIT" as const,
-                      "ADMIN" as const,
-                    ],
-                  },
-                },
-              },
-            },
-            {
-              permissions: { some: { team: {
-                    members: {
-                      some: {
-                        userId,
-                      },
-                    },
-                  },
-                },
-                permissionLevel: { in: ["VIEW", "USE", "EDIT", "ADMIN"] },
-              },
-            },
-          ],
-        },
-      },
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         vault: {
           select: {
@@ -312,35 +223,9 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Check if user has permission to manage keys
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: { in: ["EDIT" as const, "ADMIN" as const] },
-                },
-              },
-            },
-            {
-              permissions: { some: { team: {
-                    members: {
-                      some: {
-                        userId,
-                      },
-                    },
-                  },
-                },
-                permissionLevel: { in: ["EDIT", "ADMIN"] },
-              },
-            },
-          ],
-        },
-      },
+    // Check if key exists
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         versions: {
           orderBy: { versionNumber: "desc" },
@@ -411,42 +296,9 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Check if user has read permission (encrypt requires read)
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: {
-                    in: [
-                      "VIEW" as const,
-                      "USE" as const,
-                      "EDIT" as const,
-                      "ADMIN" as const,
-                    ],
-                  },
-                },
-              },
-            },
-            {
-              permissions: { some: { team: {
-                    members: {
-                      some: {
-                        userId,
-                      },
-                    },
-                  },
-                },
-                permissionLevel: { in: ["VIEW", "USE", "EDIT", "ADMIN"] },
-              },
-            },
-          ],
-        },
-      },
+    // Check if key exists
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         versions: {
           orderBy: { versionNumber: "desc" },
@@ -486,42 +338,9 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    // Check if user has read permission
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: {
-                    in: [
-                      "VIEW" as const,
-                      "USE" as const,
-                      "EDIT" as const,
-                      "ADMIN" as const,
-                    ],
-                  },
-                },
-              },
-            },
-            {
-              permissions: { some: { team: {
-                    members: {
-                      some: {
-                        userId,
-                      },
-                    },
-                  },
-                },
-                permissionLevel: { in: ["VIEW", "USE", "EDIT", "ADMIN"] },
-              },
-            },
-          ],
-        },
-      },
+    // Check if key exists
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         versions: {
           orderBy: { versionNumber: "desc" },
@@ -561,29 +380,8 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: {
-                    in: [
-                      "VIEW" as const,
-                      "USE" as const,
-                      "EDIT" as const,
-                      "ADMIN" as const,
-                    ],
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         versions: {
           orderBy: { versionNumber: "desc" },
@@ -622,29 +420,8 @@ export const keyWrapper = {
 
     const prisma = getPrismaClient();
 
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: {
-                    in: [
-                      "VIEW" as const,
-                      "USE" as const,
-                      "EDIT" as const,
-                      "ADMIN" as const,
-                    ],
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         versions: {
           orderBy: { versionNumber: "desc" },
@@ -676,23 +453,9 @@ export const keyWrapper = {
   async deleteKey(userId: string, keyId: string) {
     const prisma = getPrismaClient();
 
-    // Check if user has permission to delete (ADMIN level)
-    const key = await prisma.key.findFirst({
-      where: {
-        id: keyId,
-        vault: {
-          OR: [
-            {
-              permissions: {
-                some: {
-                  userId,
-                  permissionLevel: "ADMIN" as const,
-                },
-              },
-            },
-          ],
-        },
-      },
+    // Check if key exists
+    const key = await prisma.key.findUnique({
+      where: { id: keyId },
       include: {
         versions: {
           orderBy: { versionNumber: "desc" },

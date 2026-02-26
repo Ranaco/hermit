@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useKeys, useCreateKey, useDeleteKey, useRotateKey } from "@/hooks/use-keys";
+import { useVaults } from "@/hooks/use-vaults";
 import { useOrganizationStore } from "@/store/organization.store";
 import { Plus, Trash2, RefreshCw, Search, KeyRound, Vault, Loader2, ShieldCheck } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
@@ -24,8 +25,11 @@ export default function KeysPage() {
     name: "",
     description: "",
     valueType: "STRING" as KeyType,
+    vaultId: currentVault?.id || "",
   });
 
+  const { currentOrganization } = useOrganizationStore();
+  const { data: vaults } = useVaults(currentOrganization?.id);
   const { data: keys, isLoading } = useKeys(currentVault?.id);
   const { mutate: createKey, isPending: isCreating } = useCreateKey();
   const { mutate: deleteKey } = useDeleteKey();
@@ -38,17 +42,20 @@ export default function KeysPage() {
 
   const handleCreateKey = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentVault) return;
+    const targetVaultId = newKey.vaultId || currentVault?.id;
+    if (!targetVaultId) return;
 
     createKey(
       {
-        ...newKey,
-        vaultId: currentVault.id,
+        name: newKey.name,
+        description: newKey.description,
+        valueType: newKey.valueType,
+        vaultId: targetVaultId,
       },
       {
         onSuccess: () => {
           setShowCreateForm(false);
-          setNewKey({ name: "", description: "", valueType: "STRING" });
+          setNewKey({ name: "", description: "", valueType: "STRING", vaultId: currentVault?.id || "" });
         },
       },
     );
@@ -124,6 +131,25 @@ export default function KeysPage() {
                   onChange={(e) => setNewKey({ ...newKey, description: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="key-vault">Vault</Label>
+                <select
+                  id="key-vault"
+                  value={newKey.vaultId || currentVault?.id || ""}
+                  onChange={(e) => setNewKey({ ...newKey, vaultId: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm disabled:opacity-50"
+                  disabled={!vaults || vaults.length <= 1}
+                >
+                  {vaults?.map((vault) => (
+                    <option key={vault.id} value={vault.id}>
+                      {vault.name}
+                    </option>
+                  ))}
+                  {(!vaults || vaults.length === 0) && currentVault && (
+                    <option value={currentVault.id}>{currentVault.name}</option>
+                  )}
+                </select>
+              </div>
               <div className="md:col-span-3 flex gap-2">
                 <Button type="submit" disabled={isCreating || !newKey.name}>
                   {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -134,7 +160,7 @@ export default function KeysPage() {
                   variant="outline"
                   onClick={() => {
                     setShowCreateForm(false);
-                    setNewKey({ name: "", description: "", valueType: "STRING" });
+                    setNewKey({ name: "", description: "", valueType: "STRING", vaultId: currentVault?.id || "" });
                   }}
                 >
                   Cancel

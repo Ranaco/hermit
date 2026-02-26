@@ -77,11 +77,11 @@ export function useInviteUser() {
   return useMutation({
     mutationFn: ({ organizationId, data }: { organizationId: string; data: InviteUserData }) =>
       organizationService.inviteUser(organizationId, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      toast.success("User invited successfully");
+      // We let the component handle the toast so it can display the invite link
     },
-    onError: () => {
+    onError: (error) => {
       toast.error("Failed to invite user");
     },
   });

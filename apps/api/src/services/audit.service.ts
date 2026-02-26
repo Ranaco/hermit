@@ -106,6 +106,27 @@ export async function queryAuditLogs(filters: {
 /**
  * Audit log helper functions for common operations
  */
+export async function cleanupOldAuditLogs(retentionDays: number = 90): Promise<number> {
+  try {
+    const prisma = getPrismaClient();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    const result = await prisma.auditLog.deleteMany({
+      where: {
+        createdAt: {
+          lt: cutoffDate,
+        },
+      },
+    });
+
+    log.info(`Cleaned up ${result.count} old audit logs`, { retentionDays });
+    return result.count;
+  } catch (error) {
+    log.error("Failed to cleanup old audit logs", { error });
+    return 0;
+  }
+}
 export const auditLog = {
   login: (userId: string, ipAddress: string, userAgent: string) =>
     createAuditLog({
