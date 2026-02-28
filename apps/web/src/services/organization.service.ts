@@ -5,7 +5,13 @@ export type Role = "OWNER" | "ADMIN" | "MEMBER";
 export interface OrganizationMember {
   id: string;
   userId: string;
-  role: Role;
+  roleId: string | null;
+  role?: {
+    id: string;
+    name: string;
+    isDefault?: boolean;
+    permissions?: string[];
+  } | null;
   user: {
     id: string;
     email: string;
@@ -64,11 +70,11 @@ export interface UpdateOrganizationData {
 
 export interface InviteUserData {
   email: string;
-  role: Role;
+  roleId?: string;
 }
 
 export interface UpdateMemberRoleData {
-  role: Role;
+  roleId: string;
 }
 
 export interface CreateTeamData {

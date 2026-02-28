@@ -71,11 +71,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="kms-title">Overview</h1>
-              <p className="kms-subtitle mt-2">
-                Vault-backed key management with clear tenancy and access context.
-              </p>
             </div>
-
             {currentOrganization ? (
               <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-2 text-sm">
                 <p className="font-medium">{currentOrganization.name}</p>

@@ -42,10 +42,15 @@ export const createPolicy = asyncHandler(async (req: Request, res: Response) => 
   if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
 
   const orgId = req.params.orgId;
-  const { name, description, document } = req.body;
+  const { name, description, document, statements } = req.body;
 
-  if (!name || !document) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Name and document are required");
+  let policyDocument = document;
+  if (!policyDocument && statements) {
+    policyDocument = { statements };
+  }
+
+  if (!name || !policyDocument) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Name and document (or statements) are required");
   }
 
   const prisma = getPrismaClient();
@@ -54,7 +59,7 @@ export const createPolicy = asyncHandler(async (req: Request, res: Response) => 
     data: {
       name,
       description,
-      document,
+      document: policyDocument,
       organizationId: orgId,
       isManaged: false,
     },

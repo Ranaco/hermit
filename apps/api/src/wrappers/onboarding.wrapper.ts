@@ -161,12 +161,6 @@ export const onboardingWrapper = {
           description: "Your default secure vault for storing encryption keys",
           organizationId: organization.id,
           createdById: userId,
-          permissions: {
-            create: {
-              userId,
-              permissionLevel: "ADMIN",
-            },
-          },
         },
       });
 
@@ -287,12 +281,6 @@ export const onboardingWrapper = {
         description: "Your default secure vault for storing encryption keys",
         organizationId,
         createdById: userId,
-        permissions: {
-          create: {
-            userId,
-            permissionLevel: "ADMIN",
-          },
-        },
       },
     });
 

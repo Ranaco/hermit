@@ -10,6 +10,7 @@ import { authenticate } from "../middleware/auth";
 import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
 import { requireVaultHealth } from "../middleware/vault-health";
+import { NotFoundError, ErrorCode } from "@hermes/error-handling";
 import {
   createSecretGroupSchema,
   updateSecretGroupSchema,
@@ -22,9 +23,9 @@ const router = Router({ mergeParams: true });
 router.use(authenticate);
 
 const getGroupUrn = async (req: any) => {
-  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId;
+  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId || req.query.organizationId || req.body.organizationId;
   let vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
-  const groupId = req.params.groupId || req.params.id;
+  const groupId = req.params.groupId || req.params.id || req.query.groupId || req.body.groupId;
   
   const prisma = getPrismaClient();
 
@@ -34,12 +35,16 @@ const getGroupUrn = async (req: any) => {
        orgId = group.vault.organizationId;
        vaultId = group.vault.id;
        req.organizationId = orgId;
+     } else {
+       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Group not found");
      }
   } else if (!orgId && vaultId) {
      const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
      if (vault) {
        orgId = vault.organizationId;
        req.organizationId = orgId;
+     } else {
+       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
      }
   }
   

@@ -68,3 +68,19 @@ Access control is entirely handled via Express Middleware at the route level.
 `router.get("/:vaultId", requirePolicy("vaults:read", getVaultUrn), vaultController.getVault);`
 
 The `requirePolicy` middleware automatically extracts the user context, infers the Organization ID to bind the scope, calls the URN factory associated with the resource, and invokes the Policy Engine before ever touching the controllers.
+
+## 5. HashiCorp Vault AppRole Integration
+
+To enforce secure, machine-to-machine authentication between the Hermes API and the local Vault container (`hcv_engine`), Hermes relies on Vault **AppRoles**.
+
+### Role Definitions & Capabilities
+
+- **`read-only-role`**: Maps to `read-only-policy`. Used strictly for accessing and decrypting secrets. Cannot mount new engines or generate keys.
+- **`write-role`**: Maps to `write-policy`. Grants overarching permissions including `sys/mounts/*` and `transit/keys/*`. The Hermes API initializes its `VaultService` client using this role to legitimately provision new transit keys and mount dynamic engines when users execute KMS actions.
+
+### Authentication Lifecycle
+
+1. The `hcv_engine` initialization script (`scripts/setup`) uploads the policies and provisions the corresponding AppRoles.
+2. It generates a permanent `role_id` and a `secret_id` for each role.
+3. For local development environments, the `secret_id` is generated with **unlimited uses** (`secret_id_num_uses=0`) and **no TTL** (`secret_id_ttl=0`). This architectural concession allows `nodemon` to repeatedly restart the Node backend and request fresh Vault sessions without prematurely expiring and locking out the developer with `403 Invalid Token` errors.
+4. The `VaultService` authenticates via the `/v1/auth/approle/login` endpoint, obtains a short-lived `client_token`, and proactively schedules token renewals against the Vault APIs to prevent lockouts.

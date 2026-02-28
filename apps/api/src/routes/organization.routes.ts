@@ -127,6 +127,7 @@ router.post("/:orgId/policies", policyController.createPolicy);
  */
 router.get("/:orgId/roles", roleController.getRoles);
 router.post("/:orgId/roles", roleController.createRole);
+router.put("/:orgId/roles/:roleId", roleController.updateRole);
 router.put("/:orgId/members/:memberId/roles", roleController.assignUserRole);
 router.put("/:orgId/teams/:teamId/roles", roleController.assignTeamRole);
 

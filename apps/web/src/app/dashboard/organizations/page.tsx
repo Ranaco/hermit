@@ -19,6 +19,7 @@ import {
 } from "@/hooks/use-organizations";
 import { useOrganizationStore } from "@/store/organization.store";
 import { useRBAC } from "@/hooks/use-rbac";
+import { useRoles } from "@/hooks/use-policies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +76,7 @@ export default function OrganizationsPage() {
   } | null>(null);
 
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<Role>("MEMBER");
+  const [inviteRoleId, setInviteRoleId] = useState<string>("");
 
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamDescription, setNewTeamDescription] = useState("");
@@ -86,8 +87,8 @@ export default function OrganizationsPage() {
     () => organizations?.find((org) => org.id === (selectedOrgId || currentOrganization?.id)),
     [organizations, selectedOrgId, currentOrganization?.id],
   );
-
   const { data: teams } = useTeams(selectedOrg?.id || currentOrganization?.id);
+  const { data: orgRoles } = useRoles();
 
   const { mutate: createOrg, isPending: isCreating } = useCreateOrganization();
   const { mutate: updateOrg, isPending: isUpdating } = useUpdateOrganization();
@@ -156,12 +157,12 @@ export default function OrganizationsPage() {
     inviteUser(
       {
         organizationId: selectedOrg.id,
-        data: { email: inviteEmail, role: inviteRole },
+        data: { email: inviteEmail, roleId: inviteRoleId || undefined },
       },
       {
         onSuccess: (data: any) => {
           setInviteEmail("");
-          setInviteRole("MEMBER");
+          setInviteRoleId("");
           setShowInviteForm(false);
           
           if (data?.invitation?.token) {
@@ -182,9 +183,13 @@ export default function OrganizationsPage() {
     );
   };
 
-  const handleUpdateRole = (userId: string, role: Role) => {
+  const handleUpdateRole = (userId: string, roleId: string) => {
     if (!selectedOrg) return;
-    updateRole({ organizationId: selectedOrg.id, userId, data: { role } });
+    updateRole({
+      organizationId: selectedOrg.id,
+      userId,
+      data: { roleId },
+    });
   };
 
   const handleRemoveMember = (userId: string) => {
@@ -432,13 +437,14 @@ export default function OrganizationsPage() {
                       required
                     />
                     <select
-                      value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value as Role)}
+                      value={inviteRoleId}
+                      onChange={(e) => setInviteRoleId(e.target.value)}
                       className="flex h-10 rounded-xl border border-border bg-card px-3 text-sm"
                     >
-                      <option value="MEMBER">Member</option>
-                      <option value="ADMIN">Admin</option>
-                      <option value="OWNER">Owner</option>
+                      <option value="">Default Member</option>
+                      {orgRoles?.map(r => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
                     </select>
                     <div className="flex gap-2">
                       <Button type="submit" size="sm" disabled={isInviting}>
@@ -452,7 +458,7 @@ export default function OrganizationsPage() {
                         onClick={() => {
                           setShowInviteForm(false);
                           setInviteEmail("");
-                          setInviteRole("MEMBER");
+                          setInviteRoleId("");
                         }}
                       >
                         Cancel
@@ -472,19 +478,20 @@ export default function OrganizationsPage() {
                       <div className="flex items-center gap-2">
                         {permissions.canManageRoles ? (
                           <select
-                            value={member.role}
-                            onChange={(e) => handleUpdateRole(member.userId, e.target.value as Role)}
+                            value={member.roleId || ""}
+                            onChange={(e) => handleUpdateRole(member.userId, e.target.value)}
                             disabled={isUpdatingRole}
                             className="h-8 rounded-lg border border-border bg-card px-2 text-xs"
                           >
-                            {roleOptions.map((role) => (
-                              <option key={role} value={role}>
-                                {role}
+                            <option value="">Default Member</option>
+                            {orgRoles?.map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name}
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <Badge variant="secondary">{member.role}</Badge>
+                          <Badge variant="secondary">{member.role?.name || "Member"}</Badge>
                         )}
                         {permissions.canRemoveMembers ? (
                           <Button

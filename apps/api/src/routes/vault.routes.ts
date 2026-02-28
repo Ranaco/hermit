@@ -16,12 +16,13 @@ import {
   getVaultsQuerySchema,
   vaultIdParamSchema,
 } from "../validators/vault.validator";
+import { ErrorCode, NotFoundError } from "@hermes/error-handling";
 
 const router = Router();
 
 const getVaultUrn = async (req: any) => {
-  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId;
-  const vaultId = req.params.id || req.body.vaultId;
+  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId || req.query.organizationId || req.body.organizationId;
+  const vaultId = req.params.id || req.params.vaultId || req.body.vaultId || req.query.vaultId;
 
   if (!orgId && vaultId) {
     const prisma = getPrismaClient();
@@ -29,6 +30,8 @@ const getVaultUrn = async (req: any) => {
     if (vault) {
       orgId = vault.organizationId;
       req.organizationId = orgId;
+    } else {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
     }
   }
 

@@ -9,6 +9,7 @@ import { requireVaultHealth } from "../middleware/vault-health";
 import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
 import { validate } from "../validators/validation.middleware";
+import { NotFoundError, ErrorCode } from "@hermes/error-handling";
 import {
   createSecretSchema,
   revealSecretSchema,
@@ -27,9 +28,9 @@ import {
 const router = express.Router();
 
 const getSecretUrn = async (req: any) => {
-  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId;
-  let vaultId = req.body.vaultId || req.query.vaultId;
-  const secretId = req.params.id || req.body.secretId;
+  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId || req.query.organizationId || req.body.organizationId;
+  let vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
+  const secretId = req.params.id || req.body.secretId || req.query.secretId;
   
   const prisma = getPrismaClient();
 
@@ -39,12 +40,16 @@ const getSecretUrn = async (req: any) => {
        orgId = secret.vault.organizationId;
        vaultId = secret.vault.id;
        req.organizationId = orgId;
+     } else {
+       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
      }
   } else if (!orgId && vaultId) {
      const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
      if (vault) {
        orgId = vault.organizationId;
        req.organizationId = orgId;
+     } else {
+       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
      }
   }
   

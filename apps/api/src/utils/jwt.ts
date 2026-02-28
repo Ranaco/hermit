@@ -30,7 +30,7 @@ export function generateAccessToken(
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
       algorithm: "HS256",
-    },
+    } as jwt.SignOptions,
   );
 }
 
@@ -48,7 +48,7 @@ export function generateRefreshToken(
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
       algorithm: "HS256",
-    },
+    } as jwt.SignOptions,
   );
 }
 

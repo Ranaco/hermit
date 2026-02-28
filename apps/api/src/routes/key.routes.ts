@@ -10,6 +10,7 @@ import { requirePolicy } from '../middleware/policy';
 import getPrismaClient from "../services/prisma.service";
 import { cryptoOperationsRateLimiter, generalRateLimiter } from '../middleware/security';
 import { validate } from '../validators/validation.middleware';
+import { NotFoundError, ErrorCode } from "@hermes/error-handling";
 import {
   createKeySchema,
   getKeysQuerySchema,
@@ -24,8 +25,8 @@ import {
 const router = Router();
 
 const getKeyUrn = async (req: any) => {
-  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId;
-  let vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
+  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId || req.query.organizationId || req.body.organizationId;
+  let vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId || req.params.id;
   const keyId = req.params.id;
   
   const prisma = getPrismaClient();
@@ -36,12 +37,16 @@ const getKeyUrn = async (req: any) => {
        orgId = key.vault.organizationId;
        vaultId = key.vault.id;
        req.organizationId = orgId;
+     } else {
+       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Key not found");
      }
   } else if (!orgId && vaultId) {
      const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
      if (vault) {
        orgId = vault.organizationId;
        req.organizationId = orgId;
+     } else {
+       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
      }
   }
   

@@ -62,7 +62,7 @@ export const addMemberSchema = z.object({
 
 // Update member role schema
 export const updateMemberRoleSchema = z.object({
-  role: roleSchema,
+  roleId: uuidSchema,
 });
 
 // Member ID param schema
@@ -73,7 +73,7 @@ export const orgMemberIdParamSchema = z.object({
 // Invite member schema
 export const inviteMemberSchema = z.object({
   email: emailSchema,
-  role: roleSchema.optional().default("MEMBER"),
+  roleId: uuidSchema.optional(),
 });
 
 // Accept invitation schema (token from query params)

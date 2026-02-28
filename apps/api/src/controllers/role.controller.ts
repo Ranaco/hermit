@@ -85,6 +85,61 @@ export const createRole = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
+ * Update an existing Role
+ * PUT /api/v1/organizations/:orgId/roles/:roleId
+ */
+export const updateRole = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+
+  const orgId = req.params.orgId;
+  const roleId = req.params.roleId;
+  const { name, description, policyIds } = req.body;
+
+  if (!name) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Role name is required");
+  }
+
+  const prisma = getPrismaClient();
+
+  const role = await prisma.organizationRole.findUnique({
+    where: { id: roleId }
+  });
+
+  if (!role || role.organizationId !== orgId) {
+    throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Role not found in this organization");
+  }
+
+  if (role.isDefault) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Cannot edit a default system role");
+  }
+
+  const updatedRole = await prisma.organizationRole.update({
+    where: { id: roleId },
+    data: {
+      name,
+      description,
+      policyAttachments: policyIds && Array.isArray(policyIds) ? {
+        deleteMany: {}, // Clear existing
+        create: policyIds.map((policyId: string) => ({
+          policyId
+        }))
+      } : undefined
+    },
+    include: {
+      policyAttachments: {
+        include: { policy: true }
+      }
+    }
+  });
+
+  res.json({
+    success: true,
+    data: { role: updatedRole },
+    message: "Role updated successfully"
+  });
+});
+
+/**
  * Assign a Role to a User
  * PUT /api/v1/organizations/:orgId/members/:memberId/roles
  */

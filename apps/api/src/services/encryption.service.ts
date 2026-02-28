@@ -12,9 +12,9 @@ const vaultService = createVaultService({
   token: config.vault.token || undefined,
   namespace: config.vault.namespace,
   transitMount: config.vault.transitMount,
-  appRole: (config.vault.appRole.readRoleId && config.vault.appRole.readSecretId) ? {
-    roleId: config.vault.appRole.readRoleId, // Using read role for base ops right now
-    secretId: config.vault.appRole.readSecretId,
+  appRole: (config.vault.appRole.writeRoleId && config.vault.appRole.writeSecretId) ? {
+    roleId: config.vault.appRole.writeRoleId,
+    secretId: config.vault.appRole.writeSecretId,
   } : undefined,
 } as any); // Cast to any because the exported types from the built package might not be immediately synced
 

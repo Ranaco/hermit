@@ -96,7 +96,7 @@ export const deleteOrganization = asyncHandler(async (req: Request, res: Respons
 export const inviteUser = asyncHandler(async (req: Request, res: Response) => {
   const user = assertUser(req);
 
-  const { email, role = "MEMBER" } = req.body;
+  const { email, roleId } = req.body;
   if (!email) {
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Email is required");
   }
@@ -104,7 +104,7 @@ export const inviteUser = asyncHandler(async (req: Request, res: Response) => {
   const result = await organizationWrapper.inviteUser(
     user.id,
     req.params.id,
-    { email, role },
+    { email, roleId },
     { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
   );
 
@@ -149,17 +149,17 @@ export const removeMember = asyncHandler(async (req: Request, res: Response) => 
 
 export const updateMemberRole = asyncHandler(async (req: Request, res: Response) => {
   const user = assertUser(req);
-  const { role } = req.body;
+  const { roleId } = req.body;
 
-  if (!role) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Role is required");
+  if (!roleId) {
+    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Target roleId is required");
   }
 
   const result = await organizationWrapper.updateMemberRole(
     user.id,
     req.params.id,
     req.params.userId,
-    role,
+    roleId,
     { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
   );
 

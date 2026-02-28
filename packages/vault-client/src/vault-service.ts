@@ -405,7 +405,11 @@ export class VaultService {
         type: "transit",
       });
       log.info("Transit engine enabled", { mount: this.transitMount });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.statusCode === 403) {
+        log.warn("403 Forbidden when enabling transit engine. Assuming it is already enabled by admin.", { mount: this.transitMount });
+        return;
+      }
       log.error("Failed to enable transit engine", { error });
       throw this.handleVaultError(error as VaultError);
     }

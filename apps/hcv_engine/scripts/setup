@@ -108,8 +108,14 @@ vault policy write write-policy - <<EOF
 path "secret/data/hermes_vault/*" {
   capabilities = ["create", "update", "read", "list"]
 }
+path "sys/mounts/*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
 path "transit/*" {
-  capabilities = ["create", "read", "update", "list"]
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "transit/keys/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
 }
 path "aws/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
@@ -125,8 +131,8 @@ vault write auth/approle/role/read-only-role \
     token_policies="read-only-policy" \
     token_ttl=1h \
     token_max_ttl=4h \
-    secret_id_ttl=10m \
-    secret_id_num_uses=1
+    secret_id_ttl=0 \
+    secret_id_num_uses=0
 
 # Create write AppRole
 echo -e "${YELLOW}Creating write AppRole...${NC}"
@@ -134,8 +140,8 @@ vault write auth/approle/role/write-role \
     token_policies="write-policy" \
     token_ttl=1h \
     token_max_ttl=4h \
-    secret_id_ttl=10m \
-    secret_id_num_uses=1
+    secret_id_ttl=0 \
+    secret_id_num_uses=0
 
 # Get RoleIDs (these are static and safe to share)
 echo -e "${YELLOW}Retrieving RoleIDs...${NC}"

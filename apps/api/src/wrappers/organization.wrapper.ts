@@ -125,12 +125,6 @@ export const organizationWrapper = {
           description: "Default secure vault",
           organizationId: organization.id,
           createdById: userId,
-          permissions: {
-            create: {
-              userId,
-              permissionLevel: "ADMIN",
-            },
-          },
         },
       });
 
@@ -371,14 +365,13 @@ export const organizationWrapper = {
   async inviteUser(
     userId: string,
     organizationId: string,
-    data: { email: string; role?: string },
+    data: { email: string; roleId?: string },
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
     await requireOrgAdmin(userId, organizationId);
     const prisma = getPrismaClient();
 
     const email = data.email.toLowerCase().trim();
-    const role = data.role || "MEMBER";
 
     const existingInvite = await prisma.organizationInvitation.findFirst({
       where: {
@@ -401,7 +394,13 @@ export const organizationWrapper = {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const targetUser = await prisma.user.findUnique({ where: { email } });
-    const targetRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: role } });
+    
+    let targetRole = null;
+    if (data.roleId) {
+      targetRole = await prisma.organizationRole.findUnique({ where: { id: data.roleId } });
+    } else {
+      targetRole = await prisma.organizationRole.findFirst({ where: { organizationId, isDefault: true } });
+    }
 
     let member: unknown = null;
 
@@ -462,7 +461,7 @@ export const organizationWrapper = {
       details: {
         type: "invitation",
         email,
-        role,
+        role: targetRole?.name,
         autoAccepted: !!targetUser,
       },
       ipAddress: auditData.ipAddress || "unknown",
@@ -581,7 +580,7 @@ export const organizationWrapper = {
     userId: string,
     organizationId: string,
     targetUserId: string,
-    role: string,
+    roleId: string,
     auditData: { ipAddress?: string; userAgent?: string },
   ) {
     const membership = await requireMembership(userId, organizationId);
@@ -607,7 +606,10 @@ export const organizationWrapper = {
       throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Member not found");
     }
 
-    if (target.role?.name === "OWNER" && role !== "OWNER") {
+    const targetRole = await prisma.organizationRole.findUnique({ where: { id: roleId } });
+    if (!targetRole) throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Target role not found");
+
+    if (target.role?.name === "OWNER" && targetRole.name !== "OWNER") {
       const ownerRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: "OWNER" }});
       const ownerCount = await prisma.organizationMember.count({
         where: { organizationId, roleId: ownerRole?.id },
@@ -620,9 +622,6 @@ export const organizationWrapper = {
         );
       }
     }
-
-    const targetRole = await prisma.organizationRole.findFirst({ where: { organizationId, name: role } });
-    if (!targetRole) throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Target role not found");
 
     const updatedMember = await prisma.organizationMember.update({
       where: {
@@ -650,7 +649,7 @@ export const organizationWrapper = {
       action: "UPDATE",
       resourceType: "ORGANIZATION",
       resourceId: organizationId,
-      details: { targetUserId, role },
+      details: { targetUserId, role: targetRole.name },
       ipAddress: auditData.ipAddress || "unknown",
       userAgent: auditData.userAgent || "unknown",
     });
