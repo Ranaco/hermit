@@ -6,21 +6,34 @@ import { Router } from "express";
 import * as vaultController from "../controllers/vault.controller";
 import { authenticate } from "../middleware/auth";
 import { requireVaultHealth } from "../middleware/vault-health";
-import { requireVaultPermission } from "../middleware/rbac";
+import { requirePolicy } from "../middleware/policy";
 import { generalRateLimiter } from "../middleware/security";
 import { validate } from "../validators/validation.middleware";
+import getPrismaClient from "../services/prisma.service";
 import {
   createVaultSchema,
   updateVaultSchema,
   getVaultsQuerySchema,
   vaultIdParamSchema,
-  grantUserPermissionSchema,
-  grantTeamPermissionSchema,
-  vaultUserIdParamSchema,
-  vaultTeamIdParamSchema,
 } from "../validators/vault.validator";
 
 const router = Router();
+
+const getVaultUrn = async (req: any) => {
+  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId;
+  const vaultId = req.params.id || req.body.vaultId;
+
+  if (!orgId && vaultId) {
+    const prisma = getPrismaClient();
+    const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
+    if (vault) {
+      orgId = vault.organizationId;
+      req.organizationId = orgId;
+    }
+  }
+
+  return `urn:hermes:org:${orgId || "*"}:vault:${vaultId || "*"}`;
+};
 
 // All vault routes require authentication and vault health
 router.use(authenticate);
@@ -43,48 +56,20 @@ router.get(
 router.get(
   "/:id",
   validate({ params: vaultIdParamSchema }),
-  requireVaultPermission("VIEW"),
+  requirePolicy("vaults:read", getVaultUrn),
   vaultController.getVault,
 );
 router.patch(
   "/:id",
   validate({ params: vaultIdParamSchema, body: updateVaultSchema }),
-  requireVaultPermission("EDIT"),
+  requirePolicy("vaults:update", getVaultUrn),
   vaultController.updateVault,
 );
 router.delete(
   "/:id",
   validate({ params: vaultIdParamSchema }),
-  requireVaultPermission("ADMIN"),
+  requirePolicy("vaults:delete", getVaultUrn),
   vaultController.deleteVault,
-);
-
-/**
- * Permission management
- */
-router.post(
-  "/:id/permissions/users",
-  validate({ params: vaultIdParamSchema, body: grantUserPermissionSchema }),
-  requireVaultPermission("ADMIN"),
-  vaultController.grantUserPermission,
-);
-router.delete(
-  "/:id/permissions/users/:userId",
-  validate({ params: vaultIdParamSchema.merge(vaultUserIdParamSchema) }),
-  requireVaultPermission("ADMIN"),
-  vaultController.revokeUserPermission,
-);
-router.post(
-  "/:id/permissions/teams",
-  validate({ params: vaultIdParamSchema, body: grantTeamPermissionSchema }),
-  requireVaultPermission("ADMIN"),
-  vaultController.grantTeamPermission,
-);
-router.delete(
-  "/:id/permissions/teams/:teamId",
-  validate({ params: vaultIdParamSchema.merge(vaultTeamIdParamSchema) }),
-  requireVaultPermission("ADMIN"),
-  vaultController.revokeTeamPermission,
 );
 
 export default router;

@@ -55,6 +55,7 @@ export const getSecrets = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await secretWrapper.getSecrets(req.user.id, {
     vaultId: req.query.vaultId as string,
+    secretGroupId: req.query.secretGroupId as string | undefined,
   });
 
   res.json({
@@ -179,3 +180,5 @@ export const getSecretVersions = asyncHandler(
     });
   },
 );
+
+

@@ -9,7 +9,7 @@ NC='\033[0m'
 
 # Configuration
 VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}"
-WEBHOOK_URL="${WEBHOOK_URL:-https://webhook.site/c849a567-a6be-45be-bfc9-959fb0d3f1a1}"
+WEBHOOK_URL="${WEBHOOK_URL:-https://webhook.site/4d73e799-68aa-4715-9fed-bcc842f709be}"
 CREDENTIALS_FILE="${CREDENTIALS_FILE:-./vault_credentials.json}"
 VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-true}"
 WEBHOOK_SECRET="${WEBHOOK_SECRET:-your-shared-secret-key-here}"

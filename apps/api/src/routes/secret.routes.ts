@@ -6,7 +6,8 @@
 import express from "express";
 import { authenticate } from "../middleware/auth";
 import { requireVaultHealth } from "../middleware/vault-health";
-import { requireVaultPermission } from "../middleware/rbac";
+import { requirePolicy } from "../middleware/policy";
+import getPrismaClient from "../services/prisma.service";
 import { validate } from "../validators/validation.middleware";
 import {
   createSecretSchema,
@@ -24,6 +25,31 @@ import {
 } from "../controllers/secret.controller";
 
 const router = express.Router();
+
+const getSecretUrn = async (req: any) => {
+  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId;
+  let vaultId = req.body.vaultId || req.query.vaultId;
+  const secretId = req.params.id || req.body.secretId;
+  
+  const prisma = getPrismaClient();
+
+  if (!orgId && secretId) {
+     const secret = await prisma.secret.findUnique({ where: { id: secretId }, include: { vault: { select: { organizationId: true, id: true } } } });
+     if (secret && secret.vault) {
+       orgId = secret.vault.organizationId;
+       vaultId = secret.vault.id;
+       req.organizationId = orgId;
+     }
+  } else if (!orgId && vaultId) {
+     const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
+     if (vault) {
+       orgId = vault.organizationId;
+       req.organizationId = orgId;
+     }
+  }
+  
+  return `urn:hermes:org:${orgId || '*'}:vault:${vaultId || '*'}:secret:${secretId || '*'}`;
+};
 
 // Handle OPTIONS preflight requests before authentication
 router.options("/:id/reveal", (req, res) => {
@@ -50,7 +76,7 @@ router.use(requireVaultHealth);
 router.post(
   "/",
   validate({ body: createSecretSchema }),
-  requireVaultPermission("EDIT"),
+  requirePolicy("secrets:create", getSecretUrn),
   createSecret
 );
 
@@ -62,33 +88,31 @@ router.post(
 router.get(
   "/",
   validate({ query: getSecretsSchema }),
-  requireVaultPermission("VIEW"),
+  requirePolicy("secrets:read", getSecretUrn),
   getSecrets
 );
 
 /**
  * @route   POST /api/v1/secrets/:id/reveal
  * @desc    Reveal secret value (requires password if protected)
- * @access  Private (requires USE permission + password if applicable)
+ * @access  Private (requires USE permission)
  */
 router.post(
   "/:id/reveal",
   validate({ body: revealSecretSchema }),
-  // In `revealSecret` the ID refers to the secret ID, not the vault. Since the secret is tied to a vault, we don't have VaultID natively in URL.
-  // We'll perform authorization directly in controller if vault binding check is needed, or we adapt RBAC. Current middleware requires vaultId in params/body.
-  // Actually, wait, secrets are children of vaults. We'll verify permissions inside `revealSecret` wrapper / controller since we need DB lookup to find vaultId from secretId.
+  requirePolicy("secrets:use", getSecretUrn),
   revealSecret,
 );
 
 /**
  * @route   PUT /api/v1/secrets/:id
  * @desc    Update secret (creates new version)
- * @access  Private (requires EDIT or ADMIN permission)
+ * @access  Private (requires EDIT permission)
  */
 router.put(
   "/:id",
   validate({ body: updateSecretSchema }),
-  // Handled in controller using Secret's parent Vault ID
+  requirePolicy("secrets:update", getSecretUrn),
   updateSecret
 );
 
@@ -97,13 +121,21 @@ router.put(
  * @desc    Delete a secret permanently
  * @access  Private (requires ADMIN permission)
  */
-router.delete("/:id", deleteSecret);
+router.delete(
+  "/:id", 
+  requirePolicy("secrets:delete", getSecretUrn), 
+  deleteSecret
+);
 
 /**
  * @route   GET /api/v1/secrets/:id/versions
  * @desc    Get secret version history
  * @access  Private (requires VIEW permission)
  */
-router.get("/:id/versions", getSecretVersions);
+router.get(
+  "/:id/versions", 
+  requirePolicy("secrets:read", getSecretUrn), 
+  getSecretVersions
+);
 
 export default router;

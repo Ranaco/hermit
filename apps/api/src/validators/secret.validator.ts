@@ -25,6 +25,10 @@ export const createSecretSchema = z.object({
     .min(1, 'Secret value is required')
     .max(100000, 'Secret value is too large (max 100KB)'),
   
+  valueType: z
+    .enum(['STRING', 'JSON', 'NUMBER', 'BOOLEAN', 'MULTILINE'])
+    .optional(),
+  
   vaultId: z
     .string()
     .uuid('Invalid vault ID format'),
@@ -93,6 +97,10 @@ export const updateSecretSchema = z.object({
     .string()
     .min(1, 'Secret value cannot be empty')
     .max(100000, 'Secret value is too large (max 100KB)')
+    .optional(),
+  
+  valueType: z
+    .enum(['STRING', 'JSON', 'NUMBER', 'BOOLEAN', 'MULTILINE'])
     .optional(),
   
   description: z

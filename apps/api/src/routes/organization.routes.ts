@@ -4,6 +4,8 @@
 
 import { Router } from "express";
 import * as orgController from "../controllers/organization.controller";
+import * as policyController from "../controllers/policy.controller";
+import * as roleController from "../controllers/role.controller";
 import { authenticate } from "../middleware/auth";
 import { generalRateLimiter } from "../middleware/security";
 import { validate } from "../validators/validation.middleware";
@@ -113,5 +115,19 @@ router.delete(
   validate({ params: organizationIdParamSchema.merge(orgTeamIdParamSchema).merge(teamMemberIdParamSchema) }),
   orgController.removeTeamMember,
 );
+
+/**
+ * Access Policies Management (IAM)
+ */
+router.get("/:orgId/policies", policyController.getPolicies);
+router.post("/:orgId/policies", policyController.createPolicy);
+
+/**
+ * Custom Roles Management (IAM)
+ */
+router.get("/:orgId/roles", roleController.getRoles);
+router.post("/:orgId/roles", roleController.createRole);
+router.put("/:orgId/members/:memberId/roles", roleController.assignUserRole);
+router.put("/:orgId/teams/:teamId/roles", roleController.assignTeamRole);
 
 export default router;

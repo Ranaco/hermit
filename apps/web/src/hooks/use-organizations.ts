@@ -87,6 +87,21 @@ export function useInviteUser() {
   });
 }
 
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (token: string) => organizationService.acceptInvitation(token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      toast.success("Invitation accepted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to accept invitation");
+    },
+  });
+}
+
 export function useRemoveMember() {
   const queryClient = useQueryClient();
 

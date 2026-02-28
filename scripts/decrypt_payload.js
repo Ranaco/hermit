@@ -19,7 +19,7 @@ if (!password) {
 
 const privateKeyPath =
   argPrivateKeyPath ??
-  path.join(__dirname, "apps", "hcv_engine", "src", "private_key.pem");
+  path.join(__dirname, "apps", "hcv_engine", "certs", "private_key.pem");
 
 try {
   const privateKeyPem = fs.readFileSync(privateKeyPath, "utf8");

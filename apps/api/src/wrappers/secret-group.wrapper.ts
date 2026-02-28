@@ -74,8 +74,8 @@ export const secretGroupWrapper = {
 
     await createAuditLog({
       userId,
-      action: "CREATE_SECRET_GROUP",
-      resourceType: "SECRET_GROUP",
+      action: "CREATE" as any,
+      resourceType: "SECRET" as any,
       resourceId: group.id,
       details: {
         groupName: name,
@@ -178,8 +178,8 @@ export const secretGroupWrapper = {
 
     await createAuditLog({
       userId,
-      action: "UPDATE_SECRET_GROUP",
-      resourceType: "SECRET_GROUP",
+      action: "UPDATE" as any,
+      resourceType: "SECRET" as any,
       resourceId: group.id,
       details: {
         changes: { name, description },
@@ -230,8 +230,8 @@ export const secretGroupWrapper = {
 
     await createAuditLog({
       userId,
-      action: "DELETE_SECRET_GROUP",
-      resourceType: "SECRET_GROUP",
+      action: "DELETE" as any,
+      resourceType: "SECRET" as any,
       resourceId: group.id,
       details: {
         groupName: group.name,

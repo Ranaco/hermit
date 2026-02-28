@@ -11,6 +11,20 @@ services:
       - ENV=development
       - VAULT_ADDR=http://127.0.0.1:8200
       - VAULT_SKIP_VERIFY=true
-      - WEBHOOK_URL=https://webhook.site/c849a567-a6be-45be-bfc9-959fb0d3f1a1
+      - WEBHOOK_URL=https://webhook.site/4d73e799-68aa-4715-9fed-bcc842f709be
       - CREDENTIALS_FILE=./vault_credentials.json
       - WEBHOOK_SECRET=your-shared-secret-key-here
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=hermes
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

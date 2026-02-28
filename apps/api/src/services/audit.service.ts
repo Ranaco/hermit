@@ -28,7 +28,7 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
       data: {
         userId: data.userId,
         action: data.action,
-        resourceType: data.resourceType,
+        resourceType: data.resourceType as any,
         resourceId: data.resourceId,
         details: data.details as any,
         ipAddress: data.ipAddress,
@@ -83,7 +83,7 @@ export async function queryAuditLogs(filters: {
 
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
-      where,
+      where: where as any,
       orderBy: { createdAt: "desc" },
       take: filters.limit || 100,
       skip: filters.offset || 0,
@@ -97,7 +97,7 @@ export async function queryAuditLogs(filters: {
         },
       },
     }),
-    prisma.auditLog.count({ where }),
+    prisma.auditLog.count({ where: where as any }),
   ]);
 
   return { logs, total };

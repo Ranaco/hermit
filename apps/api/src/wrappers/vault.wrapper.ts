@@ -10,7 +10,6 @@ import {
   NotFoundError,
   AuthorizationError,
 } from "@hermes/error-handling";
-import { PermissionLevel } from "@hermes/prisma";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 import { hashPassword } from "../utils/password";
@@ -97,15 +96,8 @@ export const vaultWrapper = {
         createdBy: {
           connect: { id: userId },
         },
-        permissions: {
-          create: {
-            userId,
-            permissionLevel: "ADMIN" as PermissionLevel,
-          },
-        },
       },
       include: {
-        permissions: true,
         organization: {
           select: {
             id: true,
@@ -141,37 +133,14 @@ export const vaultWrapper = {
       include: { role: true },
     });
     
-    const adminOrgs = orgMemberships
-      .filter(m => m.role?.name === "ADMIN" || m.role?.name === "OWNER")
-      .map(m => m.organizationId);
+    const orgIds = orgMemberships.map(m => m.organizationId);
+
+    if (organizationId && !orgIds.includes(organizationId)) {
+        return { vaults: [] };
+    }
 
     const whereClause = {
-      OR: [
-        {
-          organizationId: { in: adminOrgs },
-        },
-        {
-          permissions: {
-            some: {
-              userId,
-              permissionLevel: {
-                in: ["VIEW", "USE", "EDIT", "ADMIN"] as PermissionLevel[],
-              },
-            },
-          },
-        },
-        {
-          permissions: { some: { team: {
-                members: { some: { userId } },
-              },
-              permissionLevel: {
-                in: ["VIEW", "USE", "EDIT", "ADMIN"] as PermissionLevel[],
-              },
-            },
-          },
-        },
-      ],
-      ...(organizationId ? { organizationId } : {}),
+      organizationId: organizationId ? organizationId : { in: orgIds },
     };
 
     const vaults = await prisma.vault.findMany({
@@ -208,25 +177,6 @@ export const vaultWrapper = {
           select: {
             id: true,
             name: true,
-          },
-        },
-        permissions: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-            team: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
           },
         },
         _count: {
@@ -357,245 +307,4 @@ export const vaultWrapper = {
     return { success: true };
   },
 
-  /**
-   * Grant vault permissions to a user
-   */
-  async grantUserPermission(
-    userId: string,
-    vaultId: string,
-    data: {
-      targetUserId: string;
-      permissionLevel: string;
-    },
-    auditData: { ipAddress?: string; userAgent?: string },
-  ) {
-    const { targetUserId, permissionLevel } = data;
-    const { ipAddress, userAgent } = auditData;
-
-    if (!targetUserId || !permissionLevel) {
-      throw new ValidationError(
-        ErrorCode.VALIDATION_ERROR,
-        "User ID and permission level are required",
-      );
-    }
-
-    const prisma = getPrismaClient();
-    const vault = await requireVaultAdmin(userId, vaultId);
-
-    // Check if target user exists
-    const targetUser = await prisma.user.findUnique({
-      where: { id: targetUserId },
-    });
-
-    if (!targetUser) {
-      throw new NotFoundError(ErrorCode.USER_NOT_FOUND);
-    }
-
-    const membership = await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: vault.organizationId,
-          userId: targetUserId,
-        },
-      },
-    });
-
-    if (!membership) {
-      throw new AuthorizationError(
-        ErrorCode.NOT_ORGANIZATION_MEMBER,
-        "User must be an organization member to receive vault permissions",
-      );
-    }
-
-    // Create or update permission
-    const permission = await prisma.vaultBinding.upsert({
-      where: {
-        userId_vaultId: {
-          vaultId,
-          userId: targetUserId,
-        },
-      },
-      create: {
-        vaultId,
-        userId: targetUserId,
-        permissionLevel: permissionLevel as PermissionLevel,
-      },
-      update: {
-        permissionLevel: permissionLevel as PermissionLevel,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
-
-    await createAuditLog({
-      userId,
-      action: "UPDATE",
-      resourceType: "VAULT",
-      resourceId: vaultId,
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
-      details: { targetUserId, permissionLevel },
-    });
-
-    return { permission };
-  },
-
-  /**
-   * Revoke vault permissions from a user
-   */
-  async revokeUserPermission(
-    userId: string,
-    vaultId: string,
-    targetUserId: string,
-    auditData: { ipAddress?: string; userAgent?: string },
-  ) {
-    const { ipAddress, userAgent } = auditData;
-
-    const prisma = getPrismaClient();
-    await requireVaultAdmin(userId, vaultId);
-
-    // Delete permission
-    await prisma.vaultBinding.delete({
-      where: {
-        userId_vaultId: {
-          vaultId,
-          userId: targetUserId,
-        },
-      },
-    });
-
-    await createAuditLog({
-      userId,
-      action: "DELETE",
-      resourceType: "VAULT",
-      resourceId: vaultId,
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
-      details: { targetUserId },
-    });
-
-    return { success: true };
-  },
-
-  /**
-   * Grant vault permissions to a team (team)
-   */
-  async grantTeamPermission(
-    userId: string,
-    vaultId: string,
-    data: {
-      targetTeamId: string;
-      permissionLevel: string;
-    },
-    auditData: { ipAddress?: string; userAgent?: string },
-  ) {
-    const { targetTeamId, permissionLevel } = data;
-    const { ipAddress, userAgent } = auditData;
-
-    if (!targetTeamId || !permissionLevel) {
-      throw new ValidationError(
-        ErrorCode.VALIDATION_ERROR,
-        "Team ID and permission level are required",
-      );
-    }
-
-    const prisma = getPrismaClient();
-    const vault = await requireVaultAdmin(userId, vaultId);
-
-    const team = await prisma.team.findFirst({
-      where: {
-        id: targetTeamId,
-        organizationId: vault.organizationId,
-      },
-    });
-
-    if (!team) {
-      throw new NotFoundError(
-        ErrorCode.RESOURCE_NOT_FOUND,
-        "Team not found in this organization",
-      );
-    }
-
-    const permission = await prisma.vaultBinding.upsert({
-      where: {
-        teamId_vaultId: {
-          teamId: targetTeamId,
-          vaultId,
-        },
-      },
-      create: {
-        vaultId,
-        teamId: targetTeamId,
-        permissionLevel: permissionLevel as PermissionLevel,
-      },
-      update: {
-        permissionLevel: permissionLevel as PermissionLevel,
-      },
-      include: {
-        team: {
-          select: {
-            id: true,
-            name: true,
-            organizationId: true,
-          },
-        },
-      },
-    });
-
-    await createAuditLog({
-      userId,
-      action: "UPDATE",
-      resourceType: "VAULT",
-      resourceId: vaultId,
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
-      details: { targetTeamId, permissionLevel },
-    });
-
-    return { permission };
-  },
-
-  /**
-   * Revoke vault permissions from a team (team)
-   */
-  async revokeTeamPermission(
-    userId: string,
-    vaultId: string,
-    targetTeamId: string,
-    auditData: { ipAddress?: string; userAgent?: string },
-  ) {
-    const { ipAddress, userAgent } = auditData;
-    const prisma = getPrismaClient();
-    await requireVaultAdmin(userId, vaultId);
-
-    await prisma.vaultBinding.delete({
-      where: {
-        teamId_vaultId: {
-          teamId: targetTeamId,
-          vaultId,
-        },
-      },
-    });
-
-    await createAuditLog({
-      userId,
-      action: "DELETE",
-      resourceType: "VAULT",
-      resourceId: vaultId,
-      ipAddress: ipAddress || "unknown",
-      userAgent: userAgent || "unknown",
-      details: { targetTeamId },
-    });
-
-    return { success: true };
-  },
 };

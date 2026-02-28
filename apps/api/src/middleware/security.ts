@@ -76,7 +76,6 @@ export const generalRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
   skip: (req: Request) => {
     // Skip rate limiting for health checks
     return req.path === '/health' || req.path === '/status';
@@ -94,7 +93,6 @@ export const authRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
   skipSuccessfulRequests: true,
 });
 
@@ -109,7 +107,6 @@ export const sensitiveOperationsRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
 });
 
 /**
@@ -121,7 +118,6 @@ export const cryptoOperationsRateLimiter = rateLimit({
   message: {
     error: 'Too many cryptographic operations, please slow down.',
   },
-  trustProxy: true,
   standardHeaders: true,
   legacyHeaders: false,
 });

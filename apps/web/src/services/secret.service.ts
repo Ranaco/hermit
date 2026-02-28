@@ -17,6 +17,7 @@ export interface Secret {
   currentVersionId?: string;
   createdAt: string;
   updatedAt: string;
+  valueType: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
   vault?: {
     id: string;
     name: string;
@@ -51,7 +52,9 @@ export interface CreateSecretData {
   name: string;
   description?: string;
   value: string;
+  valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
   vaultId: string;
+  secretGroupId?: string;
   keyId: string;
   password?: string;
   metadata?: Record<string, unknown>;
@@ -61,6 +64,7 @@ export interface CreateSecretData {
 
 export interface UpdateSecretData {
   value?: string;
+  valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
   description?: string;
   password?: string;
   metadata?: Record<string, unknown>;
@@ -84,12 +88,24 @@ export interface RevealSecretResponse {
   };
 }
 
+export interface PermissionBinding {
+  id: string;
+  userId?: string;
+  teamId?: string;
+  permissionLevel: 'VIEW' | 'USE' | 'EDIT' | 'ADMIN';
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: string; email: string; firstName: string | null; lastName: string | null; };
+  team?: { id: string; name: string; description: string | null; };
+}
+
 export const secretService = {
   getAll: async (
     vaultId: string,
+    secretGroupId?: string,
   ): Promise<{ secrets: Secret[]; count: number }> => {
     const response = await apiClient.get("/secrets", {
-      params: { vaultId },
+      params: { vaultId, secretGroupId },
     });
     return response.data.data;
   },
@@ -138,4 +154,6 @@ export const secretService = {
     const response = await apiClient.get(`/secrets/${id}/versions`);
     return response.data.data;
   },
+
+
 };

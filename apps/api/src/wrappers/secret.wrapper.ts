@@ -29,6 +29,7 @@ export const secretWrapper = {
       name: string;
       description?: string;
       value: string;
+      valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
       vaultId: string;
       secretGroupId?: string;
       keyId: string;
@@ -46,6 +47,7 @@ export const secretWrapper = {
       name,
       description,
       value,
+      valueType,
       vaultId,
       secretGroupId,
       keyId,
@@ -117,6 +119,7 @@ export const secretWrapper = {
         vaultId,
         secretGroupId,
         keyId,
+        valueType,
         passwordHash,
         metadata,
         tags: tags || [],
@@ -345,44 +348,7 @@ export const secretWrapper = {
     // We need to verify org admin, direct user vault binding, or team vault binding.
     // For simplicity, we just check if the user has >= USE access on the vault.
     
-    // Admins/Owners of the Organization inherently have ADMIN over the vault
-    const orgMembership = await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: (await prisma.vault.findUnique({where: {id: secret.vault.id}}))?.organizationId || "",
-          userId: userId,
-        },
-      },
-      include: { role: true },
-    });
 
-    const isOrgAdmin = orgMembership?.role?.name === "ADMIN" || orgMembership?.role?.name === "OWNER";
-
-    // Vault User Bindings
-    const userBinding = await prisma.vaultBinding.findUnique({
-      where: { userId_vaultId: { userId, vaultId: secret.vault.id } }
-    });
-
-    // Vault Team Bindings
-    const teamBindings = await prisma.vaultBinding.findMany({
-      where: {
-        vaultId: secret.vault.id,
-        teamId: { not: null },
-        team: { members: { some: { userId } } },
-      }
-    });
-
-    const permissionHierarchy: Record<string, number> = { VIEW: 1, USE: 2, EDIT: 3, ADMIN: 4 };
-
-    const hasUserPerm = userBinding && permissionHierarchy[userBinding.permissionLevel] >= permissionHierarchy["USE"];
-    const hasTeamPerm = teamBindings.some(b => permissionHierarchy[b.permissionLevel] >= permissionHierarchy["USE"]);
-
-    if (!isOrgAdmin && !hasUserPerm && !hasTeamPerm) {
-      throw new ForbiddenError(
-        ErrorCode.INSUFFICIENT_PERMISSIONS,
-        "Insufficient permissions to read this secret",
-      );
-    }
 
     // Three-tier security verification
     // 1. Secret-level password (highest priority)
@@ -534,6 +500,7 @@ export const secretWrapper = {
     data: {
       secretId: string;
       value?: string;
+      valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
       description?: string;
       password?: string;
       metadata?: Record<string, any>;
@@ -589,42 +556,7 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-    // Note: Since `updateSecret` router does not receive a vaultId, we need to enforceEDIT permissions here
-    // just like we did with reveal.
-    const orgMembership = await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: (await prisma.vault.findUnique({where: {id: secret.vault.id}}))?.organizationId || "",
-          userId: userId,
-        },
-      },
-      include: { role: true },
-    });
 
-    const isOrgAdmin = orgMembership?.role?.name === "ADMIN" || orgMembership?.role?.name === "OWNER";
-
-    const userBinding = await prisma.vaultBinding.findUnique({
-      where: { userId_vaultId: { userId, vaultId: secret.vault.id } }
-    });
-
-    const teamBindings = await prisma.vaultBinding.findMany({
-      where: {
-        vaultId: secret.vault.id,
-        teamId: { not: null },
-        team: { members: { some: { userId } } },
-      }
-    });
-
-    const permissionHierarchy: Record<string, number> = { VIEW: 1, USE: 2, EDIT: 3, ADMIN: 4 };
-    const hasUserPerm = userBinding && permissionHierarchy[userBinding.permissionLevel] >= permissionHierarchy["EDIT"];
-    const hasTeamPerm = teamBindings.some(b => permissionHierarchy[b.permissionLevel] >= permissionHierarchy["EDIT"]);
-
-    if (!isOrgAdmin && !hasUserPerm && !hasTeamPerm) {
-      throw new ForbiddenError(
-        ErrorCode.INSUFFICIENT_PERMISSIONS,
-        "Insufficient permissions to edit this secret",
-      );
-    }
 
     const currentVersion = secret.versions[0];
     const nextVersionNumber = currentVersion
@@ -647,6 +579,8 @@ export const secretWrapper = {
       updateData.expiresAt = expiresAt ? new Date(expiresAt) : null;
     if (secretGroupId !== undefined)
       updateData.secretGroupId = secretGroupId;
+    if (data.valueType !== undefined)
+      updateData.valueType = data.valueType;
 
     // Update password if provided
     if (password !== undefined) {
@@ -753,41 +687,7 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-    // Check admin permissions since we are doing a destructive delete operation
-    const orgMembership = await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: (await prisma.vault.findUnique({where: {id: secret.vault.id}}))?.organizationId || "",
-          userId: userId,
-        },
-      },
-      include: { role: true },
-    });
 
-    const isOrgAdmin = orgMembership?.role?.name === "ADMIN" || orgMembership?.role?.name === "OWNER";
-
-    const userBinding = await prisma.vaultBinding.findUnique({
-      where: { userId_vaultId: { userId, vaultId: secret.vault.id } }
-    });
-
-    const teamBindings = await prisma.vaultBinding.findMany({
-      where: {
-        vaultId: secret.vault.id,
-        teamId: { not: null },
-        team: { members: { some: { userId } } },
-      }
-    });
-
-    const permissionHierarchy: Record<string, number> = { VIEW: 1, USE: 2, EDIT: 3, ADMIN: 4 };
-    const hasUserPerm = userBinding && permissionHierarchy[userBinding.permissionLevel] >= permissionHierarchy["ADMIN"];
-    const hasTeamPerm = teamBindings.some(b => permissionHierarchy[b.permissionLevel] >= permissionHierarchy["ADMIN"]);
-
-    if (!isOrgAdmin && !hasUserPerm && !hasTeamPerm) {
-      throw new ForbiddenError(
-        ErrorCode.INSUFFICIENT_PERMISSIONS,
-        "Insufficient permissions to delete this secret",
-      );
-    }
 
     await prisma.secret.delete({
       where: { id: secretId },
@@ -832,41 +732,7 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-    // Check view permissions
-    const orgMembership = await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: (await prisma.vault.findUnique({where: {id: secret.vault.id}}))?.organizationId || "",
-          userId: userId,
-        },
-      },
-      include: { role: true },
-    });
 
-    const isOrgAdmin = orgMembership && (orgMembership.role?.name === "ADMIN" || orgMembership.role?.name === "OWNER");
-
-    const userBinding = await prisma.vaultBinding.findUnique({
-      where: { userId_vaultId: { userId, vaultId: secret.vault.id } }
-    });
-
-    const teamBindings = await prisma.vaultBinding.findMany({
-      where: {
-        vaultId: secret.vault.id,
-        teamId: { not: null },
-        team: { members: { some: { userId } } },
-      }
-    });
-
-    const permissionHierarchy: Record<string, number> = { VIEW: 1, USE: 2, EDIT: 3, ADMIN: 4 };
-    const hasUserPerm = userBinding && permissionHierarchy[userBinding.permissionLevel] >= permissionHierarchy["VIEW"];
-    const hasTeamPerm = teamBindings.some(b => permissionHierarchy[b.permissionLevel] >= permissionHierarchy["VIEW"]);
-
-    if (!isOrgAdmin && !hasUserPerm && !hasTeamPerm) {
-      throw new ForbiddenError(
-        ErrorCode.INSUFFICIENT_PERMISSIONS,
-        "Insufficient permissions to view this secret",
-      );
-    }
 
     const versions = await prisma.secretVersion.findMany({
       where: { secretId },

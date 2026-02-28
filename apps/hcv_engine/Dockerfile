@@ -12,7 +12,7 @@ COPY config/config.hcl /etc/config.hcl
 COPY scripts/setup ./setup
 RUN sed -i 's/\r$//' setup
 RUN chmod +x setup
-COPY scripts/cert.pem ./cert.pem
+COPY certs/cert.pem ./cert.pem
 COPY scripts/start.sh ./start.sh
 RUN sed -i 's/\r$//' start.sh
 RUN chmod +x start.sh

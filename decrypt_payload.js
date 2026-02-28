@@ -14,7 +14,7 @@ const argPrivateKeyPath = process.argv[3];
 
 const privateKeyPath =
   argPrivateKeyPath ??
-  path.join(__dirname, "apps", "hcv_engine", "scripts", "key.pem");
+  path.join(__dirname, "apps", "hcv_engine", "certs", "private_key.pem");
 
 try {
   const privateKeyPem = fs.readFileSync(privateKeyPath, "utf8");
