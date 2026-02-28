@@ -8,7 +8,14 @@ This file provides system context for AI assistants to align themselves with the
 - **Entity Hierarchy**: Organizations -\u003e Vaults -\u003e Keys -\u003e Secrets.
 - **Entity Selection on Creation**: When users create a Vault or a Key, the frontend forms (`apps/web/src/app/dashboard/vaults/page.tsx`, `keys/page.tsx`) explicitly provide dynamic `<select>` dropdowns for the parent Organization or Vault by calling the `useOrganizations` and `useVaults` React Query hooks. Do not regress into assuming the \"current active context\" is the only parent available.
 
-## 2. Three-Tier Security Model for Secrets
+## 2. IAM Policy Engine & Custom Roles
+
+- **Access Control Model**: The application uses a dynamic Identity and Access Management (IAM) Policy Engine instead of standard static RBAC.
+- **Resource URNs**: Every resource (Vault, Secret, Key, SecretGroup) is identified by a unique URN (e.g., `urn:hermes:org:ORG_ID:vault:VAULT_ID:secret:SECRET_ID`).
+- **Policy Evaluation**: The `requirePolicy(action, getResourceUrn)` middleware intercepts requests and evaluates the user's assigned custom roles, team roles, and implicitly attached JSON IAM policies to grant or deny access in real-time. Explicit DENY statements always override ALLOW statements.
+- **Default Owner Bypass**: Organization `OWNER`s implicitly bypass all policy evaluations and have universal access.
+
+## 3. Three-Tier Security Model for Secrets
 
 Secrets implement a strict three-tier protection model natively supported in the backend `secretWrapper.ts` and validated by Zod schemas:
 
@@ -54,6 +61,7 @@ Key tables and their core relationships:
 - **Key**: Has `vaultId`. Contains many `KeyVersion`s. Defines `valueType` (STRING, JSON, etc).
 - **Secret**: Has `vaultId` and `keyId`. Tracks `passwordHash` for the extra protection tier.
 - **SecretVersion**: Has `secretId`. Contains the `encryptedValue` and `encryptionContext`.
+- **Policy**, **OrganizationRole**, **RolePolicyAttachment**, **TeamRoleAssignment**: Tracks dynamic IAM permissions, custom roles, and groups.
 
 ## 8. Workflow & Threads
 
