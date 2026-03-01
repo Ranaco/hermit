@@ -29,6 +29,39 @@ export function useCreatePolicy() {
   });
 }
 
+export function useUpdatePolicy() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useOrganizationStore();
+
+  return useMutation({
+    mutationFn: ({ policyId, data }: { policyId: string; data: CreatePolicyData }) => 
+      policyService.updatePolicy(currentOrganization!.id, policyId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["policies", currentOrganization?.id] });
+      toast.success("Policy updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update policy");
+    },
+  });
+}
+
+export function useDeletePolicy() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useOrganizationStore();
+
+  return useMutation({
+    mutationFn: (policyId: string) => policyService.deletePolicy(currentOrganization!.id, policyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["policies", currentOrganization?.id] });
+      toast.success("Policy deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete policy");
+    },
+  });
+}
+
 export function useRoles() {
   const { currentOrganization } = useOrganizationStore();
   

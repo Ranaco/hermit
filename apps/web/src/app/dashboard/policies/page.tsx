@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Shield, KeyRound, Vault, Plus, FileCode2 } from "lucide-react";
-import { usePolicies, useRoles, useCreatePolicy, useCreateRole, useUpdateRole } from "@/hooks/use-policies";
+import { usePolicies, useRoles, useCreatePolicy, useUpdatePolicy, useDeletePolicy, useCreateRole, useUpdateRole } from "@/hooks/use-policies";
+import { PolicyEditor } from "@/components/policy-editor";
 
 export default function PoliciesPage() {
   const { data: roles = [], isLoading: isLoadingRoles } = useRoles();
@@ -20,7 +21,13 @@ export default function PoliciesPage() {
   const createRole = useCreateRole();
   const updateRole = useUpdateRole();
 
+  const updatePolicy = useUpdatePolicy();
+  const deletePolicy = useDeletePolicy();
+
   const [isPolicyDialogOpen, setIsPolicyDialogOpen] = useState(false);
+  const [isEditPolicyDialogOpen, setIsEditPolicyDialogOpen] = useState(false);
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
+  
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
 
   // Policy Form State
@@ -55,6 +62,41 @@ export default function PoliciesPage() {
     } catch (error) {
       alert("Invalid JSON format for statements");
     }
+  };
+
+  const handleUpdatePolicy = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPolicyId) return;
+    try {
+      const statements = JSON.parse(policyJson);
+      updatePolicy.mutate({
+        policyId: editingPolicyId,
+        data: {
+          name: policyName,
+          description: policyDescription,
+          statements,
+        }
+      }, {
+        onSuccess: () => {
+          setIsEditPolicyDialogOpen(false);
+          setEditingPolicyId(null);
+          setPolicyName("");
+          setPolicyDescription("");
+          setPolicyJson('[\n  {\n    "effect": "ALLOW",\n    "actions": ["secrets:*"],\n    "resources": ["*"]\n  }\n]');
+        }
+      });
+    } catch (error) {
+      alert("Invalid JSON format for statements");
+    }
+  };
+
+  const openEditPolicyDialog = (policy: any) => {
+    setEditingPolicyId(policy.id);
+    setPolicyName(policy.name);
+    setPolicyDescription(policy.description || "");
+    const statements = policy.document?.statements || policy.statements || [];
+    setPolicyJson(JSON.stringify(statements, null, 2));
+    setIsEditPolicyDialogOpen(true);
   };
 
   const handleCreateRole = (e: React.FormEvent) => {
@@ -271,7 +313,14 @@ export default function PoliciesPage() {
               <p className="kms-subtitle mt-2">Granular JSON statements defining exact resource allowances via URNs.</p>
             </div>
             
-            <Dialog open={isPolicyDialogOpen} onOpenChange={setIsPolicyDialogOpen}>
+            <Dialog open={isPolicyDialogOpen} onOpenChange={(open) => {
+               setIsPolicyDialogOpen(open);
+               if (open) {
+                 setPolicyName("");
+                 setPolicyDescription("");
+                 setPolicyJson('[\n  {\n    "effect": "ALLOW",\n    "actions": [],\n    "resources": ["*"]\n  }\n]');
+               }
+            }}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="rounded-xl"><FileCode2 className="mr-2 h-4 w-4"/> New Policy</Button>
               </DialogTrigger>
@@ -293,14 +342,7 @@ export default function PoliciesPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="polJson">Statements (JSON Array)</Label>
-                      <Textarea 
-                        id="polJson" 
-                        value={policyJson} 
-                        onChange={e => setPolicyJson(e.target.value)} 
-                        className="font-mono text-xs min-h-[200px]" 
-                        required 
-                      />
+                       <PolicyEditor value={policyJson} onChange={setPolicyJson} />
                     </div>
                   </div>
                   <div className="flex justify-end pt-2">
@@ -325,16 +367,61 @@ export default function PoliciesPage() {
                     <h3 className="font-semibold">{policy.name}</h3>
                     {policy.description && <p className="text-sm text-muted-foreground mt-0.5">{policy.description}</p>}
                   </div>
-                  <Badge variant="secondary" className="font-mono text-[10px]">{policy.id}</Badge>
+                  <div className="flex items-center gap-4">
+                    <Badge variant="secondary" className="font-mono text-[10px]">{policy.id}</Badge>
+                    {!("isManaged" in policy ? policy.isManaged : false) && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEditPolicyDialog(policy)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => {
+                          if (confirm(`Delete policy "${policy.name}"?`)) {
+                            deletePolicy.mutate(policy.id);
+                          }
+                        }}>Delete</Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="p-0">
                   <pre className="p-5 text-xs text-muted-foreground font-mono overflow-x-auto m-0 bg-[#0c0c0e]">
-                    <code>{JSON.stringify(policy.statements, null, 2)}</code>
+                    <code>{JSON.stringify((policy as any).document?.statements || (policy as any).statements, null, 2)}</code>
                   </pre>
                 </div>
               </div>
             ))}
           </div>
+
+          <Dialog open={isEditPolicyDialogOpen} onOpenChange={setIsEditPolicyDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <form onSubmit={handleUpdatePolicy}>
+                <DialogHeader>
+                  <DialogTitle>Edit Validated JSON Policy</DialogTitle>
+                  <DialogDescription>Modify the raw AWS-style policy statements granting or denying resource operations.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editPolName">Name</Label>
+                      <Input id="editPolName" value={policyName} onChange={e => setPolicyName(e.target.value)} placeholder="e.g. Read Secrets Only" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="editPolDesc">Description</Label>
+                      <Input id="editPolDesc" value={policyDescription} onChange={e => setPolicyDescription(e.target.value)} placeholder="Optional" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <PolicyEditor value={policyJson} onChange={setPolicyJson} />
+                  </div>
+                </div>
+                <div className="flex justify-end pt-2 gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsEditPolicyDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={updatePolicy.isPending} className="w-full sm:w-auto">
+                    {updatePolicy.isPending ? "Validating & Saving..." : "Save Policy"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
         </section>
 
       </div>

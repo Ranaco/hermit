@@ -306,6 +306,7 @@ model OneTimeShare {
     createdById        String
     token              String      @unique
     requirePassphrase  Boolean     @default(false)
+    passwordHash       String?
     expiresAt          DateTime
     consumedAt         DateTime?
     consumedByIp       String?

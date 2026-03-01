@@ -8,10 +8,10 @@ export type ResourceUrnFactory = (req: Request) => string | Promise<string>;
  * Validates whether the authenticated user has explicit ALLOW (and no DENY) via
  * JSON IAM Policies for the given specific action on the computed resource URN.
  *
- * @param action - e.g. "secrets:read", "vaults:delete"
+ * @param actions - e.g. "secrets:read" or ["groups:read", "secrets:read"]
  * @param resourceFactory - A callback generating the canonical URN for the req resource.
  */
-export function requirePolicy(action: string, resourceFactory: ResourceUrnFactory) {
+export function requirePolicy(actions: string | string[], resourceFactory: ResourceUrnFactory) {
   return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     // Evaluate URN first which can optionally populate `req.organizationId`
     const resourceUrn = await resourceFactory(req);
@@ -27,7 +27,15 @@ export function requirePolicy(action: string, resourceFactory: ResourceUrnFactor
     }
 
 
-    const isAllowed = await evaluateAccess(req.user.id, orgId, action, resourceUrn);
+    const actionList = Array.isArray(actions) ? actions : [actions];
+    let isAllowed = false;
+
+    for (const action of actionList) {
+      if (await evaluateAccess(req.user.id, orgId, action, resourceUrn)) {
+        isAllowed = true;
+        break;
+      }
+    }
 
     if (isAllowed) {
       return next();
@@ -35,7 +43,7 @@ export function requirePolicy(action: string, resourceFactory: ResourceUrnFactor
 
     throw new AuthenticationError(
       ErrorCode.INSUFFICIENT_PERMISSIONS,
-      `Action '${action}' denied by implicit or explicit IAM policies on resource '${resourceUrn}'`
+      `Access denied by implicit or explicit IAM policies on resource '${resourceUrn}'`
     );
   });
 }

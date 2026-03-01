@@ -15,9 +15,10 @@ import { secretService } from "@/services/secret.service";
 import { secretGroupService } from "@/services/secret-group.service";
 import { useKeys } from "@/hooks/use-keys";
 import { useOrganizationStore } from "@/store/organization.store";
-import { Plus, Trash2, Search, Lock, Eye, EyeOff, Vault, KeyRound, Loader2, Copy, Folder, ChevronRight, FolderPlus, History, RefreshCcw, Shield } from "lucide-react";
+import { Plus, Trash2, Search, Lock, Eye, EyeOff, Vault, KeyRound, Loader2, Copy, Folder, ChevronRight, FolderPlus, History, RefreshCcw, Shield, Link as LinkIcon } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
+import { CreateShareModal } from "@/components/shares/create-share-modal";
 
 
 export default function SecretsPage() {
@@ -50,6 +51,8 @@ export default function SecretsPage() {
     keyId: "",
     password: "",
   });
+
+  const [showShareModal, setShowShareModal] = useState(false);
 
 
 
@@ -273,6 +276,10 @@ export default function SecretsPage() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="secondary" className="rounded-xl border border-border/80 bg-background/50 hover:bg-background shadow-sm" onClick={() => setShowShareModal(true)}>
+                <LinkIcon className="mr-2 h-4 w-4 text-indigo-500" />
+                Share
+              </Button>
               <Button variant="outline" className="rounded-xl" onClick={() => {
                 setShowCreateFolderForm((v) => !v);
                 setShowCreateForm(false);
@@ -954,7 +961,7 @@ export default function SecretsPage() {
           </DialogContent>
         </Dialog>
         
-
+        <CreateShareModal isOpen={showShareModal} onOpenChange={setShowShareModal} />
       </div>
     </DashboardLayout>
   );

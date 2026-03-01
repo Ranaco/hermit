@@ -55,7 +55,7 @@ const getGroupUrn = async (req: any) => {
 router.get(
   "/",
   validate({ query: getSecretGroupsSchema }),
-  requirePolicy("groups:read", getGroupUrn),
+  requirePolicy(["groups:read", "secrets:read"], getGroupUrn),
   getGroups,
 );
 

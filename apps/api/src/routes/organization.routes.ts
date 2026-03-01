@@ -121,6 +121,8 @@ router.delete(
  */
 router.get("/:orgId/policies", policyController.getPolicies);
 router.post("/:orgId/policies", policyController.createPolicy);
+router.put("/:orgId/policies/:policyId", policyController.updatePolicy);
+router.delete("/:orgId/policies/:policyId", policyController.deletePolicy);
 
 /**
  * Custom Roles Management (IAM)

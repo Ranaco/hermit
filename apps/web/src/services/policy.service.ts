@@ -52,6 +52,15 @@ export const policyService = {
     return response.data.data.policy;
   },
 
+  updatePolicy: async (orgId: string, policyId: string, data: CreatePolicyData): Promise<Policy> => {
+    const response = await apiClient.put(`/organizations/${orgId}/policies/${policyId}`, data);
+    return response.data.data.policy;
+  },
+
+  deletePolicy: async (orgId: string, policyId: string): Promise<void> => {
+    await apiClient.delete(`/organizations/${orgId}/policies/${policyId}`);
+  },
+
   getRoles: async (orgId: string): Promise<OrganizationRole[]> => {
     const response = await apiClient.get(`/organizations/${orgId}/roles`);
     return response.data.data.roles;

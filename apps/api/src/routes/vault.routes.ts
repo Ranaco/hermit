@@ -49,11 +49,13 @@ router.post(
   "/",
   generalRateLimiter,
   validate({ body: createVaultSchema }),
+  requirePolicy("vaults:create", getVaultUrn),
   vaultController.createVault,
 );
 router.get(
   "/",
   validate({ query: getVaultsQuerySchema }),
+  requirePolicy("vaults:read", getVaultUrn),
   vaultController.getVaults,
 );
 router.get(

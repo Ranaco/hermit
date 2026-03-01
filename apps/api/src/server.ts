@@ -30,6 +30,7 @@ import secretRoutes from "./routes/secret.routes";
 import secretGroupRoutes from "./routes/secret-group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
+import shareRoutes from "./routes/share.routes";
 
 /**
  * Create and configure Express application
@@ -120,6 +121,7 @@ export const createServer = (): Express => {
   app.use(`${config.app.apiPrefix}/secrets`, secretRoutes);
   app.use(`${config.app.apiPrefix}/onboarding`, onboardingRoutes);
   app.use(`${config.app.apiPrefix}/audit`, auditRoutes);
+  app.use(`${config.app.apiPrefix}/shares`, shareRoutes);
 
   // Temporary placeholder route
   app.get(`${config.app.apiPrefix}/info`, (_req: Request, res: Response) => {

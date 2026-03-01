@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { useAuthStore } from "@/store/auth.store";
 import { useLogout } from "@/hooks/use-auth";
 import { useUIStore } from "@/store/ui.store";
@@ -52,15 +53,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-background text-foreground">
       <aside
         className={cn(
-          "sticky top-0 h-screen border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md transition-all duration-200",
+          "sticky top-0 h-screen border-r border-sidebar-border bg-sidebar/70 backdrop-blur-2xl transition-all duration-300 ease-in-out",
           sidebarOpen ? "w-[288px]" : "w-[88px]"
         )}
       >
         <div className="flex h-full flex-col p-4 gap-4">
           <div className="flex items-center justify-between px-2 py-2">
-            <div className={cn("transition-all", sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none")}> 
-              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Hermes</p>
-              <h1 className="text-lg font-semibold">Key Management</h1>
+            <div className={cn("flex items-center gap-3 transition-all", sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none")}> 
+              <div className="w-8 h-8 rounded-lg bg-primary flex shrink-0 items-center justify-center text-primary-foreground shadow-sm">
+                <Logo className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div className="flex flex-col">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Hermes</p>
+                <h1 className="text-sm font-semibold leading-tight">Key Management</h1>
+              </div>
             </div>
             <Button
               variant="ghost"
@@ -124,11 +130,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b border-border/70 bg-background/85 backdrop-blur-md">
-          <div className="flex h-16 items-center justify-between px-6">
+        <header className="sticky top-0 z-10 border-b border-border/40 bg-background/70 backdrop-blur-2xl transition-all duration-300">
+          <div className="flex h-16 items-center justify-between px-6 lg:px-8">
             <div>
-              <h2 className="text-base font-medium tracking-tight">{activeTitle}</h2>
-              <p className="text-xs text-muted-foreground">Vault-backed security operations</p>
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">{activeTitle}</h2>
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">Vault-backed security operations</p>
             </div>
 
             <div className="flex items-center gap-2">

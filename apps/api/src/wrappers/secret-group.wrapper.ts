@@ -5,6 +5,7 @@ import {
 } from "@hermes/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
+import { evaluateAccess } from "../services/policy-engine";
 
 export const secretGroupWrapper = {
   /**
@@ -103,6 +104,15 @@ export const secretGroupWrapper = {
     const { vaultId, parentId } = data;
     const prisma = getPrismaClient();
 
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId },
+      select: { organizationId: true }
+    });
+    
+    if (!vault) {
+      throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, "Vault not found");
+    }
+
     const where: any = { vaultId };
 
     if (parentId !== undefined) {
@@ -121,6 +131,14 @@ export const secretGroupWrapper = {
         },
       },
     });
+
+    const resourceUrn = `urn:hermes:org:${vault.organizationId}:vault:${vaultId}:group:*`;
+    const hasFullGroupRead = await evaluateAccess(userId, vault.organizationId, "groups:read", resourceUrn);
+
+    if (!hasFullGroupRead) {
+      // Feature request: Users with only secrets:read should only see folders that actively contain secrets (or nested secrets via children limit)
+      return groups.filter(g => g._count.secrets > 0 || g._count.children > 0);
+    }
 
     return groups;
   },
