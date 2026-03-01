@@ -25,6 +25,7 @@ import {
   Bell,
   Sun,
   Moon,
+  Search,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -47,46 +48,46 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const { theme, setTheme } = useTheme();
 
-  const activeTitle = navigation.find((item) => pathname === item.href)?.name || "Hermes KMS";
+  const activeTitle = navigation.find((item) => pathname === item.href)?.name || "Hermes";
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen bg-transparent text-foreground p-4 lg:p-6 gap-6 selection:bg-primary/20">
+      {/* Floating Sidebar */}
       <aside
         className={cn(
-          "sticky top-0 h-screen border-r border-sidebar-border bg-sidebar/70 backdrop-blur-2xl transition-all duration-300 ease-in-out",
-          sidebarOpen ? "w-[288px]" : "w-[88px]"
+          "sticky top-6 h-[calc(100vh-3rem)] cupertino-glass transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 flex flex-col z-20 overflow-hidden",
+          sidebarOpen ? "w-[280px]" : "w-[88px]"
         )}
       >
-        <div className="flex h-full flex-col p-4 gap-4">
-          <div className="flex items-center justify-between px-2 py-2">
-            <div className={cn("flex items-center gap-3 transition-all", sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none")}> 
-              <div className="w-8 h-8 rounded-lg bg-primary flex shrink-0 items-center justify-center text-primary-foreground shadow-sm">
+        <div className="flex h-full flex-col p-5 gap-4">
+          <div className="flex items-center justify-between px-1 py-1">
+            <div className={cn("flex items-center gap-3 transition-opacity duration-300", sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none")}> 
+              <div className="w-10 h-10 rounded-2xl bg-primary flex shrink-0 items-center justify-center text-primary-foreground shadow-md shadow-primary/20 ring-1 ring-white/10 glow">
                 <Logo className="w-5 h-5 text-primary-foreground" />
               </div>
               <div className="flex flex-col">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Hermes</p>
-                <h1 className="text-sm font-semibold leading-tight">Key Management</h1>
+                <h1 className="text-lg font-bold tracking-tight leading-none text-foreground">Hermes</h1>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mt-1">Workspace</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-xl"
+              className={cn("h-10 w-10 rounded-2xl shrink-0 transition-colors hover:bg-black/5 dark:hover:bg-white/10", !sidebarOpen && "mx-auto")}
               onClick={toggleSidebar}
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
-              {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              {sidebarOpen ? <PanelLeftClose className="h-[18px] w-[18px] text-foreground" /> : <Menu className="h-[18px] w-[18px] text-foreground" />}
             </Button>
           </div>
 
-          {sidebarOpen ? (
-            <div className="space-y-2">
-              <OrganizationSelector onCreateNew={() => router.push("/dashboard/organizations")} />
-              <VaultSelector onCreateNew={() => router.push("/dashboard/vaults")} />
-            </div>
-          ) : null}
+          <div className={cn("space-y-3 px-1 mt-4 transition-all duration-300 transform", sidebarOpen ? "opacity-100 translate-y-0 block" : "opacity-0 -translate-y-2 hidden")}>
+            <OrganizationSelector onCreateNew={() => router.push("/dashboard/organizations")} />
+            <VaultSelector onCreateNew={() => router.push("/dashboard/vaults")} />
+          </div>
 
-          <nav className="flex-1 space-y-1 pt-2">
+          <nav className="flex-1 space-y-1.5 mt-4">
+            <div className={cn("px-4 mb-3 text-[11px] font-bold text-muted-foreground uppercase tracking-widest transition-opacity", !sidebarOpen && "opacity-0")}>Menu</div>
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -94,66 +95,86 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150",
+                    "group flex items-center gap-3.5 rounded-[16px] px-3.5 py-3 text-sm font-[600] transition-all duration-300",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 translate-x-1"
+                      : "text-foreground/80 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground"
                   )}
                 >
-                  <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("truncate", sidebarOpen ? "opacity-100" : "opacity-0 w-0")}>{item.name}</span>
+                  <item.icon className={cn("h-[20px] w-[20px] shrink-0 transition-colors duration-300", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                  <span className={cn("truncate transition-all duration-300", sidebarOpen ? "opacity-100 block" : "opacity-0 hidden")}>{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="space-y-2 border-t border-sidebar-border pt-3">
-            <div className={cn("px-2", sidebarOpen ? "block" : "hidden")}>
-              <p className="text-sm font-medium truncate">
-                {user?.firstName || user?.lastName
-                  ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
-                  : user?.username || user?.email || "Operator"}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          <div className="space-y-4 pt-4 mt-auto">
+            <div className={cn("flex items-center gap-3 px-2 transition-all duration-300", sidebarOpen ? "opacity-100 block" : "opacity-0 hidden")}>
+               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-chart-3 shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-background">
+                  {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "O"}
+               </div>
+               <div className="flex flex-col min-w-0">
+                 <p className="text-sm font-bold truncate text-foreground">
+                   {user?.firstName || user?.lastName
+                     ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
+                     : user?.username || "Operator"}
+                 </p>
+                 <p className="text-[11px] font-medium text-muted-foreground truncate">{user?.email}</p>
+               </div>
             </div>
+            
             <Button
               variant="ghost"
-              size={sidebarOpen ? "default" : "icon"}
-              className={cn("w-full rounded-xl", sidebarOpen ? "justify-start" : "justify-center")}
+              className={cn("w-full h-12 rounded-[16px] text-destructive/80 hover:bg-destructive/10 hover:text-destructive transition-colors", sidebarOpen ? "justify-start px-4" : "justify-center")}
               onClick={() => logout()}
             >
-              <LogOut className="h-4 w-4" />
-              {sidebarOpen ? <span className="ml-2">Sign out</span> : null}
+              <LogOut className="h-[20px] w-[20px]" />
+              {sidebarOpen && <span className="ml-3 font-semibold">Sign Out</span>}
             </Button>
           </div>
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b border-border/40 bg-background/70 backdrop-blur-2xl transition-all duration-300">
-          <div className="flex h-16 items-center justify-between px-6 lg:px-8">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">{activeTitle}</h2>
-              <p className="text-xs text-muted-foreground font-medium mt-0.5">Vault-backed security operations</p>
-            </div>
+      {/* Main Content Area */}
+      <div className="flex min-h-[calc(100vh-3rem)] flex-1 flex-col z-10 w-full overflow-hidden">
+        {/* Floating Header */}
+        <header className="sticky top-6 relative z-30 mb-8 cupertino-glass-panel !rounded-[24px] !py-3 !px-5 flex h-[72px] shrink-0 items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="text-[22px] font-bold tracking-tight text-foreground">{activeTitle}</h2>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-xl"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex relative items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search resources..."
+                className="h-11 w-72 rounded-full bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.05] pl-11 pr-14 text-[14px] font-medium focus:bg-white/50 dark:focus:bg-black/20 focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all duration-300 placeholder:text-muted-foreground"
+              />
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                <span className="text-[10px] font-bold text-muted-foreground bg-black/5 dark:bg-white/10 rounded-[6px] px-1.5 py-0.5 border border-black/5 dark:border-white/5 shadow-sm">⌘K</span>
+              </div>
             </div>
+            
+            <div className="h-8 w-px bg-black/10 dark:bg-white/10 mx-1 hidden sm:block"></div>
+            
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] border border-black/[0.05] dark:border-white/[0.05] transition-all duration-300">
+              <Bell className="h-4 w-4 text-foreground/80" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 rounded-full bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] border border-black/[0.05] dark:border-white/[0.05] transition-all duration-300"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4 text-foreground/80" /> : <Moon className="h-4 w-4 text-foreground/80" />}
+            </Button>
           </div>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8">
+        <main className="flex-1 w-full pb-10">
           {children}
         </main>
       </div>

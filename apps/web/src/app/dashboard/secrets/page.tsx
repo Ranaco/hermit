@@ -16,7 +16,7 @@ import { secretGroupService } from "@/services/secret-group.service";
 import { useKeys } from "@/hooks/use-keys";
 import { useOrganizationStore } from "@/store/organization.store";
 import { Plus, Trash2, Search, Lock, Eye, EyeOff, Vault, KeyRound, Loader2, Copy, Folder, ChevronRight, FolderPlus, History, RefreshCcw, Shield, Link as LinkIcon } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CreateShareModal } from "@/components/shares/create-share-modal";
 
@@ -266,375 +266,408 @@ export default function SecretsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <section className="kms-panel">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="space-y-8 max-w-7xl mx-auto">
+        <section className="cupertino-glass-panel !p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="kms-title">Secrets</h1>
-              <p className="kms-subtitle mt-2">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Secrets</h1>
+              <p className="text-[15px] font-medium text-muted-foreground mt-2">
                 Organize your credentials with folders or direct secrets.
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" className="rounded-xl border border-border/80 bg-background/50 hover:bg-background shadow-sm" onClick={() => setShowShareModal(true)}>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="rounded-2xl h-11 px-5 shadow-sm" onClick={() => setShowShareModal(true)}>
                 <LinkIcon className="mr-2 h-4 w-4 text-indigo-500" />
                 Share
               </Button>
-              <Button variant="outline" className="rounded-xl" onClick={() => {
+              <Button variant="secondary" className="rounded-2xl h-11 px-5" onClick={() => {
                 setShowCreateFolderForm((v) => !v);
                 setShowCreateForm(false);
                 setShowUpdateForm(false);
               }}>
-                <FolderPlus className="mr-2 h-4 w-4" />
+                <FolderPlus className="mr-2 h-4 w-4 text-primary" />
                 Create Folder
               </Button>
-              <Button className="rounded-xl" onClick={() => {
+              <Button className="rounded-2xl h-11 px-6" onClick={() => {
                 setShowCreateForm((v) => !v);
                 setShowCreateFolderForm(false);
                 setShowUpdateForm(false);
               }}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-5 w-5" />
                 Create Secret
               </Button>
             </div>
           </div>
 
-          {showUpdateForm && activeSecretId ? (
-            <form onSubmit={handleUpdateSecret} className="mt-5 grid gap-3 rounded-2xl border border-border/70 bg-background/55 p-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2 flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Rotate / Update Secret</h3>
-                  <p className="text-xs text-muted-foreground">This will create a new version of the existing secret. Old versions will stay encrypted.</p>
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-500 ease-in-out",
+              showUpdateForm && activeSecretId ? "opacity-100 mt-6 max-h-[1000px]" : "max-h-0 opacity-0 mt-0"
+            )}
+          >
+            {showUpdateForm && activeSecretId ? (
+              <form onSubmit={handleUpdateSecret} className="grid gap-4 rounded-[20px] border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-6 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-[16px] font-bold tracking-tight text-foreground">Rotate / Update Secret</h3>
+                    <p className="text-[13px] font-medium text-muted-foreground mt-0.5">This will create a new version of the existing secret. Old versions will stay encrypted.</p>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="update-value-type">New Value Type</Label>
-                <div className="flex flex-wrap gap-2">
-                  {['STRING', 'JSON', 'NUMBER', 'BOOLEAN', 'MULTILINE'].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        let defaultVal = "";
-                        if (type === "BOOLEAN") defaultVal = "true";
-                        if (type === "NUMBER") defaultVal = "0";
-                        if (type === "JSON") defaultVal = "{}";
-                        setUpdateSecretData({ ...updateSecretData, valueType: type as any, value: defaultVal });
-                      }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                        updateSecretData.valueType === type
-                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                          : "bg-background/50 hover:bg-background border-border text-muted-foreground"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="update-value-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Value Type</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['STRING', 'JSON', 'NUMBER', 'BOOLEAN', 'MULTILINE'].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          let defaultVal = "";
+                          if (type === "BOOLEAN") defaultVal = "true";
+                          if (type === "NUMBER") defaultVal = "0";
+                          if (type === "JSON") defaultVal = "{}";
+                          setUpdateSecretData({ ...updateSecretData, valueType: type as any, value: defaultVal });
+                        }}
+                        className={cn(
+                          "px-4 py-2 text-[13px] font-bold tracking-wider uppercase rounded-xl border transition-all duration-300",
+                          updateSecretData.valueType === type
+                            ? "bg-primary text-primary-foreground border-transparent shadow-md shadow-primary/20 scale-105"
+                            : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-transparent text-muted-foreground"
+                        )}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="update-secret-value">New Value</Label>
-                {updateSecretData.valueType === "JSON" || updateSecretData.valueType === "MULTILINE" ? (
-                  <div className="relative">
-                    <Textarea
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="update-secret-value" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Value</Label>
+                  {updateSecretData.valueType === "JSON" || updateSecretData.valueType === "MULTILINE" ? (
+                    <div className="relative">
+                      <Textarea
+                        id="update-secret-value"
+                        value={updateSecretData.value}
+                        onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                        placeholder={updateSecretData.valueType === "JSON" ? '{\n  "key": "value"\n}' : "Enter multi-line secret..."}
+                        className="min-h-[120px] font-mono text-[13px] rounded-xl bg-background border-black/5 dark:border-white/5 focus:ring-2 focus:ring-primary/40 transition-all outline-none resize-y shadow-inner p-4"
+                        required
+                      />
+                      {updateSecretData.valueType === "JSON" && updateSecretData.value.length > 0 && (
+                        <div className="absolute right-3 top-3">
+                          {(() => {
+                            try {
+                              JSON.parse(updateSecretData.value);
+                              return <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Valid JSON</Badge>;
+                            } catch (e) {
+                              return <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Invalid JSON</Badge>;
+                            }
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  ) : updateSecretData.valueType === "BOOLEAN" ? (
+                    <select
                       id="update-secret-value"
+                      className="h-11 w-full rounded-xl border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
                       value={updateSecretData.value}
                       onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                      placeholder={updateSecretData.valueType === "JSON" ? '{\n  "key": "value"\n}' : "Enter multi-line secret..."}
-                      className="min-h-[120px] font-mono text-xs rounded-xl focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-y"
+                      required
+                    >
+                      <option value="true">True</option>
+                      <option value="false">False</option>
+                    </select>
+                  ) : updateSecretData.valueType === "NUMBER" ? (
+                    <Input
+                      id="update-secret-value"
+                      type="number"
+                      value={updateSecretData.value}
+                      onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                      placeholder="12345"
+                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
                       required
                     />
-                    {updateSecretData.valueType === "JSON" && updateSecretData.value.length > 0 && (
-                      <div className="absolute right-3 top-3">
-                        {(() => {
-                          try {
-                            JSON.parse(updateSecretData.value);
-                            return <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 shadow-none border-none pointer-events-none">Valid JSON</Badge>;
-                          } catch (e) {
-                            return <Badge className="bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 shadow-none border-none pointer-events-none">Invalid JSON</Badge>;
-                          }
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                ) : updateSecretData.valueType === "BOOLEAN" ? (
+                  ) : (
+                    <Input
+                      id="update-secret-value"
+                      type="password"
+                      value={updateSecretData.value}
+                      onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                      placeholder="••••••••"
+                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                      required
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="update-secret-desc" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Updated Description</Label>
+                  <Input
+                    id="update-secret-desc"
+                    value={updateSecretData.description}
+                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, description: e.target.value })}
+                    placeholder="Update description..."
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="update-secret-commit" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Commit Message</Label>
+                  <Input
+                    id="update-secret-commit"
+                    value={updateSecretData.commitMessage}
+                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, commitMessage: e.target.value })}
+                    placeholder="e.g. Scheduled 90-day rotation"
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="update-secret-password" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Protection Password (Optional)</Label>
+                  <Input
+                    id="update-secret-password"
+                    type="password"
+                    value={updateSecretData.password}
+                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, password: e.target.value })}
+                    placeholder="Leave blank to keep current password state, or provide a new 8+ character string"
+                    minLength={8}
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-3 pt-2">
+                  <Button type="submit" className="h-11 rounded-xl px-8" disabled={isUpdating || !updateSecretData.value || (updateSecretData.password && updateSecretData.password?.length < 8 ? true : false)}>
+                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Update Version
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 rounded-xl px-6"
+                    onClick={() => {
+                      setShowUpdateForm(false);
+                      setActiveSecretId(null);
+                      setUpdateSecretData({ value: "", description: "", commitMessage: "", valueType: "STRING", password: "" });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </div>
+
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-500 ease-in-out",
+              showCreateFolderForm ? "opacity-100 mt-6 max-h-[500px]" : "max-h-0 opacity-0 mt-0"
+            )}
+          >
+            {showCreateFolderForm ? (
+              <form onSubmit={handleCreateFolder} className="grid gap-4 rounded-[20px] border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-6 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="folder-name" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Folder Name</Label>
+                  <Input
+                    id="folder-name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="e.g. Database Credentials"
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-3 pt-2">
+                  <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreatingFolder || !newFolderName}>
+                    {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Create Folder
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 rounded-xl px-6"
+                    onClick={() => {
+                      setShowCreateFolderForm(false);
+                      setNewFolderName("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </div>
+
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-500 ease-in-out",
+              showCreateForm && !showUpdateForm ? "opacity-100 mt-6 max-h-[1000px]" : "max-h-0 opacity-0 mt-0"
+            )}
+          >
+            {showCreateForm && !showUpdateForm ? (
+              <form onSubmit={handleCreateSecret} className="grid gap-4 rounded-[20px] border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="secret-name" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Name</Label>
+                  <Input
+                    id="secret-name"
+                    value={newSecret.name}
+                    onChange={(e) => setNewSecret({ ...newSecret, name: e.target.value })}
+                    placeholder="DATABASE_PASSWORD"
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="secret-key" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Encryption Key</Label>
                   <select
-                    id="update-secret-value"
-                    className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                    value={updateSecretData.value}
-                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                    id="secret-key"
+                    className="h-11 w-full rounded-xl border border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
+                    value={newSecret.keyId}
+                    onChange={(e) => setNewSecret({ ...newSecret, keyId: e.target.value })}
                     required
                   >
-                    <option value="true">True</option>
-                    <option value="false">False</option>
+                    <option value="" disabled>Select key...</option>
+                    {keys?.map((key) => (
+                      <option key={key.id} value={key.id}>
+                        {key.name} ({key.valueType})
+                      </option>
+                    ))}
                   </select>
-                ) : updateSecretData.valueType === "NUMBER" ? (
-                  <Input
-                    id="update-secret-value"
-                    type="number"
-                    value={updateSecretData.value}
-                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                    placeholder="12345"
-                    className="font-mono focus:ring-primary/20 transition-all rounded-xl"
-                    required
-                  />
-                ) : (
-                  <Input
-                    id="update-secret-value"
-                    type="password"
-                    value={updateSecretData.value}
-                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                    placeholder="••••••••"
-                    className="font-mono focus:ring-primary/20 transition-all rounded-xl"
-                    required
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="update-secret-desc">Updated Description (Optional)</Label>
-                <Input
-                  id="update-secret-desc"
-                  value={updateSecretData.description}
-                  onChange={(e) => setUpdateSecretData({ ...updateSecretData, description: e.target.value })}
-                  placeholder="Update description..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="update-secret-commit">Commit Message / Reason (Optional)</Label>
-                <Input
-                  id="update-secret-commit"
-                  value={updateSecretData.commitMessage}
-                  onChange={(e) => setUpdateSecretData({ ...updateSecretData, commitMessage: e.target.value })}
-                  placeholder="e.g. Scheduled 90-day rotation"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="update-secret-password">New Protection Password (Optional)</Label>
-                <Input
-                  id="update-secret-password"
-                  type="password"
-                  value={updateSecretData.password}
-                  onChange={(e) => setUpdateSecretData({ ...updateSecretData, password: e.target.value })}
-                  placeholder="Leave blank to keep current password state, or provide a new 8+ character string"
-                  minLength={8}
-                />
-              </div>
-              <div className="md:col-span-2 flex gap-2">
-                <Button type="submit" disabled={isUpdating || !updateSecretData.value || (updateSecretData.password && updateSecretData.password?.length < 8 ? true : false)}>
-                  {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Update Version
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowUpdateForm(false);
-                    setActiveSecretId(null);
-                    setUpdateSecretData({ value: "", description: "", commitMessage: "", valueType: "STRING", password: "" });
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : null}
-
-          {showCreateFolderForm ? (
-            <form onSubmit={handleCreateFolder} className="mt-5 grid gap-3 rounded-2xl border border-border/70 bg-background/55 p-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="folder-name">Folder Name</Label>
-                <Input
-                  id="folder-name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="e.g. Database Credentials"
-                  required
-                />
-              </div>
-              <div className="md:col-span-2 flex gap-2">
-                <Button type="submit" disabled={isCreatingFolder || !newFolderName}>
-                  {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Create Folder
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowCreateFolderForm(false);
-                    setNewFolderName("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : null}
-
-          {showCreateForm && !showUpdateForm ? (
-            <form onSubmit={handleCreateSecret} className="mt-5 grid gap-3 rounded-2xl border border-border/70 bg-background/55 p-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="secret-name">Name</Label>
-                <Input
-                  id="secret-name"
-                  value={newSecret.name}
-                  onChange={(e) => setNewSecret({ ...newSecret, name: e.target.value })}
-                  placeholder="DATABASE_PASSWORD"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="secret-key">Encryption key</Label>
-                <select
-                  id="secret-key"
-                  className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                  value={newSecret.keyId}
-                  onChange={(e) => setNewSecret({ ...newSecret, keyId: e.target.value })}
-                  required
-                >
-                  <option value="" disabled>Select key</option>
-                  {keys?.map((key) => (
-                    <option key={key.id} value={key.id}>
-                      {key.name} ({key.valueType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="secret-type">Secret Type</Label>
-                <div className="flex flex-wrap gap-2">
-                  {['STRING', 'JSON', 'NUMBER', 'BOOLEAN', 'MULTILINE'].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        let defaultVal = "";
-                        if (type === "BOOLEAN") defaultVal = "true";
-                        if (type === "NUMBER") defaultVal = "0";
-                        if (type === "JSON") defaultVal = "{}";
-                        setNewSecret({ ...newSecret, valueType: type as any, value: defaultVal });
-                      }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                        newSecret.valueType === type
-                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                          : "bg-background/50 hover:bg-background border-border text-muted-foreground"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
                 </div>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="secret-description">Description</Label>
-                <Input
-                  id="secret-description"
-                  value={newSecret.description}
-                  onChange={(e) => setNewSecret({ ...newSecret, description: e.target.value })}
-                  placeholder="Production database password"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="secret-value">Value</Label>
-                {newSecret.valueType === "JSON" || newSecret.valueType === "MULTILINE" ? (
-                  <div className="relative">
-                    <Textarea
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="secret-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Secret Type</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['STRING', 'JSON', 'NUMBER', 'BOOLEAN', 'MULTILINE'].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          let defaultVal = "";
+                          if (type === "BOOLEAN") defaultVal = "true";
+                          if (type === "NUMBER") defaultVal = "0";
+                          if (type === "JSON") defaultVal = "{}";
+                          setNewSecret({ ...newSecret, valueType: type as any, value: defaultVal });
+                        }}
+                        className={cn(
+                          "px-4 py-2 text-[13px] font-bold tracking-wider uppercase rounded-xl border transition-all duration-300",
+                          newSecret.valueType === type
+                            ? "bg-primary text-primary-foreground border-transparent shadow-md shadow-primary/20 scale-105"
+                            : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-transparent text-muted-foreground"
+                        )}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="secret-description" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Description</Label>
+                  <Input
+                    id="secret-description"
+                    value={newSecret.description}
+                    onChange={(e) => setNewSecret({ ...newSecret, description: e.target.value })}
+                    placeholder="Production database password"
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="secret-value" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Value</Label>
+                  {newSecret.valueType === "JSON" || newSecret.valueType === "MULTILINE" ? (
+                    <div className="relative">
+                      <Textarea
+                        id="secret-value"
+                        value={newSecret.value}
+                        onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                        placeholder={newSecret.valueType === "JSON" ? '{\n  "key": "value"\n}' : "Enter multi-line secret..."}
+                        className="min-h-[120px] font-mono text-[13px] rounded-xl bg-background border-black/5 dark:border-white/5 focus:ring-2 focus:ring-primary/40 transition-all outline-none resize-y shadow-inner p-4"
+                        required
+                      />
+                      {newSecret.valueType === "JSON" && newSecret.value.length > 0 && (
+                        <div className="absolute right-3 top-3">
+                          {(() => {
+                            try {
+                              JSON.parse(newSecret.value);
+                              return <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Valid JSON</Badge>;
+                            } catch (e) {
+                              return <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Invalid JSON</Badge>;
+                            }
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  ) : newSecret.valueType === "BOOLEAN" ? (
+                    <select
                       id="secret-value"
+                      className="h-11 w-full rounded-xl border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
                       value={newSecret.value}
                       onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                      placeholder={newSecret.valueType === "JSON" ? '{\n  "key": "value"\n}' : "Enter multi-line secret..."}
-                      className="min-h-[120px] font-mono text-xs rounded-xl focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-y"
+                      required
+                    >
+                      <option value="true">True</option>
+                      <option value="false">False</option>
+                    </select>
+                  ) : newSecret.valueType === "NUMBER" ? (
+                    <Input
+                      id="secret-value"
+                      type="number"
+                      value={newSecret.value}
+                      onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                      placeholder="12345"
+                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
                       required
                     />
-                    {newSecret.valueType === "JSON" && newSecret.value.length > 0 && (
-                      <div className="absolute right-3 top-3">
-                        {(() => {
-                          try {
-                            JSON.parse(newSecret.value);
-                            return <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 shadow-none border-none pointer-events-none">Valid JSON</Badge>;
-                          } catch (e) {
-                            return <Badge className="bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 shadow-none border-none pointer-events-none">Invalid JSON</Badge>;
-                          }
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                ) : newSecret.valueType === "BOOLEAN" ? (
-                  <select
-                    id="secret-value"
-                    className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                    value={newSecret.value}
-                    onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                    required
-                  >
-                    <option value="true">True</option>
-                    <option value="false">False</option>
-                  </select>
-                ) : newSecret.valueType === "NUMBER" ? (
+                  ) : (
+                    <Input
+                      id="secret-value"
+                      type="password"
+                      value={newSecret.value}
+                      onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                      placeholder="••••••••"
+                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
+                      required
+                    />
+                  )}
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="secret-password" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Protection Password (Optional)</Label>
                   <Input
-                    id="secret-value"
-                    type="number"
-                    value={newSecret.value}
-                    onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                    placeholder="12345"
-                    className="font-mono focus:ring-primary/20 transition-all rounded-xl"
-                    required
-                  />
-                ) : (
-                  <Input
-                    id="secret-value"
+                    id="secret-password"
                     type="password"
-                    value={newSecret.value}
-                    onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                    placeholder="••••••••"
-                    className="font-mono focus:ring-primary/20 transition-all rounded-xl"
-                    required
+                    value={newSecret.password}
+                    onChange={(e) => setNewSecret({ ...newSecret, password: e.target.value })}
+                    placeholder="Leave blank for no password"
+                    minLength={8}
+                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
                   />
-                )}
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="secret-password">Protection Password (Optional)</Label>
-                <Input
-                  id="secret-password"
-                  type="password"
-                  value={newSecret.password}
-                  onChange={(e) => setNewSecret({ ...newSecret, password: e.target.value })}
-                  placeholder="Leave blank for no password"
-                  minLength={8}
-                />
-              </div>
-              <div className="md:col-span-2 flex gap-2">
-                <Button type="submit" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId || (newSecret.password.length > 0 && newSecret.password.length < 8)}>
-                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Create
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setNewSecret({ name: "", description: "", value: "", valueType: "STRING", keyId: "", password: "" });
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : null}
+                </div>
+                <div className="md:col-span-2 flex gap-3 pt-2">
+                  <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId || (newSecret.password.length > 0 && newSecret.password.length < 8)}>
+                    {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Create Secret
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 rounded-xl px-6"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setNewSecret({ name: "", description: "", value: "", valueType: "STRING", keyId: "", password: "" });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </div>
         </section>
 
-        <section className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <section className="relative group">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <Input
-            placeholder="Search secrets"
+            placeholder="Search secrets or folders..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="h-14 pl-12 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border-black/5 dark:border-white/5 text-[15px] font-medium placeholder:text-muted-foreground/70 transition-all focus:bg-background shadow-glass-sm focus:shadow-glass-md"
           />
         </section>
 
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium bg-background/50 border border-border/60 rounded-xl px-4 py-2 overflow-x-auto whitespace-nowrap">
+        <div className="flex items-center gap-2 text-[14px] text-muted-foreground font-medium bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 shadow-inner rounded-2xl px-5 py-3 overflow-x-auto whitespace-nowrap mb-6 transition-all duration-300">
           <button 
             onClick={() => {
               setCurrentGroupId(undefined);
@@ -642,13 +675,13 @@ export default function SecretsPage() {
             }} 
             className="hover:text-foreground transition-colors flex items-center"
           >
-            <Folder className="h-4 w-4 mr-1.5" />
+            <Folder className="h-4 w-4 mr-2" />
             Root
           </button>
           
           {breadcrumbs.map((crumb, idx) => (
             <div key={crumb.id} className="flex items-center">
-              <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+               <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
               <button
                 onClick={() => {
                   setCurrentGroupId(crumb.id);
@@ -662,47 +695,46 @@ export default function SecretsPage() {
           ))}
         </div>
 
-        <section className="space-y-3">
+        <section className="space-y-4">
           {secretsLoading || groupsLoading ? (
-            <div className="flex h-40 items-center justify-center rounded-2xl border border-border/70 bg-card/80">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="flex h-40 items-center justify-center rounded-[32px] border border-dashed border-black/10 dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.01]">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (filteredSecrets && filteredSecrets.length > 0) || (filteredGroups && filteredGroups.length > 0) ? (
             <>
               {filteredGroups?.map((group) => (
                 <Card 
                   key={group.id} 
-                  className="kms-surface border-border/80 cursor-pointer hover:border-primary/30 transition-colors"
+                  className="cupertino-glass-panel hover:bg-black/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-all duration-300 group"
                 >
-                  <CardContent className="p-4 flex items-center justify-between">
+                  <CardContent className="p-5 flex items-center justify-between">
                     <div 
-                      className="flex min-w-0 flex-1 items-center gap-3"
+                      className="flex min-w-0 flex-1 items-center gap-4"
                       onClick={() => {
                         setCurrentGroupId(group.id);
                         setBreadcrumbs([...breadcrumbs, { id: group.id, name: group.name }]);
                         setSearchQuery("");
                       }}
                     >
-                      <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                        <Folder className="h-4 w-4 fill-primary/20" />
+                      <div className="rounded-2xl bg-primary/10 p-3 text-primary group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                        <Folder className="h-5 w-5 fill-primary/20" />
                       </div>
                       <div>
-                        <p className="font-medium tracking-tight hover:underline">{group.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {group._count?.children || 0} subfolders, {group._count?.secrets || 0} secrets
+                        <p className="font-bold tracking-tight text-[16px] text-foreground group-hover:underline">{group.name}</p>
+                        <p className="text-[13px] font-medium text-muted-foreground mt-0.5">
+                           {group._count?.children || 0} subfolders, {group._count?.secrets || 0} secrets
                         </p>
                       </div>
                     </div>
-                    <div className="flex bg-background/50 border border-border/50 rounded-lg overflow-hidden shrink-0">
-
+                    <div className="flex bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl overflow-hidden shrink-0 shadow-inner">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (confirm(`Delete folder "${group.name}"? It must be empty first.`)) {
-                            deleteFolder({ vaultId: currentVault.id, groupId: group.id });
+                             deleteFolder({ vaultId: currentVault.id, groupId: group.id });
                           }
                         }}
                         title="Delete folder"
@@ -715,35 +747,37 @@ export default function SecretsPage() {
               ))}
 
               {filteredSecrets?.map((secret) => (
-              <Card key={secret.id} className="kms-surface border-border/80">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <div className="rounded-xl bg-indigo-500/10 p-2 text-indigo-600">
-                        <Lock className="h-4 w-4" />
+              <Card key={secret.id} className="cupertino-glass-panel hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors duration-300">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-5">
+                    <div className="flex min-w-0 flex-1 items-start gap-4">
+                      <div className="rounded-2xl bg-indigo-500/10 p-3 text-indigo-600 dark:text-indigo-400 shadow-inner">
+                        <Lock className="h-5 w-5" />
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium tracking-tight">{secret.name}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary" className="rounded-md text-[11px]">
-                            v{secret.currentVersion?.versionNumber || 1}
-                          </Badge>
-                          {secret.key ? (
-                            <Badge variant="outline" className="rounded-md text-[11px]">
-                              <KeyRound className="mr-1 h-3 w-3" />
-                              {secret.key.name}
+                        <div className="flex items-center gap-3">
+                          <p className="truncate font-bold tracking-tight text-[16px] text-foreground">{secret.name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary" className="rounded-lg px-2 text-[11px] font-bold tracking-wider uppercase h-5 shadow-none border-none">
+                              v{secret.currentVersion?.versionNumber || 1}
                             </Badge>
-                          ) : null}
+                            {secret.key ? (
+                              <Badge variant="outline" className="rounded-lg px-2 text-[11px] font-bold tracking-wider uppercase h-5 bg-black/[0.02] dark:bg-white/[0.02] border-black/5 dark:border-white/5">
+                                <KeyRound className="mr-1 h-3 w-3" />
+                                {secret.key.name}
+                              </Badge>
+                            ) : null}
+                          </div>
                         </div>
-                        <p className="mt-2 text-xs text-muted-foreground">{secret.description || "No description"}</p>
+                        <p className="mt-1.5 text-[14px] font-medium text-muted-foreground">{secret.description || "No description provided."}</p>
 
                         {activePrompt === secret.id ? (
-                          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-2 py-1.5">
+                          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2 shadow-inner">
                             <Input
                               type="password"
                               placeholder="Enter secret password..."
-                              className="h-7 text-xs"
+                              className="h-9 text-[13px] bg-background border-transparent shadow-sm flex-1"
                               value={revealPassword}
                               onChange={(e) => setRevealPassword(e.target.value)}
                               onKeyDown={(e) => {
@@ -756,16 +790,16 @@ export default function SecretsPage() {
                             />
                             <Button
                               size="sm"
-                              className="h-7"
+                              className="h-9 rounded-xl px-4"
                               disabled={isRevealing === secret.id || !revealPassword}
                               onClick={() => toggleSecretVisibility(secret.id, revealPassword)}
                             >
-                              {isRevealing === secret.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
+                              {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2"
+                              className="h-9 rounded-xl px-4 text-muted-foreground"
                               onClick={() => {
                                 setActivePrompt(null);
                                 setRevealPassword("");
@@ -775,30 +809,32 @@ export default function SecretsPage() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-background/70 px-2 py-1.5">
-                            <code className="min-w-0 flex-1 truncate text-xs">
+                          <div className="mt-4 flex items-center gap-2 rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2 shadow-inner w-max min-w-[320px]">
+                            <code className="min-w-0 flex-1 truncate text-[14px] font-mono px-2 py-1 bg-background rounded-xl border border-black/5 dark:border-white/5 shadow-glass-sm flex items-center h-10">
                               {visibleSecrets.has(secret.id) ? revealedSecrets[secret.id] || "loading..." : "••••••••••••••••"}
                             </code>
-                            <Button variant="ghost" size="icon" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
-                              {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                            {visibleSecrets.has(secret.id) ? (
-                              <Button variant="ghost" size="icon" onClick={() => copySecret(secret.id)}>
-                                <Copy className="h-4 w-4" />
+                            <div className="flex gap-1 shrink-0">
+                               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
+                                {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                               </Button>
-                            ) : null}
+                              {visibleSecrets.has(secret.id) ? (
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground" onClick={() => copySecret(secret.id)}>
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                            </div>
                           </div>
                         )}
 
-                        <p className="mt-2 text-xs text-muted-foreground">Updated {formatDateTime(secret.updatedAt)}</p>
+                        <p className="mt-4 text-[12px] font-bold tracking-wider uppercase text-muted-foreground/60">Updated {formatDateTime(secret.updatedAt)}</p>
                       </div>
                     </div>
 
-                    <div className="flex bg-background/50 border border-border/50 rounded-lg overflow-hidden shrink-0">
+                    <div className="flex bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl overflow-hidden shrink-0 shadow-inner">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-none border-r border-border/50 hover:bg-muted/50"
+                        className="h-11 w-11 rounded-none border-r border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                         onClick={() => {
                           if (activeSecretId === secret.id && showUpdateForm) {
                             setShowUpdateForm(false);
@@ -813,12 +849,12 @@ export default function SecretsPage() {
                         }}
                         title="Rotate / Update Secret"
                       >
-                        <RefreshCcw className="h-4 w-4 text-emerald-600" />
+                        <RefreshCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-none border-r border-border/50 hover:bg-muted/50"
+                        className="h-11 w-11 rounded-none border-r border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                         onClick={() => {
                           setActiveSecretId(secret.id);
                           setShowVersionsModal(true);
@@ -831,7 +867,7 @@ export default function SecretsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-none hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        className="h-11 w-11 rounded-none hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                         onClick={() => {
                           if (confirm(`Delete secret "${secret.name}"?`)) {
                             deleteSecret(secret.id);
@@ -848,114 +884,132 @@ export default function SecretsPage() {
               ))}
             </>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/80 px-6 py-14 text-center text-muted-foreground">
-              <Lock className="mx-auto mb-2 h-6 w-6 opacity-50" />
-              {searchQuery ? "No secrets or folders match your search." : "Empty here. Create a secret or a new folder."}
+            <div className="rounded-[32px] border border-dashed border-black/10 dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.01] px-6 py-20 text-center flex flex-col items-center">
+              <div className="h-16 w-16 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-4">
+                <Lock className="h-8 w-8 text-muted-foreground opacity-50" />
+              </div>
+              <p className="text-[16px] font-bold text-foreground">Nothing yet.</p>
+              <p className="text-[14px] font-medium text-muted-foreground mt-1 max-w-sm">
+                {searchQuery ? "No secrets or folders match your search." : "Create a folder or a secret to get started."}
+              </p>
             </div>
           )}
         </section>
 
         {/* Versions Modal */}
         <Dialog open={showVersionsModal} onOpenChange={(open: boolean) => {
-          setShowVersionsModal(open);
+           setShowVersionsModal(open);
           if (!open) setActiveSecretId(null);
         }}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Version History</DialogTitle>
+          <DialogContent className="sm:max-w-2xl cupertino-glass-panel border-none p-0 overflow-hidden bg-background/80 backdrop-blur-2xl">
+            <DialogHeader className="px-8 pt-8 pb-4 border-b border-black/5 dark:border-white/5">
+              <DialogTitle className="text-2xl font-bold tracking-tight">Version History</DialogTitle>
             </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto space-y-4 pt-4">
+            <div className="max-h-[60vh] overflow-y-auto space-y-4 px-8 py-6">
               {versionsLoading ? (
-                <div className="flex justify-center p-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="flex justify-center p-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : secretVersionsData?.versions?.length ? (
-                <div className="space-y-3">
+                <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-black/10 dark:before:via-white/10 before:to-transparent">
                   {secretVersionsData.versions.map((version) => {
                     const vKey = `${activeSecretId}-v${version.versionNumber}`;
                     return (
-                      <div key={version.id} className="border border-border/60 rounded-xl p-4 bg-muted/20 flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="px-2">v{version.versionNumber}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDateTime(version.createdAt)}
-                            </span>
+                      <div key={version.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-black/[0.04] dark:bg-white/[0.04] text-muted-foreground group-[.is-active]:bg-primary group-[.is-active]:text-primary-foreground shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 transition-colors z-10">
+                          <History className="h-4 w-4" />
+                        </div>
+                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-background/50 border border-black/5 dark:border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="px-2 py-0.5 rounded-lg text-[11px] font-bold tracking-wider uppercase bg-primary/10 text-primary border-transparent">
+                                 v{version.versionNumber}
+                               </Badge>
+                              <span className="text-[12px] font-bold text-muted-foreground">
+                                {formatDateTime(version.createdAt)}
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            by {version.createdBy?.firstName || version.createdBy?.email}
+
+                           <div className="text-[13px] font-medium text-foreground mb-4">
+                            {version.commitMessage ? (
+                               <div className="border-l-2 border-primary/40 pl-3 py-1 bg-black/[0.02] dark:bg-white/[0.02] rounded-r-lg">
+                                 {version.commitMessage}
+                               </div>
+                             ) : "No commit message provided."}
+                           </div>
+
+                          {activePrompt === vKey ? (
+                            <div className="flex items-center gap-2 rounded-xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2 shadow-inner">
+                              <Input
+                                type="password"
+                                placeholder="Password..."
+                                className="h-8 text-[12px] w-32 bg-background border-transparent"
+                                value={revealPassword}
+                                onChange={(e) => setRevealPassword(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && activeSecretId) {
+                                    e.preventDefault();
+                                    toggleVersionVisibility(activeSecretId, version.versionNumber, revealPassword);
+                                  }
+                                }}
+                                autoFocus
+                              />
+                               <Button
+                                size="sm"
+                                className="h-8 rounded-lg px-3"
+                                disabled={isRevealing === vKey || !revealPassword}
+                                onClick={() => activeSecretId && toggleVersionVisibility(activeSecretId, version.versionNumber, revealPassword)}
+                              >
+                                {isRevealing === vKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 rounded-lg"
+                                onClick={() => {
+                                  setActivePrompt(null);
+                                  setRevealPassword("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                           ) : (
+                            <div className="flex items-center gap-2 bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 shadow-inner rounded-xl p-1.5 w-max max-w-full">
+                              <code className="min-w-0 flex-1 truncate text-[13px] font-mono px-2 py-0.5 bg-background rounded-lg border border-black/5 dark:border-white/5 h-8 flex items-center">
+                                 {visibleSecrets.has(vKey) ? revealedSecrets[vKey] || "loading..." : "••••••••••••••••"}
+                              </code>
+                              <div className="flex shrink-0">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => activeSecretId && toggleVersionVisibility(activeSecretId, version.versionNumber)} 
+                                  disabled={isRevealing === vKey}
+                                  className="h-8 w-8 rounded-lg"
+                                >
+                                  {isRevealing === vKey ? <Loader2 className="h-3 w-3 animate-spin" /> : visibleSecrets.has(vKey) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                </Button>
+                                {visibleSecrets.has(vKey) ? (
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => activeSecretId && copySecret(activeSecretId, version.versionNumber)}>
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                          )}
+                          <div className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground/60 mt-4 flex items-center gap-1">
+                            By {version.createdBy?.firstName || version.createdBy?.email}
                           </div>
                         </div>
-
-                        {version.commitMessage && (
-                          <div className="text-sm border-l-2 border-primary/40 pl-3 py-1 bg-background/40">
-                            {version.commitMessage}
-                          </div>
-                        )}
-
-                        {activePrompt === vKey ? (
-                          <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/90 px-2 py-1.5 w-max">
-                            <Input
-                              type="password"
-                              placeholder="Enter secret password..."
-                              className="h-7 text-xs w-48"
-                              value={revealPassword}
-                              onChange={(e) => setRevealPassword(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && activeSecretId) {
-                                  e.preventDefault();
-                                  toggleVersionVisibility(activeSecretId, version.versionNumber, revealPassword);
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              className="h-7"
-                              disabled={isRevealing === vKey || !revealPassword}
-                              onClick={() => activeSecretId && toggleVersionVisibility(activeSecretId, version.versionNumber, revealPassword)}
-                            >
-                              {isRevealing === vKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2"
-                              onClick={() => {
-                                setActivePrompt(null);
-                                setRevealPassword("");
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 bg-background/60 border border-border/40 rounded-lg px-3 py-2">
-                            <code className="min-w-0 flex-1 text-xs break-all">
-                              {visibleSecrets.has(vKey) ? revealedSecrets[vKey] || "loading..." : "••••••••••••••••"}
-                            </code>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => activeSecretId && toggleVersionVisibility(activeSecretId, version.versionNumber)} 
-                              disabled={isRevealing === vKey}
-                              className="h-7 w-7"
-                            >
-                              {isRevealing === vKey ? <Loader2 className="h-3 w-3 animate-spin" /> : visibleSecrets.has(vKey) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                            </Button>
-                            {visibleSecrets.has(vKey) ? (
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => activeSecretId && copySecret(activeSecretId, version.versionNumber)}>
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            ) : null}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-center text-muted-foreground p-8">No version history found.</p>
+                <div className="p-12 text-center rounded-2xl border border-dashed border-black/10 dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.01]">
+                   <p className="text-[14px] font-bold text-muted-foreground">No version history found.</p>
+                </div>
               )}
             </div>
           </DialogContent>
