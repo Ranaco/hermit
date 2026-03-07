@@ -1,0 +1,61 @@
+{
+  "name": "@hermes/cli",
+  "version": "0.1.0",
+  "description": "Hermes KMS CLI — Secure secret management from your terminal",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/hermes-kms/hermes",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hermes-kms/hermes.git",
+    "directory": "apps/cli"
+  },
+  "keywords": [
+    "kms",
+    "secrets",
+    "vault",
+    "cli",
+    "security",
+    "devops"
+  ],
+  "bin": {
+    "hermes": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src/ --max-warnings 0",
+    "test": "npm run build && node --test test/**/*.test.mjs"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "chalk": "^5.4.1",
+    "conf": "^13.1.0",
+    "ora": "^8.2.0",
+    "figlet": "^1.8.0",
+    "@inquirer/prompts": "^7.5.0",
+    "yaml": "^2.7.1",
+    "clipboardy": "^4.0.0"
+  },
+  "devDependencies": {
+    "@hermes/typescript-config": "*",
+    "@hermes/eslint-config": "*",
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^22.15.3",
+    "eslint": "^9.39.3",
+    "tsup": "^8.5.0",
+    "typescript": "5.8.2"
+  }
+}

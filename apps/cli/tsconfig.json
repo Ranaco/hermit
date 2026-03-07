@@ -1,0 +1,10 @@
+{
+  "extends": "@hermes/typescript-config/base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "target": "ES2022",
+    "outDir": "./dist"
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["src"]
+}

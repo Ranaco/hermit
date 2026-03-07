@@ -755,4 +755,166 @@ export const secretWrapper = {
 
     return { versions, count: versions.length };
   },
+
+  /**
+   * Bulk reveal secrets in a vault (for CLI `hermes run`)
+   * Skips password-protected and expired secrets unless passwords are provided.
+   * Returns { name: decryptedValue } pairs.
+   */
+  async bulkRevealSecrets(
+    userId: string,
+    data: {
+      vaultId: string;
+      secretGroupId?: string;
+      password?: string;
+      vaultPassword?: string;
+    },
+    auditInfo: {
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ) {
+    const { vaultId, secretGroupId, password, vaultPassword } = data;
+
+    const prisma = getPrismaClient();
+
+    // Check vault exists
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId },
+      select: {
+        id: true,
+        name: true,
+        passwordHash: true,
+      },
+    });
+
+    if (!vault) {
+      throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, "Vault not found");
+    }
+
+    // If vault is password-protected, verify vault password
+    if (vault.passwordHash) {
+      if (!vaultPassword) {
+        return {
+          secrets: [],
+          skipped: [],
+          error: {
+            code: "VAULT_PASSWORD_REQUIRED",
+            message: "This vault is protected with a password",
+          },
+        };
+      }
+
+      const isValidVaultPassword = await verifyPassword(
+        vaultPassword,
+        vault.passwordHash,
+      );
+      if (!isValidVaultPassword) {
+        throw new ForbiddenError(
+          ErrorCode.INVALID_CREDENTIALS,
+          "Invalid vault password",
+        );
+      }
+    }
+
+    // Build query — fetch ALL secrets in the vault (or group)
+    const where: any = { vaultId };
+    if (secretGroupId) {
+      where.secretGroupId = secretGroupId;
+    }
+
+    const secrets = await prisma.secret.findMany({
+      where,
+      include: {
+        key: {
+          include: {
+            versions: {
+              orderBy: { versionNumber: "desc" as const },
+              take: 1,
+            },
+          },
+        },
+        versions: {
+          orderBy: { versionNumber: "desc" as const },
+          take: 1,
+        },
+      },
+    });
+
+    const revealed: Array<{ name: string; value: string }> = [];
+    const skipped: Array<{ name: string; reason: string }> = [];
+
+    for (const secret of secrets) {
+      // Skip expired secrets
+      if (secret.expiresAt && new Date() > secret.expiresAt) {
+        skipped.push({ name: secret.name, reason: "expired" });
+        continue;
+      }
+
+      // Handle secret-level password
+      if (secret.passwordHash) {
+        if (!password) {
+          skipped.push({ name: secret.name, reason: "password-protected" });
+          continue;
+        }
+        const isValid = await verifyPassword(password, secret.passwordHash);
+        if (!isValid) {
+          skipped.push({ name: secret.name, reason: "invalid-password" });
+          continue;
+        }
+      }
+
+      const version = secret.versions[0];
+      if (!version) {
+        skipped.push({ name: secret.name, reason: "no-version" });
+        continue;
+      }
+
+      const vaultKeyName = secret.key.versions[0]?.encryptedValue;
+      if (!vaultKeyName) {
+        skipped.push({ name: secret.name, reason: "key-error" });
+        continue;
+      }
+
+      try {
+        const decryptedValue = await encryptionService.decrypt(
+          vaultKeyName,
+          version.encryptedValue,
+        );
+        revealed.push({ name: secret.name, value: decryptedValue });
+
+        // Update access metadata
+        await prisma.secret.update({
+          where: { id: secret.id },
+          data: {
+            lastAccessedAt: new Date(),
+            accessCount: { increment: 1 },
+          },
+        });
+      } catch {
+        skipped.push({ name: secret.name, reason: "decrypt-error" });
+      }
+    }
+
+    // Single audit log for the bulk operation
+    await createAuditLog({
+      userId,
+      action: "READ_SECRET",
+      resourceType: "VAULT",
+      resourceId: vaultId,
+      details: {
+        revealedCount: revealed.length,
+        skippedCount: skipped.length,
+        secretGroupId,
+      },
+      ipAddress: auditInfo.ipAddress || "unknown",
+      userAgent: auditInfo.userAgent || "unknown",
+    });
+
+    return {
+      secrets: revealed,
+      skipped,
+      count: revealed.length,
+    };
+  },
 };

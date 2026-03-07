@@ -58,6 +58,7 @@ For detailed setup instructions, see [Quick Start Guide](./docs/quickstart.md).
 
 ### Documentation
 
+- [Hermes Overview](./docs/hermes.md)
 - [Architecture Overview](./docs/features/organization_system.md)
 - [Frontend Guide](./docs/frontend/guide.md)
 - [Bug Fixes](./docs/changelog/fixes.md)

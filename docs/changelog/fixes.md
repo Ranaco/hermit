@@ -4,6 +4,8 @@
 
 - `2026-02-22`: KMS hard revamp summary and current project state  
   See: `docs/updates/2026-02-22-kms-hard-revamp/README.md`
+- `2026-03-06`: Hermes CLI revamp and publish-ready command surface  
+  See: `docs/updates/2026-03-06-cli-revamp/README.md`
 
 ## Issues Fixed
 

@@ -15,6 +15,7 @@ import {
   revealSecretSchema,
   updateSecretSchema,
   getSecretsSchema,
+  bulkRevealSecretsSchema,
 } from "../validators/secret.validator";
 import {
   createSecret,
@@ -23,6 +24,7 @@ import {
   updateSecret,
   deleteSecret,
   getSecretVersions,
+  bulkRevealSecrets,
 } from "../controllers/secret.controller";
 
 const router = express.Router();
@@ -95,6 +97,18 @@ router.get(
   validate({ query: getSecretsSchema }),
   requirePolicy("secrets:read", getSecretUrn),
   getSecrets
+);
+
+/**
+ * @route   POST /api/v1/secrets/bulk-reveal
+ * @desc    Bulk reveal all secrets in a vault (for CLI secret injection)
+ * @access  Private (requires USE permission)
+ */
+router.post(
+  "/bulk-reveal",
+  validate({ body: bulkRevealSecretsSchema }),
+  requirePolicy("secrets:use", getSecretUrn),
+  bulkRevealSecrets,
 );
 
 /**

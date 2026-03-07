@@ -90,6 +90,31 @@ export const revealSecretSchema = z.object({
 });
 
 /**
+ * Bulk Reveal Secrets Schema
+ * For CLI's `hermes run` — fetch and decrypt multiple secrets at once
+ */
+export const bulkRevealSecretsSchema = z.object({
+  vaultId: z
+    .string()
+    .uuid('Invalid vault ID format'),
+
+  secretGroupId: z
+    .string()
+    .uuid('Invalid secret group ID format')
+    .optional(),
+
+  password: z
+    .string()
+    .min(1, 'Password is required')
+    .optional(),
+
+  vaultPassword: z
+    .string()
+    .min(1, 'Vault password is required')
+    .optional(),
+});
+
+/**
  * Update Secret Schema
  */
 export const updateSecretSchema = z.object({

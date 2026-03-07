@@ -181,4 +181,41 @@ export const getSecretVersions = asyncHandler(
   },
 );
 
+/**
+ * Bulk reveal secrets in a vault (for CLI `hermes run`)
+ * POST /api/v1/secrets/bulk-reveal
+ */
+export const bulkRevealSecrets = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+    }
 
+    const result = await secretWrapper.bulkRevealSecrets(
+      req.user.id,
+      {
+        vaultId: req.body.vaultId,
+        secretGroupId: req.body.secretGroupId,
+        password: req.body.password,
+        vaultPassword: req.body.vaultPassword,
+      },
+      {
+        ipAddress: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] || "unknown",
+      },
+    );
+
+    // Handle vault password requirement
+    if ("error" in result && result.error) {
+      return res.status(403).json({
+        success: false,
+        error: result.error,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  },
+);
