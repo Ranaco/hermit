@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCreateShare } from "@/hooks/use-shares";
 import { useKeys } from "@/hooks/use-keys";
 import { useSecrets } from "@/hooks/use-secrets";
@@ -32,6 +40,28 @@ export function CreateShareModal({ isOpen, onOpenChange }: CreateShareModalProps
   const [copied, setCopied] = useState(false);
 
   const { mutate: createShare, isPending } = useCreateShare();
+
+  const keyItems = useMemo(
+    () =>
+      keys?.map((key) => ({
+        value: key.id,
+        label: key.name,
+        description: key.valueType,
+        keywords: [key.valueType],
+      })) || [],
+    [keys],
+  );
+
+  const secretItems = useMemo(
+    () =>
+      secretsData?.secrets?.map((secret: any) => ({
+        value: secret.id,
+        label: secret.name,
+        description: `v${secret.currentVersion?.versionNumber || 1}`,
+        keywords: [secret.key?.name || "", secret.valueType || ""],
+      })) || [],
+    [secretsData?.secrets],
+  );
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +108,7 @@ export function CreateShareModal({ isOpen, onOpenChange }: CreateShareModalProps
         onOpenChange(open);
       }}
     >
-      <DialogContent className="sm:max-w-[500px] border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-h-[min(85vh,48rem)] border-border/80 bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:max-w-[500px]">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none" />
         
         {createdUrl ? (
@@ -93,11 +123,11 @@ export function CreateShareModal({ isOpen, onOpenChange }: CreateShareModalProps
               </p>
             </div>
             
-            <div className="flex w-full items-center space-x-2 bg-black/40 border border-white/10 p-2 rounded-xl">
+            <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-2 sm:flex-row sm:items-center">
               <Input
                 readOnly
                 value={createdUrl}
-                className="flex-1 border-0 bg-transparent focus-visible:ring-0 px-2 font-mono text-xs text-white"
+                className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono text-xs text-white focus-visible:ring-0"
               />
               <Button size="icon" className="shrink-0 rounded-lg hover:scale-105 transition-transform" onClick={copyToClipboard}>
                 {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -111,7 +141,7 @@ export function CreateShareModal({ isOpen, onOpenChange }: CreateShareModalProps
             </div>
           </div>
         ) : (
-          <div className="p-6 relative z-10">
+          <div className="relative z-10 overflow-y-auto p-5 sm:p-6">
             <DialogHeader className="mb-6">
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                 <Link className="h-5 w-5 text-indigo-500" />
@@ -124,7 +154,7 @@ export function CreateShareModal({ isOpen, onOpenChange }: CreateShareModalProps
 
             <form onSubmit={handleCreate} className="space-y-6">
               {/* Custom Segmented Control */}
-              <div className="flex p-1 bg-secondary/50 rounded-xl border border-border/50">
+              <div className="flex flex-col rounded-xl border border-border/50 bg-secondary/50 p-1 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => setTab("text")}
@@ -166,53 +196,51 @@ export function CreateShareModal({ isOpen, onOpenChange }: CreateShareModalProps
                 ) : (
                   <div className="space-y-3">
                     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Select Vault Secret</Label>
-                    <select
-                      required
+                    <Combobox
+                      items={secretItems}
                       value={secretId}
-                      onChange={(e) => setSecretId(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                    >
-                      <option value="" disabled>Select a secret...</option>
-                      {secretsData?.secrets?.map((s: any) => (
-                        <option key={s.id} value={s.id}>{s.name} (v{s.currentVersion?.versionNumber})</option>
-                      ))}
-                    </select>
+                      placeholder="Select a secret..."
+                      searchPlaceholder="Search secrets..."
+                      emptyText="No secrets found."
+                      onValueChange={setSecretId}
+                    />
                   </div>
                 )}
               </div>
 
               {/* Settings Section */}
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground uppercase font-semibold">Encryption Key</Label>
-                    <select
-                      required
+                    <Combobox
+                      items={keyItems}
                       value={keyId}
-                      onChange={(e) => setKeyId(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                    >
-                      <option value="" disabled>Select Key...</option>
-                      {keys?.map((k) => (
-                        <option key={k.id} value={k.id}>{k.name}</option>
-                      ))}
-                    </select>
+                      placeholder="Select key..."
+                      searchPlaceholder="Search keys..."
+                      emptyText="No keys found."
+                      onValueChange={setKeyId}
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground uppercase font-semibold flex items-center gap-1">
                       <Timer className="w-3 h-3" /> Expiration
                     </Label>
-                    <select
-                      value={expiresInHours}
-                      onChange={(e) => setExpiresInHours(Number(e.target.value))}
-                      className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                    <Select
+                      value={String(expiresInHours)}
+                      onValueChange={(value) => setExpiresInHours(Number(value))}
                     >
-                      <option value={1}>1 Hour</option>
-                      <option value={24}>24 Hours</option>
-                      <option value={72}>3 Days</option>
-                      <option value={168}>1 Week</option>
-                    </select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select expiration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Hour</SelectItem>
+                        <SelectItem value="24">24 Hours</SelectItem>
+                        <SelectItem value="72">3 Days</SelectItem>
+                        <SelectItem value="168">1 Week</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

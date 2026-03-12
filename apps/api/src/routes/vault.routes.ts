@@ -2,7 +2,7 @@
  * Vault Routes
  */
 
-import { Router } from "express";
+import { Router, type Request } from "express";
 import * as vaultController from "../controllers/vault.controller";
 import { authenticate } from "../middleware/auth";
 import { requireVaultHealth } from "../middleware/vault-health";
@@ -20,31 +20,31 @@ import { ErrorCode, NotFoundError } from "@hermes/error-handling";
 
 const router = Router();
 
-const getVaultUrn = async (req: any) => {
-  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId || req.query.organizationId || req.body.organizationId;
+const getVaultUrn = async (req: Request & { organizationId?: string }) => {
   const vaultId = req.params.id || req.params.vaultId || req.body.vaultId || req.query.vaultId;
+  const explicitOrgId = req.params.orgId || req.body.orgId || req.query.orgId || req.body.organizationId || req.query.organizationId;
 
-  if (!orgId && vaultId) {
+  if (vaultId) {
     const prisma = getPrismaClient();
     const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
-    if (vault) {
-      orgId = vault.organizationId;
-      req.organizationId = orgId;
-    } else {
+    if (!vault) {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
     }
+    req.organizationId = vault.organizationId;
+    return `urn:hermes:org:${vault.organizationId}:vault:${vaultId}`;
   }
 
-  return `urn:hermes:org:${orgId || "*"}:vault:${vaultId || "*"}`;
+  if (explicitOrgId) {
+    req.organizationId = explicitOrgId;
+    return `urn:hermes:org:${explicitOrgId}:vault:*`;
+  }
+
+  return "urn:hermes:org:*:vault:*";
 };
 
-// All vault routes require authentication and vault health
 router.use(authenticate);
 router.use(requireVaultHealth);
 
-/**
- * Vault CRUD operations
- */
 router.post(
   "/",
   generalRateLimiter,

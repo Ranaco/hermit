@@ -1,8 +1,5 @@
-import { getTokens, saveTokens, getServerUrl, clearTokens, getOrg } from "./auth-store.js";
-
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
+import { getRuntimeState } from "./runtime.js";
+import { getTokens, saveTokens, getServerUrl, clearTokens } from "./auth-store.js";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -15,21 +12,17 @@ export class ApiError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
-// ─────────────────────────────────────────────
-// HTTP Client
-// ─────────────────────────────────────────────
-
 function buildHeaders(skipAuth?: boolean): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "hermes-cli/0.0.1",
+    "User-Agent": "hermes-cli/0.1.0",
   };
 
   if (!skipAuth) {
@@ -39,12 +32,11 @@ function buildHeaders(skipAuth?: boolean): Record<string, string> {
     }
   }
 
-  const activeOrg = getOrg();
-  if (activeOrg?.id) {
-    headers["X-Organization-Id"] = activeOrg.id;
-  }
-
   return headers;
+}
+
+function resolveBaseUrl(): string {
+  return getRuntimeState().serverUrlOverride || getServerUrl();
 }
 
 async function parseJson(response: Response): Promise<ApiResponse> {
@@ -58,14 +50,26 @@ async function parseJson(response: Response): Promise<ApiResponse> {
   return response.json() as Promise<ApiResponse>;
 }
 
+function getErrorMessage<T>(json: ApiResponse<T>, response: Response): string {
+  if (typeof json.error === "string") {
+    return json.error;
+  }
+  if (json.error?.message) {
+    return json.error.message;
+  }
+  if (json.message) {
+    return json.message;
+  }
+  return `Request failed with status ${response.status}`;
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  opts: { skipAuth?: boolean; retried?: boolean } = {}
+  opts: { skipAuth?: boolean; retried?: boolean } = {},
 ): Promise<T> {
-  const baseUrl = getServerUrl();
-  const url = `${baseUrl}${path}`;
+  const url = `${resolveBaseUrl()}${path}`;
   const headers = buildHeaders(opts.skipAuth);
 
   const response = await fetch(url, {
@@ -74,7 +78,6 @@ async function request<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // Handle 401 — attempt token refresh once
   if (response.status === 401 && !opts.skipAuth && !opts.retried) {
     const refreshed = await refreshToken();
     if (refreshed) {
@@ -87,13 +90,7 @@ async function request<T>(
   const json = (await parseJson(response)) as ApiResponse<T>;
 
   if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      (typeof json.error === "string" ? json.error : undefined) ||
-        json.message ||
-        `Request failed with status ${response.status}`,
-      json
-    );
+    throw new ApiError(response.status, getErrorMessage(json, response), json);
   }
 
   return json.data as T;
@@ -104,8 +101,7 @@ async function refreshToken(): Promise<boolean> {
     const tokens = getTokens();
     if (!tokens?.refreshToken) return false;
 
-    const baseUrl = getServerUrl();
-    const response = await fetch(`${baseUrl}/auth/refresh`, {
+    const response = await fetch(`${resolveBaseUrl()}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: tokens.refreshToken }),
@@ -130,10 +126,6 @@ async function refreshToken(): Promise<boolean> {
     return false;
   }
 }
-
-// ─────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────
 
 export function get<T>(path: string): Promise<T> {
   return request<T>("GET", path);

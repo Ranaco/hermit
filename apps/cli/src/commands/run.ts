@@ -3,20 +3,36 @@ import { resolveGroup, resolveGroupByPath, resolveVault } from "../lib/context.j
 import { abort, renderData, requireAuth, runCommand as executeCommand } from "../lib/command-helpers.js";
 import { loadProjectConfig, resolveEnvironmentConfig } from "../lib/config.js";
 import { runWithEnv } from "../lib/process-runner.js";
+import { setRuntimeState } from "../lib/runtime.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+
+interface RunOptions {
+  vault?: string;
+  org?: string;
+  group?: string;
+  path?: string;
+  secret?: string;
+  env?: string;
+  config?: string;
+  password?: string;
+  vaultPassword?: string;
+}
 
 export const runCommand = new Command("run")
   .description("Run a command with secrets injected as environment variables")
   .option("--vault <query>", "Vault name or id")
+  .option("--org <query>", "Organization name or id")
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("--secret <name>", "Inject only one secret by name")
   .option("--env <name>", "Environment from .hermes.yml")
   .option("--config <path>", "Path to .hermes.yml")
+  .option("--password <password>", "Secret-level password used for protected secrets")
+  .option("--vault-password <password>", "Vault password used for protected vaults")
   .argument("[command...]", "Command to run")
   .allowExcessArguments(true)
-  .action((commandArgs: string[], opts) =>
+  .action((commandArgs: string[], opts: RunOptions) =>
     executeCommand(async () => {
       requireAuth();
 
@@ -28,6 +44,7 @@ export const runCommand = new Command("run")
         });
       }
 
+      let configOrganization = opts.org;
       let configVault = opts.vault;
       let configGroup = opts.group;
       let configPath = opts.path;
@@ -37,6 +54,8 @@ export const runCommand = new Command("run")
       if (opts.env) {
         const config = loadProjectConfig(opts.config);
         const environment = resolveEnvironmentConfig(config, opts.env);
+        setRuntimeState({ serverUrlOverride: config?.server || undefined });
+        configOrganization = configOrganization || environment.organization;
         configVault = configVault || environment.vault;
         configGroup = configGroup || environment.group;
         configPath = configPath || environment.path;
@@ -44,7 +63,7 @@ export const runCommand = new Command("run")
         configMap = environment.map;
       }
 
-      const vault = await resolveVault(configVault);
+      const vault = await resolveVault(configVault, { organizationQuery: configOrganization });
       const group = configPath
         ? await resolveGroupByPath(vault.id, configPath)
         : await resolveGroup(vault.id, configGroup);
@@ -52,6 +71,8 @@ export const runCommand = new Command("run")
       const result = await sdk.bulkRevealSecrets({
         vaultId: vault.id,
         secretGroupId: group?.id,
+        password: opts.password,
+        vaultPassword: opts.vaultPassword,
       });
 
       if (result.error) {
@@ -60,7 +81,7 @@ export const runCommand = new Command("run")
 
       let revealedSecrets = result.secrets;
       if (opts.secret) {
-        revealedSecrets = revealedSecrets.filter((secret) => secret.name.toLowerCase() === opts.secret.toLowerCase());
+        revealedSecrets = revealedSecrets.filter((secret) => secret.name.toLowerCase() === opts.secret?.toLowerCase());
       }
       if (configSecrets?.length) {
         const allowed = new Set(configSecrets.map((item) => item.toLowerCase()));
@@ -72,10 +93,7 @@ export const runCommand = new Command("run")
       }
 
       const envVars = Object.fromEntries(
-        revealedSecrets.map((secret) => [
-          configMap?.[secret.name] || secret.name,
-          secret.value,
-        ]),
+        revealedSecrets.map((secret) => [configMap?.[secret.name] || secret.name, secret.value]),
       );
 
       renderData({
@@ -93,7 +111,8 @@ export const runCommand = new Command("run")
       ui.info(`Starting: ${finalArgs.join(" ")}`);
       ui.newline();
 
-      const exitCode = await runWithEnv(finalArgs[0], finalArgs.slice(1), envVars);
+      const [command, ...args] = finalArgs;
+      const exitCode = await runWithEnv(command, args, envVars);
       process.exit(exitCode);
     }),
   );

@@ -1,6 +1,11 @@
 import * as sdk from "./sdk.js";
 import * as authStore from "./auth-store.js";
+import { abort } from "./command-helpers.js";
 import { matchId, shortId } from "./ui.js";
+
+interface ResolveVaultOptions {
+  organizationQuery?: string;
+}
 
 function exactNameMatch<T extends { name: string }>(items: T[], query: string): T | undefined {
   return items.find((item) => item.name.toLowerCase() === query.toLowerCase());
@@ -24,32 +29,39 @@ export async function requireOrganizations(): Promise<sdk.OrganizationSummary[]>
 }
 
 export async function requireActiveOrganization(): Promise<sdk.OrganizationSummary> {
+  const organizations = await sdk.getOrganizations();
   const current = authStore.getOrg();
+
   if (current?.id) {
-    const organizations = await sdk.getOrganizations();
     const match = organizations.find((organization) => organization.id === current.id);
     if (match) {
       return match;
     }
   }
 
-  const organizations = await sdk.getOrganizations();
   if (organizations.length === 0) {
-    throw new Error("No organizations found. Create one with `hermes org create`.");
+    abort("No organizations found.", { suggestions: ["Run: hermes org create"] });
   }
 
-  const organization = organizations[0];
-  authStore.saveOrg({ id: organization.id, name: organization.name, slug: organization.slug || undefined });
-  authStore.clearVault();
-  return organization;
+  if (organizations.length === 1) {
+    const organization = organizations[0];
+    authStore.saveOrg({ id: organization.id, name: organization.name, slug: organization.slug || undefined });
+    authStore.clearVault();
+    return organization;
+  }
+
+  abort("No active organization selected.", {
+    suggestions: ["Run: hermes org select <org>"],
+    details: { organizations: organizations.map((organization) => ({ id: organization.id, name: organization.name })) },
+  });
 }
 
 export async function resolveOrganization(query?: string): Promise<sdk.OrganizationSummary> {
-  const organizations = await sdk.getOrganizations();
   if (!query) {
     return requireActiveOrganization();
   }
 
+  const organizations = await sdk.getOrganizations();
   const match = findByIdOrName(organizations, query);
   if (!match) {
     throw new Error(`No organization matches "${query}".`);
@@ -57,8 +69,8 @@ export async function resolveOrganization(query?: string): Promise<sdk.Organizat
   return match;
 }
 
-export async function requireActiveVault(): Promise<sdk.VaultSummary> {
-  const organization = await requireActiveOrganization();
+export async function requireActiveVault(organizationQuery?: string): Promise<sdk.VaultSummary> {
+  const organization = await resolveOrganization(organizationQuery);
   const vaults = await sdk.getVaults(organization.id);
   const currentVaultId = authStore.getVaultId();
 
@@ -73,20 +85,27 @@ export async function requireActiveVault(): Promise<sdk.VaultSummary> {
     throw new Error("No vaults found. Create one with `hermes vault create`.");
   }
 
-  authStore.saveVault({
-    id: vaults[0].id,
-    name: vaults[0].name,
-    organizationId: vaults[0].organizationId,
+  if (vaults.length === 1) {
+    authStore.saveVault({
+      id: vaults[0].id,
+      name: vaults[0].name,
+      organizationId: vaults[0].organizationId,
+    });
+    return vaults[0];
+  }
+
+  abort("No active vault selected.", {
+    suggestions: ["Run: hermes vault select <vault>"],
+    details: { vaults: vaults.map((vault) => ({ id: vault.id, name: vault.name })) },
   });
-  return vaults[0];
 }
 
-export async function resolveVault(query?: string): Promise<sdk.VaultSummary> {
-  const organization = await requireActiveOrganization();
+export async function resolveVault(query?: string, options: ResolveVaultOptions = {}): Promise<sdk.VaultSummary> {
+  const organization = await resolveOrganization(options.organizationQuery);
   const vaults = await sdk.getVaults(organization.id);
 
   if (!query) {
-    return requireActiveVault();
+    return requireActiveVault(organization.id);
   }
 
   const match = findByIdOrName(vaults, query);

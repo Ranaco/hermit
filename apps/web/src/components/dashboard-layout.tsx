@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { useAuthStore } from "@/store/auth.store";
 import { useLogout } from "@/hooks/use-auth";
@@ -148,10 +149,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                 <Search className="h-4 w-4 text-muted-foreground" />
               </div>
-              <input
+              <Input
                 type="text"
                 placeholder="Search resources..."
-                className="h-11 w-72 rounded-full bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.05] pl-11 pr-14 text-[14px] font-medium focus:bg-white/50 dark:focus:bg-black/20 focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all duration-300 placeholder:text-muted-foreground"
+                className="h-11 w-72 rounded-full border-black/[0.05] bg-black/[0.03] pl-11 pr-14 text-[14px] font-medium shadow-none transition-all duration-300 placeholder:text-muted-foreground focus:bg-white/50 focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-white/[0.05] dark:bg-white/[0.04] dark:focus:bg-black/20"
               />
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                 <span className="text-[10px] font-bold text-muted-foreground bg-black/5 dark:bg-white/10 rounded-[6px] px-1.5 py-0.5 border border-black/5 dark:border-white/5 shadow-sm">⌘K</span>

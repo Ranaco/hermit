@@ -4,9 +4,9 @@
 > **Package**: `@hermes/cli`
 > **Binary**: `hermes`
 > **Runtime**: Node.js 18+
-> **Last Updated**: `2026-03-06`
+> **Last Updated**: `2026-03-08`
 
-Hermes CLI is a terminal-native secret management tool for the Hermes KMS platform. It provides secure authentication, vault, key, secret, team, and organization management, plus zero-leak environment injection for development and CI/CD workflows.
+Hermes CLI is a terminal-native secret management tool for the Hermes KMS platform. It provides authentication, organization and vault context management, vault, key, secret, team, and organization management, and environment injection for development and CI workflows.
 
 ## Command Surface
 
@@ -93,6 +93,8 @@ hermes secret list
 hermes secret list --path prod/api
 hermes secret set DATABASE_URL postgres://...
 hermes secret get DATABASE_URL --copy
+hermes secret get DATABASE_URL --password <secret-password>
+hermes secret get DATABASE_URL --vault-password <vault-password>
 hermes secret delete DATABASE_URL --yes
 ```
 
@@ -100,23 +102,25 @@ Key behavior:
 
 - `secret set` auto-creates `default-key` if no key exists in the vault
 - `--group` and `--path` both resolve secret hierarchy
-- password-protected reveal retries by prompting for the secret password
+- password-protected reveal retries now distinguish secret-level and vault-level password challenges
 
 ### `run`
 
 ```bash
 hermes run -- npm run dev
 hermes run --vault production -- npm start
-hermes run --path prod/api -- docker compose up
+hermes run --org acme --vault production --path prod/api -- docker compose up
 hermes run --env development -- npm run dev
+hermes run --env production --vault-password <vault-password> -- node server.js
 ```
 
 Behavior:
 
 - uses bulk secret reveal where possible
-- injects secrets only into the child process environment
-- never writes secrets to disk
-- skips protected secrets that cannot be non-interactively revealed
+- injects secrets into the executed child process environment
+- never writes injected secrets to project config files
+- fails fast when org or vault context is ambiguous
+- skips protected secrets that cannot be revealed in non-interactive mode
 
 ### `config`
 
@@ -149,6 +153,7 @@ server: https://example.com/api/v1
 
 environments:
   development:
+    organization: acme
     vault: my-project
     path: dev/api
     secrets:
@@ -158,6 +163,7 @@ environments:
       DATABASE_URL: APP_DATABASE_URL
 
   production:
+    organization: acme
     vault: my-project
     group: prod-config
 ```
@@ -165,8 +171,17 @@ environments:
 Rules:
 
 - `vault` is required
+- `organization` is optional but recommended for deterministic multi-org usage
 - `group` and `path` are mutually exclusive
+- top-level `server` overrides the stored server for commands that load `.hermes.yml`
 - CLI flag precedence is: explicit flags > env block > active stored context
+
+## Context Resolution
+
+- If exactly one organization is available, the CLI can adopt it automatically.
+- If multiple organizations are available and none is selected, the CLI stops and requires `hermes org select <org>` or an explicit `--org`.
+- If exactly one vault exists in the resolved organization, the CLI can adopt it automatically.
+- If multiple vaults exist, the CLI stops and requires `hermes vault select <vault>` or an explicit `--vault`.
 
 ## Output Modes
 
@@ -190,10 +205,9 @@ Rules:
 
 ## Security Model
 
-- access and refresh tokens stored via `conf`
+- access and refresh tokens are stored via `conf`
 - access token refresh uses the current API refresh route
-- injected secrets are passed only through child-process environment variables
-- injected secrets are removed from the parent process after child exit
+- injected secrets are passed through the child-process environment only for command execution
 - destructive actions require confirmation in interactive mode and `--yes` in non-interactive mode
 
 ## Notes
@@ -232,7 +246,7 @@ Recommended flags for automation:
 
 ```bash
 hermes --non-interactive --json auth status
-hermes --non-interactive run --env production -- node server.js
+hermes --non-interactive run --env production --vault-password "$HERMES_VAULT_PASSWORD" -- node server.js
 ```
 
 Expected CI behavior:

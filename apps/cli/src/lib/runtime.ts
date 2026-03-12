@@ -4,12 +4,14 @@ export interface CliRuntimeState {
   outputMode: OutputMode;
   nonInteractive: boolean;
   colorEnabled: boolean;
+  serverUrlOverride?: string;
 }
 
 let runtimeState: CliRuntimeState = {
   outputMode: process.stdout.isTTY ? "interactive" : "plain",
   nonInteractive: !process.stdin.isTTY,
   colorEnabled: process.stdout.isTTY,
+  serverUrlOverride: undefined,
 };
 
 export function setRuntimeState(nextState: Partial<CliRuntimeState>): void {
@@ -34,4 +36,3 @@ export function isInteractiveMode(): boolean {
 export function isNonInteractive(): boolean {
   return runtimeState.nonInteractive;
 }
-

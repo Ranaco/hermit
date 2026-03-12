@@ -4,6 +4,20 @@ import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpe
 import { promptInput, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { isNonInteractive } from "../lib/runtime.js";
+
+interface TeamScopedOptions {
+  org?: string;
+}
+
+interface TeamCreateOptions extends TeamScopedOptions {
+  name?: string;
+  description?: string;
+}
+
+interface TeamAddMemberOptions extends TeamScopedOptions {
+  user?: string;
+}
 
 export const teamCommand = new Command("team").description("Manage teams");
 
@@ -11,7 +25,7 @@ teamCommand
   .command("list")
   .description("List teams in the active organization")
   .option("--org <query>", "Organization name or id")
-  .action((opts) =>
+  .action((opts: TeamScopedOptions) =>
     runCommand(async () => {
       requireAuth();
       const organization = opts.org ? await resolveOrganization(opts.org) : await requireActiveOrganization();
@@ -41,22 +55,24 @@ teamCommand
   .option("--org <query>", "Organization name or id")
   .option("-n, --name <name>", "Team name")
   .option("-d, --description <description>", "Description")
-  .action((opts) =>
+  .action((opts: TeamCreateOptions) =>
     runCommand(async () => {
       requireAuth();
       const organization = opts.org ? await resolveOrganization(opts.org) : await requireActiveOrganization();
       const name =
         opts.name ||
         (await promptInput(
-          { message: "Team name:", validate: (value) => (value.trim() ? true : "Name is required") },
+          { message: "Team name:", validate: (value: string) => (value.trim() ? true : "Name is required") },
           "Team name is required in non-interactive mode.",
         ));
       const description =
-        opts.description ||
-        (await promptInput({ message: "Description (optional):" }, "Description is required in non-interactive mode."));
+        opts.description ??
+        (!isNonInteractive()
+          ? await promptInput({ message: "Description (optional):" }, "")
+          : undefined);
       const team = await sdk.createTeam(organization.id, {
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: description?.trim() || undefined,
       });
       renderData({ team });
       ui.success(`Team "${team.name}" created`);
@@ -69,7 +85,7 @@ teamCommand
   .description("List members of a team")
   .argument("<teamQuery>", "Team name or id")
   .option("--org <query>", "Organization name or id")
-  .action((teamQuery: string, opts) =>
+  .action((teamQuery: string, opts: TeamScopedOptions) =>
     runCommand(async () => {
       requireAuth();
       const organization = opts.org ? await resolveOrganization(opts.org) : await requireActiveOrganization();
@@ -90,7 +106,7 @@ teamCommand
   .argument("<teamQuery>", "Team name or id")
   .option("--org <query>", "Organization name or id")
   .option("--user <userId>", "User id to add")
-  .action((teamQuery: string, opts) =>
+  .action((teamQuery: string, opts: TeamAddMemberOptions) =>
     runCommand(async () => {
       requireAuth();
       const organization = opts.org ? await resolveOrganization(opts.org) : await requireActiveOrganization();
@@ -104,7 +120,7 @@ teamCommand
       if (availableMembers.length === 0) {
         abort("No organization members available to add.");
       }
-      const userId =
+      const userId: string =
         opts.user ||
         (await promptSelect(
           {
@@ -122,3 +138,4 @@ teamCommand
       ui.newline();
     }),
   );
+

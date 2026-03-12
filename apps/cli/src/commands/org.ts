@@ -5,6 +5,12 @@ import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpe
 import { promptInput, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { isNonInteractive } from "../lib/runtime.js";
+
+interface OrgCreateOptions {
+  name?: string;
+  description?: string;
+}
 
 export const orgCommand = new Command("org").description("Manage organizations");
 
@@ -41,22 +47,24 @@ orgCommand
   .description("Create an organization")
   .option("-n, --name <name>", "Organization name")
   .option("-d, --description <description>", "Organization description")
-  .action((opts) =>
+  .action((opts: OrgCreateOptions) =>
     runCommand(async () => {
       requireAuth();
       const name =
         opts.name ||
         (await promptInput(
-          { message: "Organization name:", validate: (value) => (value.trim() ? true : "Name is required") },
+          { message: "Organization name:", validate: (value: string) => (value.trim() ? true : "Name is required") },
           "Organization name is required in non-interactive mode.",
         ));
       const description =
-        opts.description ||
-        (await promptInput({ message: "Description (optional):" }, "Description is required in non-interactive mode."));
+        opts.description ??
+        (!isNonInteractive()
+          ? await promptInput({ message: "Description (optional):" }, "")
+          : undefined);
 
       const result = await sdk.createOrganization({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: description?.trim() || undefined,
       });
       authStore.saveOrg({
         id: result.organization.id,

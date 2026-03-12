@@ -4,8 +4,26 @@ import { renderData, requireAuth, runCommand } from "../lib/command-helpers.js";
 import { promptConfirm, promptInput, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { isNonInteractive } from "../lib/runtime.js";
 
 const valueTypes = ["STRING", "JSON", "NUMBER", "BOOLEAN", "MULTILINE"] as const;
+
+type ValueType = (typeof valueTypes)[number];
+
+interface KeyListOptions {
+  vault?: string;
+}
+
+interface KeyCreateOptions {
+  vault?: string;
+  name?: string;
+  description?: string;
+  type?: ValueType;
+}
+
+interface DeleteOptions {
+  yes?: boolean;
+}
 
 export const keyCommand = new Command("key").description("Manage encryption keys");
 
@@ -13,7 +31,7 @@ keyCommand
   .command("list")
   .description("List keys in a vault")
   .option("--vault <query>", "Vault name or id")
-  .action((opts) =>
+  .action((opts: KeyListOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = await resolveVault(opts.vault);
@@ -44,32 +62,36 @@ keyCommand
   .option("-n, --name <name>", "Key name")
   .option("-d, --description <description>", "Description")
   .option("-t, --type <type>", "Value type")
-  .action((opts) =>
+  .action((opts: KeyCreateOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = await resolveVault(opts.vault);
       const name =
         opts.name ||
         (await promptInput(
-          { message: "Key name:", validate: (value) => (value.trim() ? true : "Name is required") },
+          { message: "Key name:", validate: (value: string) => (value.trim() ? true : "Name is required") },
           "Key name is required in non-interactive mode.",
         ));
       const description =
-        opts.description ||
-        (await promptInput({ message: "Description (optional):" }, "Description is required in non-interactive mode."));
+        opts.description ??
+        (!isNonInteractive()
+          ? await promptInput({ message: "Description (optional):" }, "")
+          : undefined);
       const valueType =
         opts.type ||
-        (await promptSelect(
-          {
-            message: "Key type:",
-            choices: valueTypes.map((type) => ({ name: type, value: type })),
-          },
-          "Key type is required in non-interactive mode.",
-        ));
+        (isNonInteractive()
+          ? "STRING"
+          : await promptSelect<ValueType>(
+              {
+                message: "Key type:",
+                choices: valueTypes.map((type) => ({ name: type, value: type })),
+              },
+              "Key type is required in non-interactive mode.",
+            ));
 
       const key = await sdk.createKey({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: description?.trim() || undefined,
         vaultId: vault.id,
         valueType,
       });
@@ -116,7 +138,7 @@ keyCommand
   .description("Delete a key")
   .argument("<id>", "Key id")
   .option("-y, --yes", "Skip confirmation")
-  .action((id: string, opts) =>
+  .action((id: string, opts: DeleteOptions) =>
     runCommand(async () => {
       requireAuth();
       const key = await sdk.getKey(id);

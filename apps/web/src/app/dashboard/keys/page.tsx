@@ -7,6 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useKeys, useCreateKey, useDeleteKey, useRotateKey } from "@/hooks/use-keys";
 import { useVaults } from "@/hooks/use-vaults";
 import { useOrganizationStore } from "@/store/organization.store";
@@ -38,6 +46,16 @@ export default function KeysPage() {
   const filteredKeys = useMemo(
     () => keys?.filter((key) => key.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [keys, searchQuery],
+  );
+
+  const vaultItems = useMemo(
+    () =>
+      vaults?.map((vault) => ({
+        value: vault.id,
+        label: vault.name,
+        description: `${vault._count?.keys || 0} keys`,
+      })) || [],
+    [vaults],
   );
 
   const handleCreateKey = (e: React.FormEvent) => {
@@ -116,18 +134,21 @@ export default function KeysPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="key-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Type</Label>
-                  <select
-                    id="key-type"
+                  <Select
                     value={newKey.valueType}
-                    onChange={(e) => setNewKey({ ...newKey, valueType: e.target.value as KeyType })}
-                    className="h-11 w-full rounded-xl border border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
+                    onValueChange={(value) => setNewKey({ ...newKey, valueType: value as KeyType })}
                   >
-                    {keyTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="key-type" className="text-[14px]">
+                      <SelectValue placeholder="Select key type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {keyTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="key-description" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Description</Label>
@@ -141,22 +162,21 @@ export default function KeysPage() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="key-vault" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Vault</Label>
-                  <select
-                    id="key-vault"
-                    value={newKey.vaultId || currentVault?.id || ""}
-                    onChange={(e) => setNewKey({ ...newKey, vaultId: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner disabled:opacity-50"
+                  <Combobox
+                    items={
+                      vaultItems.length > 0
+                        ? vaultItems
+                        : currentVault
+                          ? [{ value: currentVault.id, label: currentVault.name }]
+                          : []
+                    }
+                    value={newKey.vaultId || currentVault?.id}
+                    placeholder="Select vault"
+                    searchPlaceholder="Search vaults..."
+                    emptyText="No vaults found."
                     disabled={!vaults || vaults.length <= 1}
-                  >
-                    {vaults?.map((vault) => (
-                      <option key={vault.id} value={vault.id}>
-                        {vault.name}
-                      </option>
-                    ))}
-                    {(!vaults || vaults.length === 0) && currentVault && (
-                      <option value={currentVault.id}>{currentVault.name}</option>
-                    )}
-                  </select>
+                    onValueChange={(value) => setNewKey({ ...newKey, vaultId: value })}
+                  />
                 </div>
                 <div className="md:col-span-3 flex gap-3 pt-2">
                   <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreating || !newKey.name}>

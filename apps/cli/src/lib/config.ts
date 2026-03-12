@@ -4,6 +4,7 @@ import { parse } from "yaml";
 import { abort } from "./command-helpers.js";
 
 export interface HermesEnvironment {
+  organization?: string;
   vault: string;
   group?: string;
   path?: string;
@@ -40,8 +41,15 @@ export function loadProjectConfig(explicitPath?: string): HermesConfig | null {
   if (!path) {
     return null;
   }
+
   const parsed = parse(readFileSync(path, "utf8")) as HermesConfig;
   return parsed;
+}
+
+export function resolveConfiguredServerUrl(explicitPath?: string): string | null {
+  const config = loadProjectConfig(explicitPath);
+  const server = config?.server?.trim();
+  return server ? server : null;
 }
 
 export function validateProjectConfig(config: HermesConfig): { valid: boolean; errors: string[] } {
@@ -90,6 +98,7 @@ version: 1
 
 environments:
   development:
+    # organization: acme
     vault: my-project
     path: dev/api
     # secrets:
@@ -99,6 +108,7 @@ environments:
     #   DATABASE_URL: APP_DATABASE_URL
 
   production:
+    # organization: acme
     vault: my-project
     group: prod-config
 `;

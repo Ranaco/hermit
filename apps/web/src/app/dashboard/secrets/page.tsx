@@ -8,7 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSecrets, useCreateSecret, useDeleteSecret, useUpdateSecret, useSecretVersions } from "@/hooks/use-secrets";
 import { useSecretGroups, useCreateSecretGroup, useDeleteSecretGroup } from "@/hooks/use-secret-groups";
 import { secretService } from "@/services/secret.service";
@@ -86,6 +94,14 @@ export default function SecretsPage() {
     showVersionsModal && activeSecretId ? activeSecretId : ""
   );
 
+  const getSecretPreview = (key: string) => {
+    if (!visibleSecrets.has(key)) {
+      return "Hidden secret value";
+    }
+
+    return revealedSecrets[key] || "Loading secret value...";
+  };
+
   const filteredSecrets = useMemo(
     () => secrets?.secrets?.filter((secret) => secret.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [secrets?.secrets, searchQuery],
@@ -94,6 +110,17 @@ export default function SecretsPage() {
   const filteredGroups = useMemo(
     () => groups?.data?.filter((group) => group.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [groups?.data, searchQuery],
+  );
+
+  const keyItems = useMemo(
+    () =>
+      keys?.map((key) => ({
+        value: key.id,
+        label: key.name,
+        description: key.valueType,
+        keywords: [key.valueType],
+      })) || [],
+    [keys],
   );
 
   const handleCreateFolder = (e: React.FormEvent) => {
@@ -266,7 +293,7 @@ export default function SecretsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl space-y-8">
         <section className="cupertino-glass-panel !p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -275,7 +302,7 @@ export default function SecretsPage() {
                 Organize your credentials with folders or direct secrets.
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3 lg:justify-end">
               <Button variant="secondary" className="rounded-2xl h-11 px-5 shadow-sm" onClick={() => setShowShareModal(true)}>
                 <LinkIcon className="mr-2 h-4 w-4 text-indigo-500" />
                 Share
@@ -366,16 +393,18 @@ export default function SecretsPage() {
                       )}
                     </div>
                   ) : updateSecretData.valueType === "BOOLEAN" ? (
-                    <select
-                      id="update-secret-value"
-                      className="h-11 w-full rounded-xl border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
+                    <Select
                       value={updateSecretData.value}
-                      onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                      required
+                      onValueChange={(value) => setUpdateSecretData({ ...updateSecretData, value })}
                     >
-                      <option value="true">True</option>
-                      <option value="false">False</option>
-                    </select>
+                      <SelectTrigger id="update-secret-value">
+                        <SelectValue placeholder="Select boolean value" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">True</SelectItem>
+                        <SelectItem value="false">False</SelectItem>
+                      </SelectContent>
+                    </Select>
                   ) : updateSecretData.valueType === "NUMBER" ? (
                     <Input
                       id="update-secret-value"
@@ -430,7 +459,7 @@ export default function SecretsPage() {
                     className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
                   />
                 </div>
-                <div className="md:col-span-2 flex gap-3 pt-2">
+                <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row">
                   <Button type="submit" className="h-11 rounded-xl px-8" disabled={isUpdating || !updateSecretData.value || (updateSecretData.password && updateSecretData.password?.length < 8 ? true : false)}>
                     {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Update Version
@@ -471,7 +500,7 @@ export default function SecretsPage() {
                     required
                   />
                 </div>
-                <div className="md:col-span-2 flex gap-3 pt-2">
+                <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row">
                   <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreatingFolder || !newFolderName}>
                     {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Create Folder
@@ -513,20 +542,14 @@ export default function SecretsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="secret-key" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Encryption Key</Label>
-                  <select
-                    id="secret-key"
-                    className="h-11 w-full rounded-xl border border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
+                  <Combobox
+                    items={keyItems}
                     value={newSecret.keyId}
-                    onChange={(e) => setNewSecret({ ...newSecret, keyId: e.target.value })}
-                    required
-                  >
-                    <option value="" disabled>Select key...</option>
-                    {keys?.map((key) => (
-                      <option key={key.id} value={key.id}>
-                        {key.name} ({key.valueType})
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select key..."
+                    searchPlaceholder="Search keys..."
+                    emptyText="No keys found."
+                    onValueChange={(value) => setNewSecret({ ...newSecret, keyId: value })}
+                  />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="secret-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Secret Type</Label>
@@ -590,16 +613,18 @@ export default function SecretsPage() {
                       )}
                     </div>
                   ) : newSecret.valueType === "BOOLEAN" ? (
-                    <select
-                      id="secret-value"
-                      className="h-11 w-full rounded-xl border-black/5 dark:border-white/5 bg-background px-4 text-[14px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-inner"
+                    <Select
                       value={newSecret.value}
-                      onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                      required
+                      onValueChange={(value) => setNewSecret({ ...newSecret, value })}
                     >
-                      <option value="true">True</option>
-                      <option value="false">False</option>
-                    </select>
+                      <SelectTrigger id="secret-value">
+                        <SelectValue placeholder="Select boolean value" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">True</SelectItem>
+                        <SelectItem value="false">False</SelectItem>
+                      </SelectContent>
+                    </Select>
                   ) : newSecret.valueType === "NUMBER" ? (
                     <Input
                       id="secret-value"
@@ -634,7 +659,7 @@ export default function SecretsPage() {
                     className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
                   />
                 </div>
-                <div className="md:col-span-2 flex gap-3 pt-2">
+                <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row">
                   <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId || (newSecret.password.length > 0 && newSecret.password.length < 8)}>
                     {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Create Secret
@@ -707,7 +732,7 @@ export default function SecretsPage() {
                   key={group.id} 
                   className="cupertino-glass-panel hover:bg-black/[0.04] dark:hover:bg-white/[0.04] cursor-pointer transition-all duration-300 group"
                 >
-                  <CardContent className="p-5 flex items-center justify-between">
+                  <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div 
                       className="flex min-w-0 flex-1 items-center gap-4"
                       onClick={() => {
@@ -726,7 +751,7 @@ export default function SecretsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl overflow-hidden shrink-0 shadow-inner">
+                    <div className="flex shrink-0 self-start overflow-hidden rounded-xl border border-black/5 bg-black/[0.02] shadow-inner dark:border-white/5 dark:bg-white/[0.02] sm:self-center">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -749,15 +774,15 @@ export default function SecretsPage() {
               {filteredSecrets?.map((secret) => (
               <Card key={secret.id} className="cupertino-glass-panel hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors duration-300">
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-5">
+                  <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                     <div className="flex min-w-0 flex-1 items-start gap-4">
                       <div className="rounded-2xl bg-indigo-500/10 p-3 text-indigo-600 dark:text-indigo-400 shadow-inner">
                         <Lock className="h-5 w-5" />
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3">
-                          <p className="truncate font-bold tracking-tight text-[16px] text-foreground">{secret.name}</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="min-w-0 break-words font-bold tracking-tight text-[16px] text-foreground">{secret.name}</p>
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="secondary" className="rounded-lg px-2 text-[11px] font-bold tracking-wider uppercase h-5 shadow-none border-none">
                               v{secret.currentVersion?.versionNumber || 1}
@@ -773,11 +798,11 @@ export default function SecretsPage() {
                         <p className="mt-1.5 text-[14px] font-medium text-muted-foreground">{secret.description || "No description provided."}</p>
 
                         {activePrompt === secret.id ? (
-                          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2 shadow-inner">
+                          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-black/5 bg-black/[0.02] p-2 shadow-inner dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center">
                             <Input
                               type="password"
                               placeholder="Enter secret password..."
-                              className="h-9 text-[13px] bg-background border-transparent shadow-sm flex-1"
+                              className="h-9 flex-1 bg-background text-[13px] shadow-sm"
                               value={revealPassword}
                               onChange={(e) => setRevealPassword(e.target.value)}
                               onKeyDown={(e) => {
@@ -788,37 +813,39 @@ export default function SecretsPage() {
                               }}
                               autoFocus
                             />
-                            <Button
-                              size="sm"
-                              className="h-9 rounded-xl px-4"
-                              disabled={isRevealing === secret.id || !revealPassword}
-                              onClick={() => toggleSecretVisibility(secret.id, revealPassword)}
-                            >
-                              {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-9 rounded-xl px-4 text-muted-foreground"
-                              onClick={() => {
-                                setActivePrompt(null);
-                                setRevealPassword("");
-                              }}
-                            >
-                              Cancel
-                            </Button>
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                size="sm"
+                                className="h-9 rounded-xl px-4"
+                                disabled={isRevealing === secret.id || !revealPassword}
+                                onClick={() => toggleSecretVisibility(secret.id, revealPassword)}
+                              >
+                                {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 rounded-xl px-4 text-muted-foreground"
+                                onClick={() => {
+                                  setActivePrompt(null);
+                                  setRevealPassword("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
                         ) : (
-                          <div className="mt-4 flex items-center gap-2 rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2 shadow-inner w-max min-w-[320px]">
-                            <code className="min-w-0 flex-1 truncate text-[14px] font-mono px-2 py-1 bg-background rounded-xl border border-black/5 dark:border-white/5 shadow-glass-sm flex items-center h-10">
-                              {visibleSecrets.has(secret.id) ? revealedSecrets[secret.id] || "loading..." : "••••••••••••••••"}
+                          <div className="mt-4 flex w-full min-w-0 flex-col gap-2 rounded-2xl border border-black/5 bg-black/[0.02] p-2 shadow-inner dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-start">
+                            <code className="block max-h-48 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-xl border border-black/5 bg-background px-3 py-2 font-mono text-[13px] leading-6 shadow-glass-sm dark:border-white/5">
+                              {getSecretPreview(secret.id)}
                             </code>
-                            <div className="flex gap-1 shrink-0">
-                               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
+                            <div className="flex shrink-0 justify-end gap-1">
+                               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
                                 {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                               </Button>
                               {visibleSecrets.has(secret.id) ? (
-                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground" onClick={() => copySecret(secret.id)}>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5" onClick={() => copySecret(secret.id)}>
                                   <Copy className="h-4 w-4" />
                                 </Button>
                               ) : null}
@@ -830,7 +857,7 @@ export default function SecretsPage() {
                       </div>
                     </div>
 
-                    <div className="flex bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl overflow-hidden shrink-0 shadow-inner">
+                    <div className="flex shrink-0 self-end overflow-hidden rounded-2xl border border-black/5 bg-black/[0.02] shadow-inner dark:border-white/5 dark:bg-white/[0.02] xl:self-start">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -901,11 +928,11 @@ export default function SecretsPage() {
            setShowVersionsModal(open);
           if (!open) setActiveSecretId(null);
         }}>
-          <DialogContent className="sm:max-w-2xl cupertino-glass-panel border-none p-0 overflow-hidden bg-background/80 backdrop-blur-2xl">
-            <DialogHeader className="px-8 pt-8 pb-4 border-b border-black/5 dark:border-white/5">
+          <DialogContent className="cupertino-glass-panel border-none bg-background/80 p-0 backdrop-blur-2xl sm:max-w-2xl">
+            <DialogHeader className="border-b border-black/5 px-5 pb-4 pt-6 dark:border-white/5 sm:px-8 sm:pt-8">
               <DialogTitle className="text-2xl font-bold tracking-tight">Version History</DialogTitle>
             </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto space-y-4 px-8 py-6">
+            <div className="max-h-[min(70vh,44rem)] space-y-4 overflow-y-auto px-4 py-5 sm:px-8 sm:py-6">
               {versionsLoading ? (
                 <div className="flex justify-center p-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -915,13 +942,13 @@ export default function SecretsPage() {
                   {secretVersionsData.versions.map((version) => {
                     const vKey = `${activeSecretId}-v${version.versionNumber}`;
                     return (
-                      <div key={version.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                      <div key={version.id} className="group is-active relative flex items-start justify-between md:justify-normal md:odd:flex-row-reverse">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-black/[0.04] dark:bg-white/[0.04] text-muted-foreground group-[.is-active]:bg-primary group-[.is-active]:text-primary-foreground shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 transition-colors z-10">
                           <History className="h-4 w-4" />
                         </div>
-                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-background/50 border border-black/5 dark:border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
+                        <div className="min-w-0 w-[calc(100%-4rem)] rounded-2xl border border-black/5 bg-background/50 p-4 shadow-sm backdrop-blur-md dark:border-white/5 md:w-[calc(50%-2.5rem)] sm:p-5">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
                               <Badge variant="secondary" className="px-2 py-0.5 rounded-lg text-[11px] font-bold tracking-wider uppercase bg-primary/10 text-primary border-transparent">
                                  v{version.versionNumber}
                                </Badge>
@@ -940,11 +967,11 @@ export default function SecretsPage() {
                            </div>
 
                           {activePrompt === vKey ? (
-                            <div className="flex items-center gap-2 rounded-xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2 shadow-inner">
+                            <div className="flex flex-col gap-2 rounded-xl border border-black/5 bg-black/[0.02] p-2 shadow-inner dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center">
                               <Input
                                 type="password"
                                 placeholder="Password..."
-                                className="h-8 text-[12px] w-32 bg-background border-transparent"
+                                className="h-8 bg-background text-[12px] sm:w-32"
                                 value={revealPassword}
                                 onChange={(e) => setRevealPassword(e.target.value)}
                                 onKeyDown={(e) => {
@@ -955,32 +982,34 @@ export default function SecretsPage() {
                                 }}
                                 autoFocus
                               />
-                               <Button
-                                size="sm"
-                                className="h-8 rounded-lg px-3"
-                                disabled={isRevealing === vKey || !revealPassword}
-                                onClick={() => activeSecretId && toggleVersionVisibility(activeSecretId, version.versionNumber, revealPassword)}
-                              >
-                                {isRevealing === vKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 rounded-lg"
-                                onClick={() => {
-                                  setActivePrompt(null);
-                                  setRevealPassword("");
-                                }}
-                              >
-                                Cancel
-                              </Button>
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-8 rounded-lg px-3"
+                                  disabled={isRevealing === vKey || !revealPassword}
+                                  onClick={() => activeSecretId && toggleVersionVisibility(activeSecretId, version.versionNumber, revealPassword)}
+                                >
+                                  {isRevealing === vKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 rounded-lg px-2"
+                                  onClick={() => {
+                                    setActivePrompt(null);
+                                    setRevealPassword("");
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
                             </div>
                            ) : (
-                            <div className="flex items-center gap-2 bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 shadow-inner rounded-xl p-1.5 w-max max-w-full">
-                              <code className="min-w-0 flex-1 truncate text-[13px] font-mono px-2 py-0.5 bg-background rounded-lg border border-black/5 dark:border-white/5 h-8 flex items-center">
-                                 {visibleSecrets.has(vKey) ? revealedSecrets[vKey] || "loading..." : "••••••••••••••••"}
+                            <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-black/5 bg-black/[0.02] p-1.5 shadow-inner dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-start">
+                              <code className="block max-h-40 min-h-8 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-black/5 bg-background px-2 py-1 font-mono text-[13px] leading-5 dark:border-white/5">
+                                 {getSecretPreview(vKey)}
                               </code>
-                              <div className="flex shrink-0">
+                              <div className="flex shrink-0 justify-end">
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Shield, KeyRound, Vault, Plus, FileCode2 } from "lucide-react";
 import { usePolicies, useRoles, useCreatePolicy, useUpdatePolicy, useDeletePolicy, useCreateRole, useUpdateRole } from "@/hooks/use-policies";
 import { PolicyEditor } from "@/components/policy-editor";
@@ -182,14 +183,12 @@ export default function PoliciesPage() {
                         {policies.length === 0 && <p className="text-sm text-muted-foreground p-2">No policies created yet.</p>}
                         {policies.map(p => (
                           <label key={p.id} className="flex items-center space-x-2 text-sm">
-                            <input 
-                              type="checkbox" 
+                            <Checkbox
                               checked={selectedPolicies.includes(p.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) setSelectedPolicies(prev => [...prev, p.id]);
+                              onCheckedChange={(checked) => {
+                                if (checked) setSelectedPolicies(prev => [...prev, p.id]);
                                 else setSelectedPolicies(prev => prev.filter(id => id !== p.id));
                               }}
-                              className="rounded border-gray-300 text-primary focus:ring-primary"
                             />
                             <span>{p.name}</span>
                           </label>
@@ -276,20 +275,18 @@ export default function PoliciesPage() {
                     <Label>Permissions</Label>
                     <div className="grid gap-2 border rounded-md p-3 max-h-48 overflow-y-auto bg-muted/20">
                       {policies.length === 0 && <p className="text-sm text-muted-foreground p-2">No policies created yet.</p>}
-                      {policies.map(p => (
-                        <label key={p.id} className="flex items-center space-x-2 text-sm">
-                          <input 
-                            type="checkbox" 
-                            checked={selectedPolicies.includes(p.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) setSelectedPolicies(prev => [...prev, p.id]);
-                              else setSelectedPolicies(prev => prev.filter(id => id !== p.id));
-                            }}
-                            className="rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                          <span>{p.name}</span>
-                        </label>
-                      ))}
+                        {policies.map(p => (
+                          <label key={p.id} className="flex items-center space-x-2 text-sm">
+                            <Checkbox
+                              checked={selectedPolicies.includes(p.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) setSelectedPolicies(prev => [...prev, p.id]);
+                                else setSelectedPolicies(prev => prev.filter(id => id !== p.id));
+                              }}
+                            />
+                            <span>{p.name}</span>
+                          </label>
+                        ))}
                     </div>
                   </div>
                 </div>

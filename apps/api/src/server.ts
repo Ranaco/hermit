@@ -3,7 +3,7 @@
  * Production-ready Express server with comprehensive security and middleware
  */
 
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import { json, urlencoded } from "body-parser";
 import morgan from "morgan";
 import compression from "compression";
@@ -49,7 +49,7 @@ export const createServer = (): Express => {
   setupCors(app);
 
   // Request parsing middleware
-  app.use(compression()); // Compress responses
+  app.use(compression() as unknown as RequestHandler); // Compress responses
   app.use(json({ limit: "1mb" })); // Parse JSON bodies
   app.use(urlencoded({ extended: true, limit: "1mb" })); // Parse URL-encoded bodies
   app.use(cookieParser()); // Parse cookies
@@ -151,10 +151,16 @@ async function checkVaultConnection(): Promise<boolean> {
   try {
     const vaultService = createVaultService({
       endpoint: config.vault.endpoint,
-      token: config.vault.token ?? "",
+      token: config.vault.token,
       namespace: config.vault.namespace,
       transitMount: config.vault.transitMount,
       requestTimeout: config.vault.requestTimeout,
+      appRole: config.vault.appRole.writeRoleId && config.vault.appRole.writeSecretId
+        ? {
+            roleId: config.vault.appRole.writeRoleId,
+            secretId: config.vault.appRole.writeSecretId,
+          }
+        : undefined,
     });
 
     return await vaultService.testConnection();

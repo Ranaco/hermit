@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
 import { useVaults, useCreateVault, useDeleteVault } from "@/hooks/use-vaults";
 import { useOrganizations } from "@/hooks/use-organizations";
 import { useOrganizationStore } from "@/store/organization.store";
@@ -32,6 +33,16 @@ export default function VaultsPage() {
   const filteredVaults = useMemo(
     () => vaults?.filter((vault) => vault.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [vaults, searchQuery],
+  );
+
+  const organizationItems = useMemo(
+    () =>
+      organizations?.map((org) => ({
+        value: org.id,
+        label: org.name,
+        description: org.description || undefined,
+      })) || [],
+    [organizations],
   );
 
   const handleCreateVault = (e: React.FormEvent) => {
@@ -96,22 +107,21 @@ export default function VaultsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vault-org">Organization</Label>
-                <select
-                  id="vault-org"
-                  value={newVault.organizationId || currentOrganization?.id || ""}
-                  onChange={(e) => setNewVault({ ...newVault, organizationId: e.target.value })}
-                  className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm disabled:opacity-50"
+                <Combobox
+                  items={
+                    organizationItems.length > 0
+                      ? organizationItems
+                      : currentOrganization
+                        ? [{ value: currentOrganization.id, label: currentOrganization.name }]
+                        : []
+                  }
+                  value={newVault.organizationId || currentOrganization?.id}
+                  placeholder="Select organization"
+                  searchPlaceholder="Search organizations..."
+                  emptyText="No organizations found."
                   disabled={!organizations || organizations.length <= 1}
-                >
-                  {organizations?.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-                  {(!organizations || organizations.length === 0) && currentOrganization && (
-                    <option value={currentOrganization.id}>{currentOrganization.name}</option>
-                  )}
-                </select>
+                  onValueChange={(value) => setNewVault({ ...newVault, organizationId: value })}
+                />
               </div>
               <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="vault-description">Description</Label>

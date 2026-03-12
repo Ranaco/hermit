@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/ui/combobox";
 import { useOrganizations } from "@/hooks/use-organizations";
 import { useOrganizationStore } from "@/store/organization.store";
 
@@ -47,27 +48,30 @@ export function OrganizationSelector({ onCreateNew }: OrganizationSelectorProps)
     );
   }
 
+  const organizationItems = organizations.map((org) => ({
+    value: org.id,
+    label: org.name,
+    description: org.userRole ? `Role: ${org.userRole}` : undefined,
+    keywords: [org.userRole || ""],
+  }));
+
   return (
     <div className="flex gap-2">
       <div className="flex-1">
         <Label htmlFor="org-select" className="sr-only">
           Select Organization
         </Label>
-        <div className="relative flex items-center">
-          <Building2 className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
-          <select
-            id="org-select"
-            value={currentOrganization?.id || ""}
-            onChange={(e) => handleSelectOrganization(e.target.value)}
-            className="h-10 w-full appearance-none rounded-xl border border-sidebar-border bg-sidebar/95 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-sidebar-ring"
-          >
-            <option value="">Select organization</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name} {org.userRole && `(${org.userRole})`}
-              </option>
-            ))}
-          </select>
+        <div className="relative">
+          <Building2 className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Combobox
+            items={organizationItems}
+            value={currentOrganization?.id}
+            placeholder="Select organization"
+            searchPlaceholder="Search organizations..."
+            emptyText="No organizations found."
+            onValueChange={handleSelectOrganization}
+            triggerClassName="border-sidebar-border bg-sidebar/95 pl-10 pr-4 focus-visible:ring-sidebar-ring"
+          />
         </div>
       </div>
       {onCreateNew ? (

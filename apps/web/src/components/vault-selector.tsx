@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Vault, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/ui/combobox";
 import { useVaults } from "@/hooks/use-vaults";
 import { useOrganizationStore } from "@/store/organization.store";
 
@@ -63,27 +64,30 @@ export function VaultSelector({ onCreateNew }: VaultSelectorProps) {
     );
   }
 
+  const vaultItems = vaults.map((vault) => ({
+    value: vault.id,
+    label: vault.name,
+    description: vault._count ? `${vault._count.keys} keys` : undefined,
+    keywords: [vault.organizationId],
+  }));
+
   return (
     <div className="flex gap-2">
       <div className="flex-1">
         <Label htmlFor="vault-select" className="sr-only">
           Select Vault
         </Label>
-        <div className="relative flex items-center">
-          <Vault className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
-          <select
-            id="vault-select"
-            value={currentVault?.id || ""}
-            onChange={(e) => handleSelectVault(e.target.value)}
-            className="h-10 w-full appearance-none rounded-xl border border-sidebar-border bg-sidebar/95 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-sidebar-ring"
-          >
-            <option value="">Select vault</option>
-            {vaults.map((vault) => (
-              <option key={vault.id} value={vault.id}>
-                {vault.name} {vault._count ? `(${vault._count.keys} keys)` : ""}
-              </option>
-            ))}
-          </select>
+        <div className="relative">
+          <Vault className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Combobox
+            items={vaultItems}
+            value={currentVault?.id}
+            placeholder="Select vault"
+            searchPlaceholder="Search vaults..."
+            emptyText="No vaults found."
+            onValueChange={handleSelectVault}
+            triggerClassName="border-sidebar-border bg-sidebar/95 pl-10 pr-4 focus-visible:ring-sidebar-ring"
+          />
         </div>
       </div>
       {onCreateNew ? (

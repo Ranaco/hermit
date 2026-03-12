@@ -4,8 +4,54 @@ import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpe
 import { promptConfirm, promptEditor, promptInput, promptPassword, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { isNonInteractive } from "../lib/runtime.js";
 
 const valueTypes = ["STRING", "JSON", "NUMBER", "BOOLEAN", "MULTILINE"] as const;
+
+type ValueType = (typeof valueTypes)[number];
+
+interface SecretListOptions {
+  vault?: string;
+  group?: string;
+  path?: string;
+  search?: string;
+}
+
+interface SecretSetOptions {
+  vault?: string;
+  key?: string;
+  group?: string;
+  path?: string;
+  type?: ValueType;
+  description?: string;
+  password?: boolean;
+}
+
+interface SecretGetOptions {
+  vault?: string;
+  group?: string;
+  path?: string;
+  copy?: boolean;
+  password?: string;
+  vaultPassword?: string;
+}
+
+interface SecretDeleteOptions {
+  vault?: string;
+  group?: string;
+  path?: string;
+  yes?: boolean;
+}
+
+interface RevealApiError {
+  statusCode?: number;
+  details?: {
+    error?: {
+      code?: string;
+      message?: string;
+    };
+  };
+}
 
 async function resolveKeyId(vaultId: string, requestedKeyId?: string): Promise<string> {
   if (requestedKeyId) return requestedKeyId;
@@ -33,7 +79,7 @@ secretCommand
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("--search <term>", "Search term")
-  .action((opts) =>
+  .action((opts: SecretListOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -76,7 +122,7 @@ secretCommand
   .option("--type <type>", "Value type")
   .option("--description <description>", "Description")
   .option("--password", "Prompt for a secret password")
-  .action((nameArg: string | undefined, valueArg: string | undefined, opts) =>
+  .action((nameArg: string | undefined, valueArg: string | undefined, opts: SecretSetOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -89,7 +135,7 @@ secretCommand
         (await promptInput(
           {
             message: "Secret name:",
-            validate: (value) =>
+            validate: (value: string) =>
               /^[a-zA-Z0-9-_. ]+$/.test(value) ? true : "Invalid secret name",
           },
           "Secret name is required in non-interactive mode.",
@@ -98,20 +144,22 @@ secretCommand
       const existing = secrets.find((secret) => secret.name.toLowerCase() === name.toLowerCase());
       const valueType =
         opts.type ||
-        (await promptSelect(
-          {
-            message: "Secret type:",
-            choices: valueTypes.map((type) => ({ name: type, value: type })),
-          },
-          "Secret type is required in non-interactive mode.",
-        ));
+        (isNonInteractive()
+          ? "STRING"
+          : await promptSelect<ValueType>(
+              {
+                message: "Secret type:",
+                choices: valueTypes.map((type) => ({ name: type, value: type })),
+              },
+              "Secret type is required in non-interactive mode.",
+            ));
 
       let value = valueArg;
       if (!value) {
         if (valueType === "MULTILINE") {
           value = await promptEditor({ message: "Secret value:" }, "Secret value is required in non-interactive mode.");
         } else if (valueType === "BOOLEAN") {
-          const booleanValue = await promptSelect(
+          value = await promptSelect<string>(
             {
               message: "Secret value:",
               choices: [
@@ -121,7 +169,6 @@ secretCommand
             },
             "Secret value is required in non-interactive mode.",
           );
-          value = booleanValue;
         } else {
           value = await promptPassword({ message: "Secret value:" }, "Secret value is required in non-interactive mode.");
         }
@@ -177,8 +224,10 @@ secretCommand
   .option("--vault <query>", "Vault name or id")
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
+  .option("--password <password>", "Secret password for password-protected secrets")
+  .option("--vault-password <password>", "Vault password for vault-protected secrets")
   .option("-c, --copy", "Copy to clipboard")
-  .action((nameArg: string | undefined, opts) =>
+  .action((nameArg: string | undefined, opts: SecretGetOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -208,17 +257,31 @@ secretCommand
         abort(`Secret "${nameArg}" not found.`);
       }
 
+      let secretPassword = opts.password;
+      let vaultPassword = opts.vaultPassword;
       let revealed: sdk.SecretRevealResult;
+
       try {
-        revealed = await sdk.revealSecret(secret.id);
+        revealed = await sdk.revealSecret(secret.id, {
+          password: secretPassword,
+          vaultPassword,
+        });
       } catch (error: unknown) {
-        const apiError = error as { statusCode?: number };
-        if (apiError.statusCode === 403) {
-          const password = await promptPassword(
+        const apiError = error as RevealApiError;
+        const code = apiError.details?.error?.code;
+
+        if (apiError.statusCode === 403 && code === "SECRET_PASSWORD_REQUIRED") {
+          secretPassword = await promptPassword(
             { message: "Secret password:" },
             "Secret password is required in non-interactive mode.",
           );
-          revealed = await sdk.revealSecret(secret.id, { password });
+          revealed = await sdk.revealSecret(secret.id, { password: secretPassword });
+        } else if (apiError.statusCode === 403 && code === "VAULT_PASSWORD_REQUIRED") {
+          vaultPassword = await promptPassword(
+            { message: "Vault password:" },
+            "Vault password is required in non-interactive mode.",
+          );
+          revealed = await sdk.revealSecret(secret.id, { vaultPassword });
         } else {
           throw error;
         }
@@ -233,8 +296,8 @@ secretCommand
       ]);
 
       if (opts.copy) {
-        const { default: clipboardy } = await import("clipboardy");
-        await clipboardy.write(revealed.secret.value);
+        const clipboardy = await import("clipboardy");
+        await clipboardy.default.write(revealed.secret.value);
         ui.info("Value copied to clipboard");
       }
 
@@ -250,7 +313,7 @@ secretCommand
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("-y, --yes", "Skip confirmation")
-  .action((nameArg: string | undefined, opts) =>
+  .action((nameArg: string | undefined, opts: SecretDeleteOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();

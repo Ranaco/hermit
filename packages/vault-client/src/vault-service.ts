@@ -38,6 +38,7 @@ export class VaultService {
   private transitMount: string;
   private config: VaultConfig;
   private tokenRenewalTimer?: NodeJS.Timeout;
+  private initialized = false;
 
   constructor(config: VaultConfig) {
     this.config = config;
@@ -65,12 +66,18 @@ export class VaultService {
    * Initialize service, performs AppRole login if configured
    */
   async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
     if (!this.config.token && this.config.appRole) {
       await this.loginWithAppRole();
     } else if (this.config.token) {
       // If we provided a token, try to schedule renewal for it assuming it's renewable
       await this.scheduleTokenRenewal();
     }
+
+    this.initialized = true;
   }
 
   /**
@@ -771,7 +778,14 @@ export class VaultService {
    */
   async testConnection(): Promise<boolean> {
     try {
+      await this.initialize();
       await this.checkHealth();
+
+      if (this.config.token || this.config.appRole) {
+        await this.client.tokenLookupSelf();
+        await this.listKeys();
+      }
+
       log.info("Vault connection test successful");
       return true;
     } catch (error) {

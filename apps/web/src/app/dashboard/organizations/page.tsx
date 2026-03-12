@@ -26,6 +26,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Building2,
   Plus,
@@ -57,6 +65,8 @@ function displayName(member: {
   }
   return member.user.username || member.user.email;
 }
+
+const DEFAULT_ROLE_VALUE = "__member__";
 
 export default function OrganizationsPage() {
   const permissions = useRBAC();
@@ -101,6 +111,12 @@ export default function OrganizationsPage() {
   const { mutate: deleteTeam, isPending: isDeletingTeam } = useDeleteTeam();
   const { mutate: addTeamMember, isPending: isAddingTeamMember } = useAddTeamMember();
   const { mutate: removeTeamMember, isPending: isRemovingTeamMember } = useRemoveTeamMember();
+
+  const roleItems = orgRoles?.map((role) => ({
+    value: role.id,
+    label: role.name,
+    description: role.description || undefined,
+  })) || [];
 
   const handleCreateOrg = (e: React.FormEvent) => {
     e.preventDefault();
@@ -462,16 +478,22 @@ export default function OrganizationsPage() {
                         className="h-11 rounded-xl flex-1 bg-background"
                         required
                       />
-                      <select
-                        value={inviteRoleId}
-                        onChange={(e) => setInviteRoleId(e.target.value)}
-                        className="h-11 rounded-xl border border-border bg-background px-4 text-sm font-medium w-full sm:w-48 outline-none focus:ring-2 focus:ring-primary/40"
+                      <Select
+                        value={inviteRoleId || DEFAULT_ROLE_VALUE}
+                        onValueChange={(value) => setInviteRoleId(value === DEFAULT_ROLE_VALUE ? "" : value)}
                       >
-                        <option value="">Member</option>
-                        {orgRoles?.map(r => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full sm:w-56">
+                          <SelectValue placeholder="Member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={DEFAULT_ROLE_VALUE}>Member</SelectItem>
+                          {roleItems.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="flex gap-3">
                       <Button type="submit" size="sm" className="rounded-xl h-10 px-6" disabled={isInviting || !inviteEmail}>
@@ -510,19 +532,23 @@ export default function OrganizationsPage() {
 
                       <div className="flex items-center gap-3">
                         {permissions.canManageRoles ? (
-                          <select
-                            value={member.roleId || ""}
-                            onChange={(e) => handleUpdateRole(member.userId, e.target.value)}
+                          <Select
+                            value={member.roleId || DEFAULT_ROLE_VALUE}
+                            onValueChange={(value) => handleUpdateRole(member.userId, value === DEFAULT_ROLE_VALUE ? "" : value)}
                             disabled={isUpdatingRole}
-                            className="h-9 rounded-xl border border-transparent bg-black/5 dark:bg-white/10 px-3 text-[13px] font-bold uppercase tracking-wider text-muted-foreground outline-none focus:ring-2 focus:ring-primary/40 hover:bg-black/10 dark:hover:bg-white/20 transition-colors cursor-pointer"
                           >
-                            <option value="">Member</option>
-                            {orgRoles?.map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger className="h-9 min-w-[140px] border-transparent bg-black/5 text-[13px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20">
+                              <SelectValue placeholder="Member" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={DEFAULT_ROLE_VALUE}>Member</SelectItem>
+                              {roleItems.map((role) => (
+                                <SelectItem key={role.value} value={role.value}>
+                                  {role.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : (
                           <Badge variant="secondary">{member.role?.name || "Member"}</Badge>
                         )}
@@ -648,23 +674,26 @@ export default function OrganizationsPage() {
                       </div>
 
                       <div className="mt-5 flex items-center gap-2">
-                        <select
+                        <Combobox
+                          items={
+                            selectedOrg.members
+                              ?.filter((m) => !(team.members || []).some((tm) => tm.userId === m.userId))
+                              .map((m) => ({
+                                value: m.userId,
+                                label: displayName(m),
+                                description: m.user.email,
+                                keywords: [m.user.email, m.user.username || ""],
+                              })) || []
+                          }
                           value={selectedTeamIdForMemberAdd === team.id ? selectedUserIdForTeamAdd : ""}
-                          onChange={(e) => {
+                          placeholder="Add member..."
+                          searchPlaceholder="Search members..."
+                          emptyText="No available members."
+                          onValueChange={(value) => {
                             setSelectedTeamIdForMemberAdd(team.id);
-                            setSelectedUserIdForTeamAdd(e.target.value);
+                            setSelectedUserIdForTeamAdd(value);
                           }}
-                          className="h-10 min-w-0 flex-1 rounded-xl border border-black/5 dark:border-white/5 bg-background px-3 text-[13px] font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/40"
-                        >
-                          <option value="">Add member...</option>
-                          {selectedOrg.members
-                            ?.filter((m) => !(team.members || []).some((tm) => tm.userId === m.userId))
-                            .map((m) => (
-                              <option key={m.id} value={m.userId}>
-                                {displayName(m)} ({m.user.email})
-                              </option>
-                            ))}
-                        </select>
+                        />
                         <Button
                           size="icon"
                           variant="secondary"

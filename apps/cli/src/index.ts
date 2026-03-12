@@ -9,29 +9,33 @@ import { secretCommand } from "./commands/secret.js";
 import { teamCommand } from "./commands/team.js";
 import { vaultCommand } from "./commands/vault.js";
 import { whoamiCommand } from "./commands/whoami.js";
+import { resolveConfiguredServerUrl } from "./lib/config.js";
 import { setRuntimeState } from "./lib/runtime.js";
+
+interface GlobalOptions {
+  json?: boolean;
+  nonInteractive?: boolean;
+  color?: boolean;
+}
 
 const program = new Command();
 
 program
   .name("hermes")
-  .description("Hermes KMS — Secure secret management from your terminal")
+  .description("Hermes KMS - Secure secret management from your terminal")
   .version("0.1.0")
   .option("--json", "Emit machine-readable JSON output")
   .option("--non-interactive", "Disable prompts and animated output")
   .option("--no-color", "Disable terminal colors");
 
-program.hook("preAction", (thisCommand) => {
-  const options = thisCommand.optsWithGlobals<{
-    json?: boolean;
-    nonInteractive?: boolean;
-    color?: boolean;
-  }>();
+program.hook("preAction", (thisCommand: Command) => {
+  const options = thisCommand.optsWithGlobals() as GlobalOptions;
 
   setRuntimeState({
     outputMode: options.json ? "json" : options.nonInteractive || !process.stdout.isTTY ? "plain" : "interactive",
     nonInteractive: !!options.nonInteractive || !process.stdin.isTTY,
     colorEnabled: options.color !== false,
+    serverUrlOverride: resolveConfiguredServerUrl() || undefined,
   });
 });
 

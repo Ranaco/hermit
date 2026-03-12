@@ -1,4 +1,4 @@
-import { Chalk, type ChalkInstance } from "chalk";
+import chalk from "chalk";
 import figlet from "figlet";
 import { getRuntimeState, isInteractiveMode, isJsonMode, setRuntimeState } from "./runtime.js";
 
@@ -193,11 +193,15 @@ function fitAnsi(value: string, width: number, overflow: OverflowMode): string[]
   return wrapAnsi(value, width);
 }
 
-function createChalk(): ChalkInstance {
-  return new Chalk({ level: getRuntimeState().colorEnabled ? 3 : 0 });
+function createChalk() {
+  const ChalkConstructor = (chalk as unknown as {
+    constructor: new (options: { level: number }) => typeof chalk;
+  }).constructor;
+
+  return new ChalkConstructor({ level: getRuntimeState().colorEnabled ? 3 : 0 });
 }
 
-function chalkRef(): ChalkInstance {
+function chalkRef() {
   return createChalk();
 }
 
@@ -429,7 +433,7 @@ function renderTitle(title: string, width: number): string {
 export function panel(
   title: string,
   rows: PanelRow[],
-  opts: { width?: number; labelWidth?: number; borderColor?: ChalkInstance | ((text: string) => string) } = {},
+  opts: { width?: number; labelWidth?: number; borderColor?: ((text: string) => string) } = {},
 ): void {
   if (isJsonMode()) return;
 
@@ -459,7 +463,7 @@ export function panel(
 export function listPanel(
   title: string,
   lines: string[],
-  opts: { width?: number; borderColor?: ChalkInstance | ((text: string) => string) } = {},
+  opts: { width?: number; borderColor?: ((text: string) => string) } = {},
 ): void {
   panel(
     title,
@@ -519,7 +523,7 @@ export function cards(items: CardItem[], opts: { width?: number; labelWidth?: nu
 export function box(
   title: string,
   content: string[],
-  opts: { width?: number; borderColor?: ChalkInstance | ((text: string) => string) } = {},
+  opts: { width?: number; borderColor?: ((text: string) => string) } = {},
 ): void {
   panel(title, content.map((line) => (line ? text(line, { overflow: "wrap" }) : spacer())), opts);
 }
@@ -609,3 +613,6 @@ export function matchId(partial: string, fullId: string): boolean {
 }
 
 export { setRuntimeState };
+
+
+

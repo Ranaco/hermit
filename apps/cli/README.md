@@ -1,11 +1,11 @@
 # Hermes CLI
 
-Hermes CLI is the terminal-native interface for Hermes KMS. It covers secure authentication, org and vault context management, team administration, key lifecycle operations, secret hierarchy management, and zero-leak environment injection for local development and CI/CD workflows.
+Hermes CLI is the terminal-native interface for Hermes KMS. It covers authentication, explicit organization and vault context, team administration, key lifecycle operations, secret hierarchy management, and environment injection for local development and CI workflows.
 
 ## Requirements
 
 - Node.js 18+
-- A reachable Hermes API base URL, typically `http://localhost:3001/api/v1` in local development
+- A reachable Hermes API base URL, typically `http://localhost:5001/api/v1` in local development
 
 ## Install
 
@@ -37,7 +37,7 @@ hermes --help
 Set the API server:
 
 ```bash
-hermes config set-server http://localhost:3001/api/v1
+hermes config set-server http://localhost:5001/api/v1
 ```
 
 Authenticate and choose context:
@@ -47,6 +47,8 @@ hermes auth login
 hermes org select <org>
 hermes vault select <vault>
 ```
+
+If your account can access multiple organizations or vaults, the CLI now requires an explicit selection instead of silently picking the first match.
 
 ## Core command families
 
@@ -88,10 +90,11 @@ Example:
 
 ```yaml
 version: 1
-server: http://localhost:3001/api/v1
+server: http://localhost:5001/api/v1
 
 environments:
   development:
+    organization: acme
     vault: my-project
     path: dev/api
     secrets:
@@ -101,6 +104,7 @@ environments:
       DATABASE_URL: APP_DATABASE_URL
 
   production:
+    organization: acme
     vault: my-project
     group: prod-config
 ```
@@ -110,6 +114,24 @@ Resolution precedence:
 1. CLI flags
 2. `.hermes.yml` environment block
 3. active stored CLI context
+
+Notes:
+
+- Top-level `server` is applied when commands load `.hermes.yml`.
+- `organization` lets `hermes run --env <name>` resolve the target vault deterministically.
+- `group` and `path` are mutually exclusive.
+
+## Protected secret access
+
+Protected reveal flows support both layers of the current backend model:
+
+```bash
+hermes secret get DATABASE_URL --password <secret-password>
+hermes secret get DATABASE_URL --vault-password <vault-password>
+hermes run --env production --vault-password <vault-password> -- node server.js
+```
+
+If a password is omitted in interactive mode, the CLI prompts for the required secret or vault password and retries with the correct field.
 
 ## CI usage
 
@@ -125,4 +147,5 @@ Behavior in CI:
 - no prompts
 - no animated output
 - destructive commands require `--yes`
-- password-protected secrets are skipped during injected runs unless the workflow explicitly reveals them
+- missing org or vault context fails fast instead of auto-selecting
+- protected secrets are skipped during injected runs unless the workflow provides the required password flags

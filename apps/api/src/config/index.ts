@@ -3,6 +3,11 @@
 // Load environment variables
 dotenv.config();
 
+const readEnv = (name: string): string | undefined => {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+};
+
 /**
  * Application Configuration
  * Centralized configuration management for the Hermes KMS API
@@ -25,17 +30,17 @@ const config = {
 
   // HashiCorp Vault
   vault: {
-    endpoint: process.env.VAULT_ENDPOINT || "http://localhost:8200",
-    token: process.env.VAULT_TOKEN || "",
-    namespace: process.env.VAULT_NAMESPACE || "", // Empty for root namespace
-    transitMount: process.env.VAULT_TRANSIT_MOUNT || "transit",
+    endpoint: readEnv("VAULT_ENDPOINT") || "http://localhost:8200",
+    token: readEnv("VAULT_TOKEN") || "",
+    namespace: readEnv("VAULT_NAMESPACE") || "", // Empty for root namespace
+    transitMount: readEnv("VAULT_TRANSIT_MOUNT") || "transit",
     requestTimeout: parseInt(process.env.VAULT_REQUEST_TIMEOUT || "5000", 10),
     keyName: process.env.VAULT_KEY_NAME || "hermes-master-key",
     appRole: {
-      readRoleId: process.env.VAULT_APPROLE_ROLE_ID_READ || "",
-      readSecretId: process.env.VAULT_APPROLE_SECRET_ID_READ || "",
-      writeRoleId: process.env.VAULT_APPROLE_ROLE_ID_WRITE || "",
-      writeSecretId: process.env.VAULT_APPROLE_SECRET_ID_WRITE || "",
+      readRoleId: readEnv("VAULT_APPROLE_ROLE_ID_READ") || "",
+      readSecretId: readEnv("VAULT_APPROLE_SECRET_ID_READ") || "",
+      writeRoleId: readEnv("VAULT_APPROLE_ROLE_ID_WRITE") || "",
+      writeSecretId: readEnv("VAULT_APPROLE_SECRET_ID_WRITE") || "",
     },
   },
 
@@ -124,8 +129,12 @@ if (config.app.env === "production") {
   if (config.jwt.accessTokenSecret.includes("change-this")) {
     throw new Error("JWT secrets must be changed in production!");
   }
-  if (!config.vault.token) {
-    throw new Error("VAULT_TOKEN must be set in production!");
+  const hasVaultToken = Boolean(config.vault.token);
+  const hasVaultWriteAppRole = Boolean(
+    config.vault.appRole.writeRoleId && config.vault.appRole.writeSecretId,
+  );
+  if (!hasVaultToken && !hasVaultWriteAppRole) {
+    throw new Error("Vault authentication must be configured with either VAULT_TOKEN or write AppRole credentials in production!");
   }
   if (!config.database.url.startsWith("postgresql://")) {
     throw new Error("DATABASE_URL must be properly configured in production!");

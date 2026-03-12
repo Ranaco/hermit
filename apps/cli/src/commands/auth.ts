@@ -5,45 +5,66 @@ import { promptInput, promptPassword } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
 
+interface LoginOptions {
+  server?: string;
+  email?: string;
+  password?: string;
+  mfaToken?: string;
+}
+
+interface MfaApiError {
+  statusCode?: number;
+  details?: { error?: { code?: string } };
+}
+
 export const authCommand = new Command("auth").description("Manage authentication and MFA");
 
 authCommand
   .command("login")
   .description("Log in to Hermes")
   .option("-s, --server <url>", "Server URL")
-  .action((opts) =>
+  .option("-e, --email <email>", "Account email")
+  .option("-p, --password <password>", "Account password")
+  .option("--mfa-token <token>", "MFA token when two-factor authentication is required")
+  .action((opts: LoginOptions) =>
     runCommand(async () => {
       ui.newline();
       if (opts.server) {
         authStore.setServerUrl(opts.server);
       }
 
-      const email = await promptInput(
-        {
-          message: "Email:",
-          validate: (value) => (value.includes("@") ? true : "Enter a valid email"),
-        },
-        "Email is required in non-interactive mode.",
-      );
-      const password = await promptPassword(
-        { message: "Password:" },
-        "Password is required in non-interactive mode.",
-      );
+      const email =
+        opts.email ||
+        (await promptInput(
+          {
+            message: "Email:",
+            validate: (value: string) => (value.includes("@") ? true : "Enter a valid email"),
+          },
+          "Email is required in non-interactive mode.",
+        ));
+      const password =
+        opts.password ||
+        (await promptPassword(
+          { message: "Password:" },
+          "Password is required in non-interactive mode.",
+        ));
 
       let result: sdk.LoginResult;
       try {
-        result = await sdk.login({ email, password });
+        result = await sdk.login({ email, password, mfaToken: opts.mfaToken });
       } catch (error: unknown) {
-        const apiError = error as { statusCode?: number; details?: { error?: { code?: string } } };
+        const apiError = error as MfaApiError;
         const code = apiError.details?.error?.code;
         if (apiError.statusCode === 401 && code === "MFA_REQUIRED") {
-          const mfaToken = await promptInput(
-            {
-              message: "MFA token:",
-              validate: (value) => (/^\d{6}$/.test(value) ? true : "Enter a 6-digit token"),
-            },
-            "MFA token is required in non-interactive mode.",
-          );
+          const mfaToken =
+            opts.mfaToken ||
+            (await promptInput(
+              {
+                message: "MFA token:",
+                validate: (value: string) => (/^\d{6}$/.test(value) ? true : "Enter a 6-digit token"),
+              },
+              "MFA token is required in non-interactive mode.",
+            ));
           result = await sdk.login({ email, password, mfaToken });
         } else {
           throw error;
@@ -163,7 +184,7 @@ mfaCommand
       const token = await promptInput(
         {
           message: "Verification token:",
-          validate: (value) => (/^\d{6}$/.test(value) ? true : "Enter a 6-digit token"),
+          validate: (value: string) => (/^\d{6}$/.test(value) ? true : "Enter a 6-digit token"),
         },
         "Verification token is required in non-interactive mode.",
       );
@@ -187,7 +208,7 @@ mfaCommand
       const mfaToken = await promptInput(
         {
           message: "MFA token:",
-          validate: (value) => (/^\d{6}$/.test(value) ? true : "Enter a 6-digit token"),
+          validate: (value: string) => (/^\d{6}$/.test(value) ? true : "Enter a 6-digit token"),
         },
         "MFA token is required in non-interactive mode.",
       );

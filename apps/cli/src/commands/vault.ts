@@ -5,6 +5,17 @@ import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpe
 import { promptConfirm, promptInput, promptPassword, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { isNonInteractive } from "../lib/runtime.js";
+
+interface VaultCreateOptions {
+  name?: string;
+  description?: string;
+  password?: boolean;
+}
+
+interface DeleteOptions {
+  yes?: boolean;
+}
 
 export const vaultCommand = new Command("vault").description("Manage vaults");
 
@@ -43,19 +54,21 @@ vaultCommand
   .option("-n, --name <name>", "Vault name")
   .option("-d, --description <description>", "Description")
   .option("-p, --password", "Prompt for a vault password")
-  .action((opts) =>
+  .action((opts: VaultCreateOptions) =>
     runCommand(async () => {
       requireAuth();
       const organization = await requireActiveOrganization();
       const name =
         opts.name ||
         (await promptInput(
-          { message: "Vault name:", validate: (value) => (value.trim() ? true : "Name is required") },
+          { message: "Vault name:", validate: (value: string) => (value.trim() ? true : "Name is required") },
           "Vault name is required in non-interactive mode.",
         ));
       const description =
-        opts.description ||
-        (await promptInput({ message: "Description (optional):" }, "Description is required in non-interactive mode."));
+        opts.description ??
+        (!isNonInteractive()
+          ? await promptInput({ message: "Description (optional):" }, "")
+          : undefined);
 
       let password: string | undefined;
       if (opts.password) {
@@ -71,7 +84,7 @@ vaultCommand
 
       const vault = await sdk.createVault({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: description?.trim() || undefined,
         organizationId: organization.id,
         password,
       });
@@ -105,7 +118,7 @@ vaultCommand
           {
             message: "Select vault:",
             choices: vaults.map((item) => ({
-              name: `${ui.shortId(item.id)}  ${item.name}${item.description ? ` — ${item.description}` : ""}`,
+              name: `${ui.shortId(item.id)}  ${item.name}${item.description ? ` - ${item.description}` : ""}`,
               value: item.id,
             })),
           },
@@ -130,7 +143,7 @@ vaultCommand
   .description("Delete a vault")
   .argument("[query]", "Vault name, full id, or short id")
   .option("-y, --yes", "Skip confirmation")
-  .action((query: string | undefined, opts) =>
+  .action((query: string | undefined, opts: DeleteOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = await resolveVault(query);

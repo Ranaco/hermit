@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import {
   createGroup,
   getGroups,
@@ -19,39 +19,35 @@ import {
 
 const router = Router({ mergeParams: true });
 
-// All routes require authentication
-router.use(authenticate);
-
-const getGroupUrn = async (req: any) => {
-  let orgId = req.headers["x-organization-id"] || req.query.orgId || req.body.orgId || req.query.organizationId || req.body.organizationId;
-  let vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
+const getGroupUrn = async (req: Request & { organizationId?: string }) => {
   const groupId = req.params.groupId || req.params.id || req.query.groupId || req.body.groupId;
-  
+  const vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
+
   const prisma = getPrismaClient();
 
-  if (!orgId && groupId) {
-     const group = await prisma.secretGroup.findUnique({ where: { id: groupId }, include: { vault: { select: { organizationId: true, id: true } } } });
-     if (group && group.vault) {
-       orgId = group.vault.organizationId;
-       vaultId = group.vault.id;
-       req.organizationId = orgId;
-     } else {
-       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Group not found");
-     }
-  } else if (!orgId && vaultId) {
-     const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
-     if (vault) {
-       orgId = vault.organizationId;
-       req.organizationId = orgId;
-     } else {
-       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
-     }
+  if (groupId) {
+    const group = await prisma.secretGroup.findUnique({ where: { id: groupId }, include: { vault: { select: { organizationId: true, id: true } } } });
+    if (!group || !group.vault) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Group not found");
+    }
+    req.organizationId = group.vault.organizationId;
+    return `urn:hermes:org:${group.vault.organizationId}:vault:${group.vault.id}:group:${groupId}`;
   }
-  
-  return `urn:hermes:org:${orgId || '*'}:vault:${vaultId || '*'}:group:${groupId || '*'}`;
+
+  if (vaultId) {
+    const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
+    if (!vault) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
+    }
+    req.organizationId = vault.organizationId;
+    return `urn:hermes:org:${vault.organizationId}:vault:${vaultId}:group:*`;
+  }
+
+  return "urn:hermes:org:*:vault:*:group:*";
 };
 
-// List groups
+router.use(authenticate);
+
 router.get(
   "/",
   validate({ query: getSecretGroupsSchema }),
@@ -59,16 +55,14 @@ router.get(
   getGroups,
 );
 
-// Create a new group
 router.post(
   "/",
-  requireVaultHealth, // Ensure Vault is unsealed for modifications
+  requireVaultHealth,
   validate({ body: createSecretGroupSchema }),
   requirePolicy("groups:create", getGroupUrn),
   createGroup,
 );
 
-// Update a group
 router.put(
   "/:groupId",
   requireVaultHealth,
@@ -77,7 +71,6 @@ router.put(
   updateGroup,
 );
 
-// Delete a group
 router.delete("/:groupId", requirePolicy("groups:delete", getGroupUrn), deleteGroup);
 
 export default router;

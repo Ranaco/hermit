@@ -4,6 +4,35 @@ import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpe
 import { promptConfirm, promptInput } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { isNonInteractive } from "../lib/runtime.js";
+
+interface GroupListOptions {
+  vault?: string;
+  parent?: string;
+}
+
+interface GroupCreateOptions {
+  vault?: string;
+  parent?: string;
+  path?: string;
+  name?: string;
+  description?: string;
+}
+
+interface GroupUpdateOptions {
+  vault?: string;
+  name?: string;
+  description?: string;
+}
+
+interface GroupDeleteOptions {
+  vault?: string;
+  yes?: boolean;
+}
+
+interface GroupTreeOptions {
+  vault?: string;
+}
 
 async function renderGroupTree(vaultId: string, parentId?: string | null, prefix: string = ""): Promise<string[]> {
   const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
@@ -22,7 +51,7 @@ groupCommand
   .description("List groups in the active vault")
   .option("--vault <query>", "Vault name or id")
   .option("--parent <id>", "Parent group id")
-  .action((opts) =>
+  .action((opts: GroupListOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -55,7 +84,7 @@ groupCommand
   .option("--path <path>", "Path like prod/api")
   .option("-n, --name <name>", "Group name")
   .option("-d, --description <description>", "Description")
-  .action((opts) =>
+  .action((opts: GroupCreateOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -65,16 +94,18 @@ groupCommand
       const name =
         opts.name ||
         (await promptInput(
-          { message: "Group name:", validate: (value) => (value.trim() ? true : "Name is required") },
+          { message: "Group name:", validate: (value: string) => (value.trim() ? true : "Name is required") },
           "Group name is required in non-interactive mode.",
         ));
       const description =
-        opts.description ||
-        (await promptInput({ message: "Description (optional):" }, "Description is required in non-interactive mode."));
+        opts.description ??
+        (!isNonInteractive()
+          ? await promptInput({ message: "Description (optional):" }, "")
+          : undefined);
       const group = await sdk.createSecretGroup({
         vaultId: vault.id,
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: description?.trim() || undefined,
         parentId: parent?.id,
       });
       renderData({ group });
@@ -90,7 +121,7 @@ groupCommand
   .option("--vault <query>", "Vault name or id")
   .option("-n, --name <name>", "New name")
   .option("-d, --description <description>", "New description")
-  .action((query: string, opts) =>
+  .action((query: string, opts: GroupUpdateOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -114,7 +145,7 @@ groupCommand
   .argument("<query>", "Group id, short id, or name")
   .option("--vault <query>", "Vault name or id")
   .option("-y, --yes", "Skip confirmation")
-  .action((query: string, opts) =>
+  .action((query: string, opts: GroupDeleteOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -144,7 +175,7 @@ groupCommand
   .command("tree")
   .description("Render the secret group hierarchy")
   .option("--vault <query>", "Vault name or id")
-  .action((opts) =>
+  .action((opts: GroupTreeOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
@@ -155,7 +186,8 @@ groupCommand
         ui.newline();
         return;
       }
-      ui.listPanel(`Groups · ${vault.name}`, lines);
+      ui.listPanel(`Groups - ${vault.name}`, lines);
       ui.newline();
     }),
   );
+
