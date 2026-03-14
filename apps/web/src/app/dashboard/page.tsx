@@ -1,153 +1,375 @@
 "use client";
 
+import Link from "next/link";
+import { Activity, ArrowUpRight, Building2, FileKey2, Loader2, Mail, Shield } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuditLogs } from "@/hooks/use-audit";
+import { useAutoContext } from "@/hooks/use-auto-context";
+import {
+  useMyPendingInvitations,
+  useOrganizationInvitations,
+} from "@/hooks/use-organizations";
 import { useKeys } from "@/hooks/use-keys";
 import { useSecrets } from "@/hooks/use-secrets";
 import { useVaults } from "@/hooks/use-vaults";
-import { useAutoContext } from "@/hooks/use-auto-context";
+import { useRBAC } from "@/hooks/use-rbac";
 import { useOrganizationStore } from "@/store/organization.store";
-import {
-  Key,
-  Lock,
-  Vault,
-  Activity,
-  Building2,
-  ShieldCheck,
-  Clock3,
-  ArrowUpRight,
-  Loader2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+
+const dateFormatter = new Intl.DateTimeFormat("en", {
+  month: "short",
+  day: "numeric",
+});
+
+function formatAuditAction(action: string) {
+  return action.toLowerCase().replace(/_/g, " ");
+}
+
+function formatDate(value?: string | null) {
+  if (!value) {
+    return "No date";
+  }
+
+  return dateFormatter.format(new Date(value));
+}
+
+function EmptyWorkspace({
+  title,
+  detail,
+  linkHref,
+  linkLabel,
+}: {
+  title: string;
+  detail: string;
+  linkHref: string;
+  linkLabel: string;
+}) {
+  return (
+    <section className="flex min-h-[360px] flex-col items-start justify-center gap-4 border border-border bg-card px-8 py-10">
+      <p className="app-eyebrow">Workspace</p>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <p className="max-w-xl text-sm text-muted-foreground">{detail}</p>
+      </div>
+      <Link
+        href={linkHref}
+        className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-opacity hover:opacity-70"
+      >
+        {linkLabel}
+        <ArrowUpRight className="h-4 w-4" />
+      </Link>
+    </section>
+  );
+}
 
 export default function DashboardPage() {
   useAutoContext();
 
+  const permissions = useRBAC();
   const { currentOrganization, currentVault } = useOrganizationStore();
+
+  const { data: myInvitations } = useMyPendingInvitations();
+  const { data: vaults, isLoading: vaultsLoading } = useVaults(currentOrganization?.id);
   const { data: keys, isLoading: keysLoading } = useKeys(currentVault?.id);
   const { data: secrets, isLoading: secretsLoading } = useSecrets(currentVault?.id);
-  const { data: vaults, isLoading: vaultsLoading } = useVaults(currentOrganization?.id);
+  const { data: organizationInvitations } = useOrganizationInvitations(
+    currentOrganization?.id,
+    permissions.canReadInvitations,
+  );
+  const { data: activity, isLoading: activityLoading } = useAuditLogs(
+    {
+      organizationId: currentOrganization?.id,
+      vaultId: currentVault?.id,
+      limit: 8,
+    },
+    Boolean(currentOrganization && currentVault),
+  );
 
-  const loading = keysLoading || secretsLoading || vaultsLoading;
+  if (!currentOrganization) {
+    return (
+      <DashboardLayout>
+        <EmptyWorkspace
+          title="Select a workspace"
+          detail="Choose an organization to load keys, secrets, activity, and invitations."
+          linkHref="/dashboard/organizations"
+          linkLabel="Open organizations"
+        />
+      </DashboardLayout>
+    );
+  }
 
-  const metrics = [
-    {
-      label: "Keys",
-      value: keys?.length || 0,
-      hint: "Transit and data-encryption keys",
-      icon: Key,
-      tone: "text-blue-600",
-      chip: "bg-blue-500/10",
-    },
-    {
-      label: "Secrets",
-      value: secrets?.secrets?.length || 0,
-      hint: "Masked values and versions",
-      icon: Lock,
-      tone: "text-indigo-600",
-      chip: "bg-indigo-500/10",
-    },
-    {
-      label: "Vaults",
-      value: vaults?.length || 0,
-      hint: "Active secure partitions",
-      icon: Vault,
-      tone: "text-emerald-600",
-      chip: "bg-emerald-500/10",
-    },
-    {
-      label: "Ops Today",
-      value: 1247,
-      hint: "Encrypt, decrypt, rotate, reveal",
-      icon: Activity,
-      tone: "text-orange-600",
-      chip: "bg-orange-500/10",
-    },
+  const keysList = keys ?? [];
+  const secretsList = secrets?.secrets ?? [];
+  const outboundInvitations = organizationInvitations ?? [];
+  const activityList = activity?.logs ?? [];
+  const hasVault = Boolean(currentVault);
+
+  if (!hasVault) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8">
+          <section className="space-y-2 border-b border-border pb-6">
+            <p className="app-eyebrow">Workspace</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              {currentOrganization.name}
+            </h1>
+            <p className="text-sm text-muted-foreground">Pick a vault to load workspace data.</p>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: "Vaults", value: vaults?.length ?? 0 },
+              ...(permissions.canReadInvitations
+                ? [{ label: "Pending invites", value: outboundInvitations.length }]
+                : []),
+              { label: "For me", value: myInvitations?.length ?? 0 },
+            ].map((item) => (
+              <div key={item.label} className="border border-border bg-card px-5 py-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+                  {vaultsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : item.value}
+                </p>
+              </div>
+            ))}
+          </section>
+
+          <EmptyWorkspace
+            title="No vault selected"
+            detail="Select a vault from the sidebar to see recent activity, keys, and secrets."
+            linkHref="/dashboard/vaults"
+            linkLabel="Open vaults"
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const selectedVault = currentVault!;
+
+  const summary = [
+    { label: "Keys", value: keysList.length, href: "/dashboard/keys", icon: FileKey2 },
+    { label: "Secrets", value: secretsList.length, href: "/dashboard/secrets", icon: Shield },
+    { label: "Vaults", value: vaults?.length ?? 0, href: "/dashboard/vaults", icon: Building2 },
+    ...(permissions.canReadInvitations
+      ? [
+          {
+            label: "Pending invites",
+            value: outboundInvitations.length,
+            href: "/dashboard/organizations",
+            icon: Mail,
+          },
+        ]
+      : []),
   ];
+
+  const loading = keysLoading || secretsLoading || activityLoading;
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 max-w-7xl mx-auto">
-        <section className="cupertino-glass-panel !p-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Overview</h1>
-            <p className="text-[15px] font-medium text-muted-foreground mt-2">
-              Your key management summary and security posture.
-            </p>
+      <div className="space-y-8">
+        <section className="flex flex-col gap-3 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <p className="app-eyebrow">Workspace</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              {currentOrganization.name}
+            </h1>
+            <p className="text-sm text-muted-foreground">{selectedVault.name}</p>
           </div>
-          {currentOrganization ? (
-            <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] shadow-inner px-5 py-3 text-sm flex flex-col items-end">
-              <p className="font-bold tracking-tight text-[15px]">{currentOrganization.name}</p>
-              <p className="text-[13px] font-medium text-muted-foreground mt-0.5 z-10">{currentVault ? currentVault.name : "No vault selected"}</p>
-            </div>
-          ) : null}
+
+          <div className="flex flex-wrap gap-3 text-sm">
+            <Link href="/dashboard/secrets" className="text-muted-foreground transition-colors hover:text-foreground">
+              Secrets
+            </Link>
+            <Link href="/dashboard/keys" className="text-muted-foreground transition-colors hover:text-foreground">
+              Keys
+            </Link>
+            <Link href="/dashboard/audit" className="text-muted-foreground transition-colors hover:text-foreground">
+              Audit
+            </Link>
+            {permissions.canReadInvitations ? (
+              <Link href="/dashboard/organizations" className="text-muted-foreground transition-colors hover:text-foreground">
+                Invitations
+              </Link>
+            ) : null}
+          </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {metrics.map((metric) => (
-            <article key={metric.label} className="cupertino-glass-panel hover:bg-black/[0.02] dark:hover:bg-white/[0.02] hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">{metric.label}</p>
-                  <p className="mt-3 text-4xl font-bold tracking-tight text-foreground">
-                    {loading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : metric.value}
-                  </p>
+          {summary.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="border border-border bg-card px-5 py-4 transition-colors hover:bg-muted/30"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className={cn("rounded-2xl p-3 shadow-inner", metric.chip)}>
-                  <metric.icon className={cn("h-6 w-6", metric.tone)} />
-                </div>
-              </div>
-              <p className="mt-4 text-[13px] font-medium text-muted-foreground bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 shadow-inner inline-block w-max rounded-b-xl">{metric.hint}</p>
-            </article>
-          ))}
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : item.value}
+                </p>
+              </Link>
+            );
+          })}
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-2">
-          <Card className="cupertino-glass-panel border-none shadow-glass-md">
-            <CardHeader className="px-6 pt-6 pb-2">
-              <CardTitle className="text-xl font-bold tracking-tight">Security Posture</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 p-6 pt-2">
-              <div className="flex items-center justify-between rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] px-4 py-3 shadow-inner">
-                <span className="inline-flex items-center gap-3 text-[14px] font-medium text-foreground">
-                  <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Vault connectivity
-                </span>
-                <span className="text-[12px] font-bold tracking-wider uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">Healthy</span>
+        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <section className="border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Recent activity</h2>
+                </div>
+                <Link href="/dashboard/audit" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  View all
+                </Link>
               </div>
-              <div className="flex items-center justify-between rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] px-4 py-3 shadow-inner">
-                <span className="inline-flex items-center gap-3 text-[14px] font-medium text-foreground">
-                  <Clock3 className="h-5 w-5 text-blue-600 dark:text-blue-400" /> Last key rotation
-                </span>
-                <span className="text-[12px] font-bold tracking-wider uppercase text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg">Within window</span>
+              <div className="divide-y divide-border">
+                {activityList.length > 0 ? (
+                  activityList.map((entry) => (
+                    <div key={entry.id} className="flex items-start justify-between gap-4 px-5 py-4">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {formatAuditAction(entry.action)}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {entry.resourceType.toLowerCase()} {entry.resourceId ? `• ${entry.resourceId.slice(0, 8)}` : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatDate(entry.createdAt)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-5 py-8 text-sm text-muted-foreground">No workspace activity yet.</div>
+                )}
               </div>
-              <div className="flex items-center justify-between rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] px-4 py-3 shadow-inner">
-                <span className="inline-flex items-center gap-3 text-[14px] font-medium text-foreground">
-                  <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /> Tenant isolation
-                </span>
-                <span className="text-[12px] font-bold tracking-wider uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg">Org scoped</span>
-              </div>
-            </CardContent>
-          </Card>
+            </section>
 
-          <Card className="cupertino-glass-panel border-none shadow-glass-md">
-            <CardHeader className="px-6 pt-6 pb-2">
-              <CardTitle className="text-xl font-bold tracking-tight">Recent Activity Signals</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-2">
-              <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] px-4 py-4 shadow-inner">
-                <p className="text-[15px] font-bold text-foreground">3 key rotations completed</p>
-                <p className="mt-1 text-[13px] font-medium text-muted-foreground">All in active vault {currentVault?.name || "context"}</p>
+            <section className="grid gap-6 lg:grid-cols-2">
+              <section className="border border-border bg-card">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <h2 className="text-base font-semibold text-foreground">Recent keys</h2>
+                  <Link href="/dashboard/keys" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                    Open
+                  </Link>
+                </div>
+                <div className="divide-y divide-border">
+                  {keysList.slice(0, 5).map((key) => (
+                    <Link
+                      key={key.id}
+                      href="/dashboard/keys"
+                      className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/30"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{key.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">{key.valueType}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{formatDate(key.createdAt)}</span>
+                    </Link>
+                  ))}
+                  {keysList.length === 0 && (
+                    <div className="px-5 py-8 text-sm text-muted-foreground">No keys in this vault.</div>
+                  )}
+                </div>
+              </section>
+
+              <section className="border border-border bg-card">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <h2 className="text-base font-semibold text-foreground">Recent secrets</h2>
+                  <Link href="/dashboard/secrets" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                    Open
+                  </Link>
+                </div>
+                <div className="divide-y divide-border">
+                  {secretsList.slice(0, 5).map((secret) => (
+                    <Link
+                      key={secret.id}
+                      href={`/dashboard/secrets/${secret.id}`}
+                      className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/30"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{secret.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          v{secret.currentVersion?.versionNumber ?? "1"}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{formatDate(secret.updatedAt)}</span>
+                    </Link>
+                  ))}
+                  {secretsList.length === 0 && (
+                    <div className="px-5 py-8 text-sm text-muted-foreground">No secrets in this vault.</div>
+                  )}
+                </div>
+              </section>
+            </section>
+          </div>
+
+          <div className="space-y-6">
+            <section className="border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <h2 className="text-base font-semibold text-foreground">Pending for me</h2>
+                <Link href="/dashboard/organizations" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  Review
+                </Link>
               </div>
-              <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] px-4 py-4 shadow-inner">
-                <p className="text-[15px] font-bold text-foreground">12 secret reads with audit trail</p>
-                <p className="mt-1 text-[13px] font-medium text-muted-foreground">No unauthorized access attempts detected</p>
+              <div className="divide-y divide-border">
+                {myInvitations?.slice(0, 4).map((invite) => (
+                  <Link
+                    key={invite.id}
+                    href={`/invite?token=${invite.token}`}
+                    className="block px-5 py-4 transition-colors hover:bg-muted/30"
+                  >
+                    <p className="text-sm font-medium text-foreground">{invite.organizationName}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {invite.roleName || "Member"} • expires {formatDate(invite.expiresAt)}
+                    </p>
+                  </Link>
+                ))}
+                {!myInvitations?.length && (
+                  <div className="px-5 py-8 text-sm text-muted-foreground">No pending invitations.</div>
+                )}
               </div>
-              <div className="inline-flex items-center gap-2 text-[13px] font-bold tracking-wide text-primary hover:underline hover:cursor-pointer px-2">
-                Export detailed logs from the Audit Logs section
-                <ArrowUpRight className="h-4 w-4" />
+            </section>
+
+            <section className="border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <h2 className="text-base font-semibold text-foreground">Pending from this org</h2>
+                <Link href="/dashboard/organizations" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  Manage
+                </Link>
               </div>
-            </CardContent>
-          </Card>
+              <div className="divide-y divide-border">
+                {permissions.canReadInvitations && outboundInvitations.slice(0, 5).map((invite) => (
+                  <div key={invite.id} className="px-5 py-4">
+                    <p className="truncate text-sm font-medium text-foreground">{invite.email}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {invite.roleName || "Member"} • {formatDate(invite.expiresAt)}
+                    </p>
+                  </div>
+                ))}
+                {permissions.canReadInvitations && outboundInvitations.length === 0 && (
+                  <div className="px-5 py-8 text-sm text-muted-foreground">No pending outbound invitations.</div>
+                )}
+                {!permissions.canReadInvitations && (
+                  <div className="px-5 py-8 text-sm text-muted-foreground">Invitation visibility requires admin access.</div>
+                )}
+              </div>
+            </section>
+
+            <section className="border border-border bg-card px-5 py-4">
+              <div className="flex items-center gap-3">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Audit scope</p>
+                  <p className="text-sm text-muted-foreground">{currentOrganization.name} • {selectedVault.name}</p>
+                </div>
+              </div>
+            </section>
+          </div>
         </section>
       </div>
     </DashboardLayout>

@@ -109,6 +109,8 @@ export const vaultWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId,
+      vaultId: vault.id,
       action: "CREATE",
       resourceType: "VAULT",
       resourceId: vault.id,
@@ -247,6 +249,8 @@ export const vaultWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: updatedVault.organization.id,
+      vaultId,
       action: "UPDATE",
       resourceType: "VAULT",
       resourceId: vaultId,
@@ -274,6 +278,11 @@ export const vaultWrapper = {
     const vault = await prisma.vault.findUnique({
       where: { id: vaultId },
       include: {
+        organization: {
+          select: {
+            id: true,
+          },
+        },
         _count: {
           select: {
             keys: true,
@@ -296,6 +305,8 @@ export const vaultWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: vault.organization.id,
+      vaultId,
       action: "DELETE",
       resourceType: "VAULT",
       resourceId: vaultId,

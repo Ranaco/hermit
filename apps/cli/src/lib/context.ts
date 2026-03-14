@@ -1,7 +1,7 @@
 import * as sdk from "./sdk.js";
 import * as authStore from "./auth-store.js";
 import { abort } from "./command-helpers.js";
-import { matchId, shortId } from "./ui.js";
+import { matchId } from "./ui.js";
 
 interface ResolveVaultOptions {
   organizationQuery?: string;
@@ -12,7 +12,6 @@ function exactNameMatch<T extends { name: string }>(items: T[], query: string): 
 }
 
 function shortIdMatch<T extends { id: string }>(items: T[], query: string): T | undefined {
-  if (query.length < 4) return undefined;
   const matches = items.filter((item) => matchId(query, item.id));
   return matches.length === 1 ? matches[0] : undefined;
 }
@@ -22,6 +21,38 @@ export function findByIdOrName<T extends { id: string; name: string }>(
   query: string,
 ): T | undefined {
   return exactNameMatch(items, query) || shortIdMatch(items, query) || items.find((item) => item.id === query);
+}
+
+export function requireByIdOrName<T extends { id: string; name: string }>(
+  items: T[],
+  query: string,
+  entityLabel: string,
+): T {
+  const exactName = exactNameMatch(items, query);
+  if (exactName) {
+    return exactName;
+  }
+
+  const exactId = items.find((item) => item.id === query);
+  if (exactId) {
+    return exactId;
+  }
+
+  const prefixMatches = items.filter((item) => matchId(query, item.id));
+  if (prefixMatches.length === 1) {
+    return prefixMatches[0];
+  }
+
+  if (prefixMatches.length > 1) {
+    abort(`Multiple ${entityLabel}s match "${query}".`, {
+      suggestions: [`Use a longer ${entityLabel} id prefix or the exact ${entityLabel} name.`],
+      details: {
+        matches: prefixMatches.map((item) => ({ id: item.id, name: item.name })),
+      },
+    });
+  }
+
+  abort(`No ${entityLabel} matches "${query}".`);
 }
 
 export async function requireOrganizations(): Promise<sdk.OrganizationSummary[]> {
@@ -62,11 +93,7 @@ export async function resolveOrganization(query?: string): Promise<sdk.Organizat
   }
 
   const organizations = await sdk.getOrganizations();
-  const match = findByIdOrName(organizations, query);
-  if (!match) {
-    throw new Error(`No organization matches "${query}".`);
-  }
-  return match;
+  return requireByIdOrName(organizations, query, "organization");
 }
 
 export async function requireActiveVault(organizationQuery?: string): Promise<sdk.VaultSummary> {
@@ -108,12 +135,12 @@ export async function resolveVault(query?: string, options: ResolveVaultOptions 
     return requireActiveVault(organization.id);
   }
 
-  const match = findByIdOrName(vaults, query);
-  if (!match) {
-    throw new Error(`No vault matches "${query}".`);
-  }
+  return requireByIdOrName(vaults, query, "vault");
+}
 
-  return match;
+export async function resolveKey(vaultId: string, query: string): Promise<sdk.KeySummary> {
+  const keys = await sdk.getKeys(vaultId);
+  return requireByIdOrName(keys, query, "key");
 }
 
 export async function resolveGroupByPath(
@@ -156,25 +183,14 @@ export async function resolveGroup(
     return undefined;
   }
 
-  const rootGroups = await sdk.getSecretGroups(vaultId);
-  const direct = findByIdOrName(rootGroups, query);
-  if (direct) {
-    return direct;
-  }
-
-  const queue = [...rootGroups];
+  const allGroups = await sdk.getSecretGroups(vaultId);
+  const queue = [...allGroups];
   while (queue.length > 0) {
     const group = queue.shift()!;
-    if (group.id === query || shortId(group.id) === query) {
-      return group;
-    }
     const children = await sdk.getSecretGroups(vaultId, { parentId: group.id });
-    const byName = children.find((item) => item.name.toLowerCase() === query.toLowerCase());
-    if (byName) {
-      return byName;
-    }
+    allGroups.push(...children);
     queue.push(...children);
   }
 
-  throw new Error(`No secret group matches "${query}".`);
+  return requireByIdOrName(allGroups, query, "secret group");
 }

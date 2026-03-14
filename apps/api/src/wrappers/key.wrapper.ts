@@ -113,6 +113,8 @@ export const keyWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: vault.organizationId,
+      vaultId,
       action: "CREATE",
       resourceType: "KEY",
       resourceId: key.id,
@@ -227,6 +229,12 @@ export const keyWrapper = {
     const key = await prisma.key.findUnique({
       where: { id: keyId },
       include: {
+        vault: {
+          select: {
+            id: true,
+            organizationId: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 5,
@@ -272,6 +280,8 @@ export const keyWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: key.vault.organizationId,
+      vaultId: key.vault.id,
       action: "UPDATE",
       resourceType: "KEY",
       resourceId: key.id,

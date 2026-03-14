@@ -9,6 +9,8 @@ import { log } from "@hermes/logger";
 
 export interface AuditLogData {
   userId?: string;
+  organizationId?: string;
+  vaultId?: string;
   action: AuditAction;
   resourceType: ResourceType;
   resourceId?: string;
@@ -27,6 +29,8 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
     await prisma.auditLog.create({
       data: {
         userId: data.userId,
+        organizationId: data.organizationId,
+        vaultId: data.vaultId,
         action: data.action,
         resourceType: data.resourceType as any,
         resourceId: data.resourceId,
@@ -40,6 +44,8 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
       action: data.action,
       resourceType: data.resourceType,
       userId: data.userId,
+      organizationId: data.organizationId,
+      vaultId: data.vaultId,
     });
   } catch (error) {
     // Don't throw errors from audit logging - just log them
@@ -52,6 +58,8 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
  */
 export async function queryAuditLogs(filters: {
   userId?: string;
+  organizationId?: string;
+  vaultId?: string;
   resourceType?: ResourceType;
   resourceId?: string;
   action?: AuditAction;
@@ -64,6 +72,8 @@ export async function queryAuditLogs(filters: {
 
   const where: {
     userId?: string;
+    organizationId?: string;
+    vaultId?: string;
     resourceType?: ResourceType;
     resourceId?: string;
     action?: AuditAction;
@@ -71,6 +81,8 @@ export async function queryAuditLogs(filters: {
   } = {};
 
   if (filters.userId) where.userId = filters.userId;
+  if (filters.organizationId) where.organizationId = filters.organizationId;
+  if (filters.vaultId) where.vaultId = filters.vaultId;
   if (filters.resourceType) where.resourceType = filters.resourceType;
   if (filters.resourceId) where.resourceId = filters.resourceId;
   if (filters.action) where.action = filters.action;

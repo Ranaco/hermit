@@ -88,11 +88,25 @@ export class ForbiddenError extends AppError {
  */
 export class ValidationError extends AppError {
   constructor(
-    message?: string,
-    details?: unknown,
+    messageOrCode?: string | ErrorCode,
+    detailsOrMessage?: unknown,
     code: ErrorCode = ErrorCode.VALIDATION_ERROR,
   ) {
-    super(code, message, details);
+    const isErrorCode =
+      typeof messageOrCode === "string" &&
+      Object.values(ErrorCode).includes(messageOrCode as ErrorCode);
+
+    const resolvedCode = isErrorCode ? (messageOrCode as ErrorCode) : code;
+    const resolvedMessage = isErrorCode
+      ? (typeof detailsOrMessage === "string" ? detailsOrMessage : undefined)
+      : messageOrCode;
+    const resolvedDetails = isErrorCode
+      ? typeof detailsOrMessage === "string"
+        ? undefined
+        : detailsOrMessage
+      : detailsOrMessage;
+
+    super(resolvedCode, resolvedMessage, resolvedDetails);
     Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
@@ -118,8 +132,26 @@ export class NotFoundError extends AppError {
  * Conflict Error
  */
 export class ConflictError extends AppError {
-  constructor(message: string, details?: unknown) {
-    super(ErrorCode.KEY_ALREADY_EXISTS, message, details);
+  constructor(
+    messageOrCode: string | ErrorCode,
+    detailsOrMessage?: unknown,
+    code: ErrorCode = ErrorCode.KEY_ALREADY_EXISTS,
+  ) {
+    const isErrorCode =
+      typeof messageOrCode === "string" &&
+      Object.values(ErrorCode).includes(messageOrCode as ErrorCode);
+
+    const resolvedCode = isErrorCode ? (messageOrCode as ErrorCode) : code;
+    const resolvedMessage = isErrorCode
+      ? (typeof detailsOrMessage === "string" ? detailsOrMessage : undefined)
+      : messageOrCode;
+    const resolvedDetails = isErrorCode
+      ? typeof detailsOrMessage === "string"
+        ? undefined
+        : detailsOrMessage
+      : detailsOrMessage;
+
+    super(resolvedCode, resolvedMessage, resolvedDetails);
     Object.setPrototypeOf(this, ConflictError.prototype);
   }
 }

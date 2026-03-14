@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { requireActiveVault, resolveGroup, resolveGroupByPath, resolveVault } from "../lib/context.js";
+import { requireActiveVault, requireByIdOrName, resolveGroup, resolveGroupByPath, resolveVault } from "../lib/context.js";
 import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpers.js";
 import { promptConfirm, promptEditor, promptInput, promptPassword, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
@@ -42,6 +42,8 @@ interface SecretDeleteOptions {
   path?: string;
   yes?: boolean;
 }
+
+const SECRET_LOOKUP_LIMIT = 200;
 
 interface RevealApiError {
   statusCode?: number;
@@ -220,27 +222,31 @@ secretCommand
 secretCommand
   .command("get")
   .description("Reveal a secret value")
-  .argument("[name]", "Secret name")
+  .argument("[query]", "Secret name, id, or short id prefix")
   .option("--vault <query>", "Vault name or id")
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("--password <password>", "Secret password for password-protected secrets")
   .option("--vault-password <password>", "Vault password for vault-protected secrets")
   .option("-c, --copy", "Copy to clipboard")
-  .action((nameArg: string | undefined, opts: SecretGetOptions) =>
+  .action((queryArg: string | undefined, opts: SecretGetOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
       const group = opts.path
         ? await resolveGroupByPath(vault.id, opts.path)
         : await resolveGroup(vault.id, opts.group);
-      const secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id });
+      const secrets = await sdk.getSecrets(vault.id, {
+        secretGroupId: group?.id,
+        search: queryArg,
+        limit: queryArg ? SECRET_LOOKUP_LIMIT : undefined,
+      });
       if (secrets.length === 0) {
         abort("No secrets found.");
       }
 
-      let secret = nameArg
-        ? secrets.find((item) => item.name.toLowerCase() === nameArg.toLowerCase())
+      let secret = queryArg
+        ? requireByIdOrName(secrets, queryArg, "secret")
         : undefined;
       if (!secret) {
         const selected = await promptSelect(
@@ -248,13 +254,13 @@ secretCommand
             message: "Select secret:",
             choices: secrets.map((item) => ({ name: item.name, value: item.id })),
           },
-          "Secret name is required in non-interactive mode.",
+          "Secret id or name is required in non-interactive mode.",
         );
         secret = secrets.find((item) => item.id === selected);
       }
 
       if (!secret) {
-        abort(`Secret "${nameArg}" not found.`);
+        abort(`Secret "${queryArg}" not found.`);
       }
 
       let secretPassword = opts.password;
@@ -308,25 +314,29 @@ secretCommand
 secretCommand
   .command("delete")
   .description("Delete a secret")
-  .argument("[name]", "Secret name")
+  .argument("[query]", "Secret name, id, or short id prefix")
   .option("--vault <query>", "Vault name or id")
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("-y, --yes", "Skip confirmation")
-  .action((nameArg: string | undefined, opts: SecretDeleteOptions) =>
+  .action((queryArg: string | undefined, opts: SecretDeleteOptions) =>
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
       const group = opts.path
         ? await resolveGroupByPath(vault.id, opts.path)
         : await resolveGroup(vault.id, opts.group);
-      const secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id });
+      const secrets = await sdk.getSecrets(vault.id, {
+        secretGroupId: group?.id,
+        search: queryArg,
+        limit: queryArg ? SECRET_LOOKUP_LIMIT : undefined,
+      });
       if (secrets.length === 0) {
         abort("No secrets found.");
       }
 
-      let secret = nameArg
-        ? secrets.find((item) => item.name.toLowerCase() === nameArg.toLowerCase())
+      let secret = queryArg
+        ? requireByIdOrName(secrets, queryArg, "secret")
         : undefined;
       if (!secret) {
         const selected = await promptSelect(
@@ -334,12 +344,12 @@ secretCommand
             message: "Select secret:",
             choices: secrets.map((item) => ({ name: item.name, value: item.id })),
           },
-          "Secret selection requires interactive mode or an explicit name.",
+          "Secret selection requires interactive mode or an explicit id or name.",
         );
         secret = secrets.find((item) => item.id === selected);
       }
       if (!secret) {
-        abort(`Secret "${nameArg}" not found.`);
+        abort(`Secret "${queryArg}" not found.`);
       }
 
       if (!opts.yes) {

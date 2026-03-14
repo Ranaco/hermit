@@ -54,6 +54,10 @@ export const organizationIdParamSchema = z.object({
   id: uuidSchema,
 });
 
+export const orgScopedParamSchema = z.object({
+  orgId: uuidSchema,
+});
+
 // Add member schema
 export const addMemberSchema = z.object({
   userId: uuidSchema,
@@ -83,6 +87,10 @@ export const acceptInvitationSchema = z.object({
 
 // Revoke invitation schema
 export const revokeInvitationSchema = z.object({
+  invitationId: uuidSchema,
+});
+
+export const organizationInvitationIdParamSchema = z.object({
   invitationId: uuidSchema,
 });
 
@@ -126,4 +134,65 @@ export const orgTeamIdParamSchema = z.object({
 // Team member ID param schema
 export const teamMemberIdParamSchema = z.object({
   userId: uuidSchema,
+});
+
+export const policyIdParamSchema = z.object({
+  policyId: uuidSchema,
+});
+
+export const roleIdParamSchema = z.object({
+  roleId: uuidSchema,
+});
+
+export const memberIdParamSchema = z.object({
+  memberId: uuidSchema,
+});
+
+const policyStatementSchema = z.object({
+  sid: z.string().max(100).optional(),
+  effect: z.enum(["ALLOW", "DENY"]),
+  actions: z.array(z.string().min(1)).min(1, "At least one action is required"),
+  resources: z.array(z.string().min(1)).min(1, "At least one resource is required"),
+});
+
+const policyDocumentSchema = z.object({
+  version: z.string().min(1).default("2026-03-14"),
+  statements: z.array(policyStatementSchema).min(1, "At least one statement is required"),
+});
+
+export const createPolicySchema = z.object({
+  name: z.string().min(1, "Policy name is required").max(100, "Policy name must be at most 100 characters"),
+  description: z.string().max(500, "Description must be at most 500 characters").optional().nullable(),
+  document: policyDocumentSchema.optional(),
+  statements: z.array(policyStatementSchema).min(1).optional(),
+}).refine((data) => !!data.document || !!data.statements, {
+  message: "Policy document or statements are required",
+  path: ["document"],
+});
+
+export const updatePolicySchema = z.object({
+  name: z.string().min(1, "Policy name is required").max(100, "Policy name must be at most 100 characters").optional(),
+  description: z.string().max(500, "Description must be at most 500 characters").optional().nullable(),
+  document: policyDocumentSchema.optional(),
+  statements: z.array(policyStatementSchema).min(1).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: "At least one policy field must be provided",
+});
+
+export const createRoleSchema = z.object({
+  name: z.string().min(1, "Role name is required").max(100, "Role name must be at most 100 characters"),
+  description: z.string().max(500, "Description must be at most 500 characters").optional().nullable(),
+  policyIds: z.array(uuidSchema).max(50, "Maximum 50 attached policies allowed").optional(),
+});
+
+export const updateRoleSchema = z.object({
+  name: z.string().min(1, "Role name is required").max(100, "Role name must be at most 100 characters").optional(),
+  description: z.string().max(500, "Description must be at most 500 characters").optional().nullable(),
+  policyIds: z.array(uuidSchema).max(50, "Maximum 50 attached policies allowed").optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: "At least one role field must be provided",
+});
+
+export const assignRoleSchema = z.object({
+  roleId: uuidSchema,
 });

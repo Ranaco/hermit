@@ -317,7 +317,7 @@ export async function deleteSecretGroup(vaultId: string, groupId: string): Promi
 
 export async function getSecrets(
   vaultId: string,
-  params: { secretGroupId?: string; search?: string } = {},
+  params: { secretGroupId?: string; search?: string; page?: number; limit?: number } = {},
 ): Promise<SecretSummary[]> {
   const search = new URLSearchParams({ vaultId });
   if (params.secretGroupId) {
@@ -325,6 +325,12 @@ export async function getSecrets(
   }
   if (params.search) {
     search.set("search", params.search);
+  }
+  if (params.page) {
+    search.set("page", String(params.page));
+  }
+  if (params.limit) {
+    search.set("limit", String(params.limit));
   }
   const result = await api.get<{ secrets: SecretSummary[] }>(`/secrets?${search.toString()}`);
   return result.secrets;
@@ -371,6 +377,8 @@ export async function deleteSecret(secretId: string): Promise<void> {
 export async function bulkRevealSecrets(payload: {
   vaultId: string;
   secretGroupId?: string;
+  secretIds?: string[];
+  includeDescendants?: boolean;
   password?: string;
   vaultPassword?: string;
 }): Promise<BulkRevealResult> {

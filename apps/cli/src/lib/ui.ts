@@ -609,7 +609,7 @@ export function shortId(id: string): string {
 }
 
 export function matchId(partial: string, fullId: string): boolean {
-  return partial.length >= 4 && fullId.toLowerCase().startsWith(partial.toLowerCase());
+  return partial.length > 0 && fullId.toLowerCase().startsWith(partial.toLowerCase());
 }
 
 export { setRuntimeState };

@@ -36,7 +36,18 @@ const getVaultUrn = async (req: Request & { organizationId?: string }) => {
 
   if (explicitOrgId) {
     req.organizationId = explicitOrgId;
-    return `urn:hermes:org:${explicitOrgId}:vault:*`;
+    const prisma = getPrismaClient();
+    const vaults = await prisma.vault.findMany({
+      where: { organizationId: explicitOrgId as string },
+      select: { id: true },
+    });
+
+    return Array.from(
+      new Set([
+        `urn:hermes:org:${explicitOrgId}:vault:*`,
+        ...vaults.map((vault) => `urn:hermes:org:${explicitOrgId}:vault:${vault.id}`),
+      ]),
+    );
   }
 
   return "urn:hermes:org:*:vault:*";

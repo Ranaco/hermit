@@ -1,4 +1,5 @@
 import getPrismaClient from "./prisma.service";
+import { ensureOrganizationIamBootstrap } from "./organization-iam.service";
 
 export interface PolicyStatement {
   sid?: string;
@@ -29,12 +30,49 @@ function isMatch(pattern: string, target: string): boolean {
   return false;
 }
 
+export function evaluateStatements(
+  statements: PolicyStatement[],
+  action: string,
+  resourceUrn: string,
+): boolean {
+  return evaluateStatementsAgainstAny(statements, action, [resourceUrn]);
+}
+
+export function evaluateStatementsAgainstAny(
+  statements: PolicyStatement[],
+  action: string,
+  resourceUrns: string[],
+): boolean {
+  let isAllowed = false;
+  const candidateResources = resourceUrns.length > 0 ? resourceUrns : ["*"];
+
+  for (const statement of statements) {
+    const matchesAction = statement.actions.some((pattern) => isMatch(pattern, action));
+    const matchesResource = statement.resources.some((pattern) =>
+      candidateResources.some((resourceUrn) => isMatch(pattern, resourceUrn)),
+    );
+
+    if (matchesAction && matchesResource) {
+      if (statement.effect === "DENY") {
+        return false;
+      }
+
+      if (statement.effect === "ALLOW") {
+        isAllowed = true;
+      }
+    }
+  }
+
+  return isAllowed;
+}
+
 /**
  * Compiles and merges all policies attached to a user directly via OrgnizationRoles
  * and indirectly via Team assignments, returning the combined Statements.
  */
 export async function getUserPolicies(userId: string, orgId: string): Promise<PolicyStatement[]> {
   const prisma = getPrismaClient();
+  await ensureOrganizationIamBootstrap(orgId);
 
   // 1. Get the user's direct organization role
   const orgMembership = await prisma.organizationMember.findUnique({
@@ -114,6 +152,15 @@ export async function evaluateAccess(
   action: string,
   resourceUrn: string
 ): Promise<boolean> {
+  return evaluateAccessAgainstAny(userId, orgId, action, [resourceUrn]);
+}
+
+export async function evaluateAccessAgainstAny(
+  userId: string,
+  orgId: string,
+  action: string,
+  resourceUrns: string[],
+): Promise<boolean> {
   // Always grant Owners implicit universal access for safety
   const prisma = getPrismaClient();
   const orgMembership = await prisma.organizationMember.findUnique({
@@ -126,25 +173,5 @@ export async function evaluateAccess(
   }
 
   const statements = await getUserPolicies(userId, orgId);
-
-  let isAllowed = false;
-
-  for (const statement of statements) {
-    // Check if the action matches any pattern in statement.actions
-    const matchesAction = statement.actions.some((p) => isMatch(p, action));
-    // Check if the resource matches any pattern in statement.resources
-    const matchesResource = statement.resources.some((p) => isMatch(p, resourceUrn));
-
-    if (matchesAction && matchesResource) {
-      if (statement.effect === "DENY") {
-        // Explicit DENY trumps everything immediately
-        return false;
-      }
-      if (statement.effect === "ALLOW") {
-        isAllowed = true;
-      }
-    }
-  }
-
-  return isAllowed;
+  return evaluateStatementsAgainstAny(statements, action, resourceUrns);
 }

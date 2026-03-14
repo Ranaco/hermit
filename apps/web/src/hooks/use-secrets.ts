@@ -30,6 +30,14 @@ export function useRevealSecret(id: string) {
   });
 }
 
+export function useSecret(id?: string) {
+  return useQuery({
+    queryKey: ["secrets", id, "detail"],
+    queryFn: () => secretService.getById(id!),
+    enabled: !!id,
+  });
+}
+
 export function useSecretVersions(id: string) {
   return useQuery({
     queryKey: ["secrets", id, "versions"],
@@ -59,8 +67,10 @@ export function useUpdateSecret() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateSecretData }) =>
       secretService.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["secrets"] });
+      queryClient.invalidateQueries({ queryKey: ["secrets", variables.id, "detail"] });
+      queryClient.invalidateQueries({ queryKey: ["secrets", variables.id, "versions"] });
       toast.success("Secret updated successfully");
     },
     onError: () => {
@@ -80,6 +90,24 @@ export function useDeleteSecret() {
     },
     onError: () => {
       toast.error("Failed to delete secret");
+    },
+  });
+}
+
+export function useSetCurrentSecretVersion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, versionId }: { id: string; versionId: string }) =>
+      secretService.setCurrentVersion(id, versionId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["secrets"] });
+      queryClient.invalidateQueries({ queryKey: ["secrets", variables.id, "detail"] });
+      queryClient.invalidateQueries({ queryKey: ["secrets", variables.id, "versions"] });
+      toast.success("Current version updated");
+    },
+    onError: () => {
+      toast.error("Failed to update current version");
     },
   });
 }

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { requireActiveOrganization, resolveOrganization } from "../lib/context.js";
+import { requireActiveOrganization, requireByIdOrName, resolveOrganization } from "../lib/context.js";
 import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpers.js";
 import { promptInput, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
@@ -90,10 +90,7 @@ teamCommand
       requireAuth();
       const organization = opts.org ? await resolveOrganization(opts.org) : await requireActiveOrganization();
       const teams = await sdk.getTeams(organization.id);
-      const team = teams.find((item) => item.id === teamQuery || ui.matchId(teamQuery, item.id) || item.name.toLowerCase() === teamQuery.toLowerCase());
-      if (!team) {
-        abort(`No team matches "${teamQuery}".`);
-      }
+      const team = requireByIdOrName(teams, teamQuery, "team");
       renderData({ team, members: team.members || [] });
       ui.panel(team.name, (team.members || []).map((member) => ui.kv("User", ui.colors.primary(member.user.email), { overflow: "truncate" })));
       ui.newline();
@@ -111,10 +108,7 @@ teamCommand
       requireAuth();
       const organization = opts.org ? await resolveOrganization(opts.org) : await requireActiveOrganization();
       const teams = await sdk.getTeams(organization.id);
-      const team = teams.find((item) => item.id === teamQuery || ui.matchId(teamQuery, item.id) || item.name.toLowerCase() === teamQuery.toLowerCase());
-      if (!team) {
-        abort(`No team matches "${teamQuery}".`);
-      }
+      const team = requireByIdOrName(teams, teamQuery, "team");
       const organizationDetail = await sdk.getOrganization(organization.id);
       const availableMembers = organizationDetail.members || [];
       if (availableMembers.length === 0) {

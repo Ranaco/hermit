@@ -2,14 +2,27 @@ import { useMutation } from "@tanstack/react-query";
 import { shareService, CreateSharePayload } from "../services/share.service";
 import { toast } from "sonner";
 
+type ShareApiError = {
+  response?: {
+    data?: {
+      error?: {
+        message?: string;
+      };
+    };
+  };
+};
+
 export const useCreateShare = () => {
   return useMutation({
     mutationFn: (payload: CreateSharePayload) => shareService.createShare(payload),
     onSuccess: () => {
       toast.success("Share link created successfully!");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || "Failed to create share link");
+    onError: (error: unknown) => {
+      const shareError = error as ShareApiError;
+      toast.error(
+        shareError.response?.data?.error?.message || "Failed to create share link",
+      );
     },
   });
 };

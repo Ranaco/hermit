@@ -21,6 +21,7 @@ export interface CreateVaultData {
   name: string;
   description?: string;
   organizationId: string;
+  password?: string;
 }
 
 

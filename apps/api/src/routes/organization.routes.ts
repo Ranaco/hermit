@@ -15,6 +15,7 @@ import {
   getOrganizationsQuerySchema,
   organizationIdParamSchema,
   inviteMemberSchema,
+  organizationInvitationIdParamSchema,
   orgMemberIdParamSchema,
   updateMemberRoleSchema,
   acceptInvitationSchema,
@@ -23,6 +24,15 @@ import {
   addTeamMemberSchema,
   orgTeamIdParamSchema,
   teamMemberIdParamSchema,
+  orgScopedParamSchema,
+  policyIdParamSchema,
+  roleIdParamSchema,
+  memberIdParamSchema,
+  createPolicySchema,
+  updatePolicySchema,
+  createRoleSchema,
+  updateRoleSchema,
+  assignRoleSchema,
 } from "../validators/organization.validator";
 
 const router = Router();
@@ -39,6 +49,15 @@ router.get(
   "/",
   validate({ query: getOrganizationsQuerySchema }),
   orgController.getOrganizations,
+);
+router.get(
+  "/invitations/mine",
+  orgController.getMyPendingInvitations,
+);
+router.post(
+  "/invitations/accept",
+  validate({ body: acceptInvitationSchema }),
+  orgController.acceptInvitation,
 );
 router.get(
   "/:id",
@@ -66,10 +85,15 @@ router.post(
   validate({ params: organizationIdParamSchema, body: inviteMemberSchema }),
   orgController.inviteUser,
 );
-router.post(
-  "/invitations/accept",
-  validate({ body: acceptInvitationSchema }),
-  orgController.acceptInvitation,
+router.get(
+  "/:id/invitations",
+  validate({ params: organizationIdParamSchema }),
+  orgController.getOrganizationInvitations,
+);
+router.delete(
+  "/:id/invitations/:invitationId",
+  validate({ params: organizationIdParamSchema.merge(organizationInvitationIdParamSchema) }),
+  orgController.revokeInvitation,
 );
 router.delete(
   "/:id/members/:userId",
@@ -119,18 +143,54 @@ router.delete(
 /**
  * Access Policies Management (IAM)
  */
-router.get("/:orgId/policies", policyController.getPolicies);
-router.post("/:orgId/policies", policyController.createPolicy);
-router.put("/:orgId/policies/:policyId", policyController.updatePolicy);
-router.delete("/:orgId/policies/:policyId", policyController.deletePolicy);
+router.get(
+  "/:orgId/policies",
+  validate({ params: orgScopedParamSchema }),
+  policyController.getPolicies,
+);
+router.post(
+  "/:orgId/policies",
+  validate({ params: orgScopedParamSchema, body: createPolicySchema }),
+  policyController.createPolicy,
+);
+router.put(
+  "/:orgId/policies/:policyId",
+  validate({ params: orgScopedParamSchema.merge(policyIdParamSchema), body: updatePolicySchema }),
+  policyController.updatePolicy,
+);
+router.delete(
+  "/:orgId/policies/:policyId",
+  validate({ params: orgScopedParamSchema.merge(policyIdParamSchema) }),
+  policyController.deletePolicy,
+);
 
 /**
  * Custom Roles Management (IAM)
  */
-router.get("/:orgId/roles", roleController.getRoles);
-router.post("/:orgId/roles", roleController.createRole);
-router.put("/:orgId/roles/:roleId", roleController.updateRole);
-router.put("/:orgId/members/:memberId/roles", roleController.assignUserRole);
-router.put("/:orgId/teams/:teamId/roles", roleController.assignTeamRole);
+router.get(
+  "/:orgId/roles",
+  validate({ params: orgScopedParamSchema }),
+  roleController.getRoles,
+);
+router.post(
+  "/:orgId/roles",
+  validate({ params: orgScopedParamSchema, body: createRoleSchema }),
+  roleController.createRole,
+);
+router.put(
+  "/:orgId/roles/:roleId",
+  validate({ params: orgScopedParamSchema.merge(roleIdParamSchema), body: updateRoleSchema }),
+  roleController.updateRole,
+);
+router.put(
+  "/:orgId/members/:memberId/roles",
+  validate({ params: orgScopedParamSchema.merge(memberIdParamSchema), body: assignRoleSchema }),
+  roleController.assignUserRole,
+);
+router.put(
+  "/:orgId/teams/:teamId/roles",
+  validate({ params: orgScopedParamSchema.merge(orgTeamIdParamSchema), body: assignRoleSchema }),
+  roleController.assignTeamRole,
+);
 
 export default router;

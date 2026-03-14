@@ -1,6 +1,6 @@
 ---
-title: API Design Principles & Architecture
-description: This skill enables the agent to architect, design, and implement new backend API endpoints following established industry patterns for scalable Node.js/TypeScript services. It specifically enforces the Strict Layered Architecture (Routes -> Controllers -> Services/Wrappers), structured Validation, standard Error Handling, and Audit Logging.
+name: api-design-principles
+description: Architect, design, and implement backend API endpoints for Node.js and TypeScript services using strict layered architecture, request validation, structured error handling, and audit logging. Use when building or refactoring routes, controllers, validators, or service-layer API flows.
 ---
 
 ## The Generic API Architecture

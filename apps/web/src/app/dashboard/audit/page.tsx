@@ -1,171 +1,201 @@
 "use client";
 
 import { useState } from "react";
-import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Download, Filter, Search, ShieldCheck, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useAuditLogs } from "@/hooks/use-audit";
 import { format } from "date-fns";
+import {
+  Building2,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Filter,
+  Loader2,
+  ScrollText,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
+import { DashboardLayout } from "@/components/dashboard-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuditLogs } from "@/hooks/use-audit";
+import { useOrganizationStore } from "@/store/organization.store";
 
 const ITEMS_PER_PAGE = 20;
 
 export default function AuditPage() {
+  const { currentOrganization } = useOrganizationStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Calculate offset for Prisma based on current page
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  // Passing search into resourceId since email isn't supported as query filter in `getLogs` directly right now, but resourceId acts as a loose fuzzy search in Prisma `queryAuditLogs` implementation if customized, or strictly.
-  // Given Prisma's Audit controller allows querying exact `userId`, we can default this text as a catch-all if we really wanted or restrict it.
-  const { data: auditData, isLoading } = useAuditLogs({ 
-    limit: ITEMS_PER_PAGE, 
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const { data: auditData, isLoading } = useAuditLogs({
+    limit: ITEMS_PER_PAGE,
     offset,
-    ...(searchQuery ? { resourceId: searchQuery } : {})
+    ...(searchQuery ? { resourceId: searchQuery } : {}),
   });
-  
+
   const logs = auditData?.logs || [];
   const totalLogs = auditData?.total || 0;
-  
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
+
+  if (!currentOrganization) {
+    return (
+      <DashboardLayout>
+        <div className="app-empty">
+          <Building2 className="mx-auto mb-4 h-10 w-10" />
+          <p className="text-lg font-semibold tracking-tight text-foreground">
+            Select an organization to view audit history
+          </p>
+          <p className="mx-auto mt-2 max-w-[46ch] text-sm leading-7 text-muted-foreground">
+            Audit logs are organization-scoped.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="kms-title">Audit Logs</h1>
-            <p className="kms-subtitle mt-2">Trace who accessed what, when, and how Vault responded.</p>
+      <div className="space-y-8">
+        <section className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[58ch]">
+            <p className="app-eyebrow">Audit</p>
+            <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
+              Audit trail
+            </h1>
+            <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
+              Review recorded activity.
+            </p>
           </div>
-          <Button variant="outline" className="rounded-xl">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
 
-        <Card className="kms-surface border-border/80 flex flex-col h-[calc(100vh-140px)]">
-          <CardHeader className="space-y-3 shrink-0">
-            <CardTitle className="text-base">Filters</CardTitle>
-            <CardDescription>Narrow by actor, resource, action, and time window.</CardDescription>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input 
-                  className="pl-9 rounded-xl" 
-                  placeholder="Search actor or resource" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Button variant="outline" className="justify-start rounded-xl">
-                <Filter className="mr-2 h-4 w-4" />
-                Action Filter
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary">
+              <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+              {currentOrganization.name}
+            </Badge>
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search actor or resource"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" className="justify-start">
+            <Filter className="mr-2 h-4 w-4" />
+            Action filter
+          </Button>
+          <Button variant="outline" className="justify-start">
+            <CalendarDays className="mr-2 h-4 w-4" />
+            Last 24 hours
+          </Button>
+        </section>
+
+        {isLoading ? (
+          <div className="flex min-h-[440px] items-center justify-center border-y border-border">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : logs.length > 0 ? (
+          <div className="overflow-x-auto border-y border-border">
+            <table className="w-full min-w-[880px] text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">Time</th>
+                  <th className="px-4 py-3 font-medium">Actor</th>
+                  <th className="px-4 py-3 font-medium">Resource</th>
+                  <th className="px-4 py-3 font-medium">Action</th>
+                  <th className="px-4 py-3 font-medium">Result</th>
+                  <th className="px-4 py-3 font-medium">IP address</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((row) => (
+                  <tr key={row.id} className="border-b border-border">
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted-foreground">
+                      {format(new Date(row.createdAt), "MMM d, yyyy HH:mm:ss")}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-foreground">
+                      {row.user?.email || row.userId || "System"}
+                    </td>
+                    <td className="max-w-[260px] px-4 py-3 text-muted-foreground" title={row.resourceId || ""}>
+                      <div className="truncate">
+                        {row.resourceType}
+                        {row.resourceId ? ` (${row.resourceId.slice(0, 8)}...)` : ""}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <Badge variant="outline">{row.action}</Badge>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {row.details?.success === false || row.action === "LOGIN_FAILED" ? (
+                        <Badge variant="destructive">Failed</Badge>
+                      ) : (
+                        <Badge variant="secondary">Success</Badge>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted-foreground">
+                      {row.ipAddress || "unknown"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="app-empty">
+            <ScrollText className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
+            <p className="text-lg font-semibold tracking-tight text-foreground">No audit entries yet</p>
+            <p className="mx-auto mt-2 max-w-[46ch] text-sm leading-7 text-muted-foreground">
+              Activity will appear here.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && totalPages > 1 ? (
+          <div className="flex flex-col gap-4 text-sm md:flex-row md:items-center md:justify-between">
+            <div className="text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{offset + 1}</span> to{" "}
+              <span className="font-semibold text-foreground">
+                {Math.min(offset + ITEMS_PER_PAGE, totalLogs)}
+              </span>{" "}
+              of <span className="font-semibold text-foreground">{totalLogs}</span> entries
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Previous
               </Button>
-              <Button variant="outline" className="justify-start rounded-xl">
-                <CalendarDays className="mr-2 h-4 w-4" />
-                Last 24 hours
+              <div className="px-2 text-sm font-medium text-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
-          </CardHeader>
-          <CardContent className="flex flex-col flex-1 overflow-hidden p-0 relative">
-            <div className="overflow-auto flex-1">
-              {isLoading ? (
-                <div className="flex justify-center p-8 absolute inset-0 items-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : logs.length > 0 ? (
-                <div className="px-6"> 
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-card/90 backdrop-blur z-10">
-                      <tr className="border-b border-border/80 text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                        <th className="py-3 pr-3 font-medium">Time</th>
-                        <th className="py-3 pr-3 font-medium">Actor</th>
-                        <th className="py-3 pr-3 font-medium">Resource</th>
-                        <th className="py-3 pr-3 font-medium">Action</th>
-                        <th className="py-3 pr-3 font-medium">Result</th>
-                        <th className="py-3 font-medium">IP Address</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {logs.map((row) => (
-                        <tr key={row.id} className="border-b border-border/60 hover:bg-muted/40 transition-colors">
-                          <td className="py-3 pr-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                            {format(new Date(row.createdAt), "MMM d, yyyy HH:mm:ss")}
-                          </td>
-                          <td className="py-3 pr-3 whitespace-nowrap">
-                            {row.user?.email || row.userId || "System"}
-                          </td>
-                          <td className="py-3 pr-3 text-muted-foreground truncate max-w-[200px]" title={row.resourceId || ""}>
-                            {row.resourceType} {row.resourceId ? `(${row.resourceId.substring(0, 8)}...)` : ""}
-                          </td>
-                          <td className="py-3 pr-3 whitespace-nowrap">
-                            <Badge variant="outline" className="bg-background">
-                              {row.action}
-                            </Badge>
-                          </td>
-                          <td className="py-3 pr-3 whitespace-nowrap">
-                            {row.details?.success === false || row.action === 'LOGIN_FAILED' ? (
-                              <Badge className="rounded-full" variant="destructive">
-                                FAILED
-                              </Badge>
-                            ) : (
-                              <Badge className="rounded-full" variant="secondary">
-                                <ShieldCheck className="mr-1 h-3 w-3" />
-                                SUCCESS
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                            {row.ipAddress || "unknown"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground absolute inset-0 flex items-center justify-center">
-                  No audit logs found for your organization yet.
-                </div>
-              )}
-            </div>
-            
-            {/* Pagination Controls */}
-            {!isLoading && totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border/80 px-6 py-4 bg-card shrink-0">
-                <div className="text-sm text-muted-foreground">
-                  Showing <span className="font-medium text-foreground">{offset + 1}</span> to <span className="font-medium text-foreground">{Math.min(offset + ITEMS_PER_PAGE, totalLogs)}</span> of <span className="font-medium text-foreground">{totalLogs}</span> entries
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
-                  <div className="text-sm font-medium px-2">
-                    Page {currentPage} of {totalPages}
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        ) : null}
       </div>
     </DashboardLayout>
   );

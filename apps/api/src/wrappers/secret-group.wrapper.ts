@@ -2,10 +2,115 @@ import {
   ValidationError,
   ErrorCode,
   NotFoundError,
+  ForbiddenError,
 } from "@hermes/error-handling";
+import { randomUUID } from "crypto";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
-import { evaluateAccess } from "../services/policy-engine";
+import {
+  evaluateStatementsAgainstAny,
+  getUserPolicies,
+  evaluateAccess,
+  type PolicyStatement,
+} from "../services/policy-engine";
+import {
+  buildGroupCandidateResourceUrns,
+  buildGroupUrn,
+  buildSecretCandidateResourceUrns,
+} from "../services/iam-resource.service";
+import { buildPolicyUrn } from "../services/organization-iam.service";
+
+type AccessContext = {
+  canBypass: boolean;
+  policyStatements: PolicyStatement[];
+};
+
+async function getAccessContext(
+  prisma: ReturnType<typeof getPrismaClient>,
+  userId: string,
+  orgId: string,
+): Promise<AccessContext> {
+  const membership = await prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId: orgId,
+        userId,
+      },
+    },
+    include: {
+      role: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  const canBypass = membership?.role?.name === "OWNER";
+
+  return {
+    canBypass,
+    policyStatements: canBypass ? [] : await getUserPolicies(userId, orgId),
+  };
+}
+
+function canAccessGroupAction(
+  accessContext: AccessContext,
+  action: string,
+  data: {
+    orgId: string;
+    vaultId: string;
+    groupId?: string | null;
+    groupPath?: string | null;
+  },
+) {
+  if (accessContext.canBypass) {
+    return true;
+  }
+
+  if (data.groupId) {
+    return evaluateStatementsAgainstAny(
+      accessContext.policyStatements,
+      action,
+      buildGroupCandidateResourceUrns({
+        orgId: data.orgId,
+        vaultId: data.vaultId,
+        groupId: data.groupId,
+        path: data.groupPath,
+      }),
+    );
+  }
+
+  return evaluateStatementsAgainstAny(accessContext.policyStatements, action, [
+    buildGroupUrn(data.orgId, data.vaultId, "*"),
+  ]);
+}
+
+function canAccessSecretAction(
+  accessContext: AccessContext,
+  action: string,
+  data: {
+    orgId: string;
+    vaultId: string;
+    secretId: string;
+    groupPath?: string | null;
+  },
+) {
+  if (accessContext.canBypass) {
+    return true;
+  }
+
+  return evaluateStatementsAgainstAny(
+    accessContext.policyStatements,
+    action,
+    buildSecretCandidateResourceUrns({
+      orgId: data.orgId,
+      vaultId: data.vaultId,
+      secretId: data.secretId,
+      groupPath: data.groupPath,
+    }),
+  );
+}
 
 export const secretGroupWrapper = {
   /**
@@ -36,9 +141,20 @@ export const secretGroupWrapper = {
       throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, "Vault not found");
     }
 
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
+    let path = "";
+    let depth = 0;
+    const groupId = randomUUID();
+
     if (parentId) {
       const parent = await prisma.secretGroup.findUnique({
         where: { id: parentId },
+        select: {
+          id: true,
+          vaultId: true,
+          path: true,
+          depth: true,
+        },
       });
       if (!parent || parent.vaultId !== vaultId) {
         throw new ValidationError(
@@ -46,6 +162,37 @@ export const secretGroupWrapper = {
           "Parent Secret Group not found in this vault",
         );
       }
+
+      if (
+        !canAccessGroupAction(accessContext, "groups:create", {
+          orgId: vault.organizationId,
+          vaultId,
+          groupId: parent.id,
+          groupPath: parent.path,
+        })
+      ) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Access denied by IAM policy",
+        );
+      }
+
+      path = `${parent.path}/${groupId}`;
+      depth = parent.depth + 1;
+    } else {
+      if (
+        !canAccessGroupAction(accessContext, "groups:create", {
+          orgId: vault.organizationId,
+          vaultId,
+        })
+      ) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Access denied by IAM policy",
+        );
+      }
+
+      path = groupId;
     }
 
     // Check for duplicate name in the same hierarchy level
@@ -66,10 +213,13 @@ export const secretGroupWrapper = {
 
     const group = await prisma.secretGroup.create({
       data: {
+        id: groupId,
         name,
         description,
         vaultId,
         parentId,
+        path,
+        depth,
       },
     });
 
@@ -99,9 +249,10 @@ export const secretGroupWrapper = {
       vaultId: string;
       parentId?: string;
       includeChildren?: boolean;
+      forPolicyBuilder?: boolean;
     },
   ) {
-    const { vaultId, parentId } = data;
+    const { vaultId, parentId, includeChildren, forPolicyBuilder } = data;
     const prisma = getPrismaClient();
 
     const vault = await prisma.vault.findUnique({
@@ -115,7 +266,9 @@ export const secretGroupWrapper = {
 
     const where: any = { vaultId };
 
-    if (parentId !== undefined) {
+    if (includeChildren) {
+      // Return the full folder tree in this vault for scoped pickers and tree-aware UIs.
+    } else if (parentId !== undefined) {
       where.parentId = parentId ?? null;
     } else {
       // By default, only return root level groups
@@ -131,16 +284,131 @@ export const secretGroupWrapper = {
         },
       },
     });
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
 
-    const resourceUrn = `urn:hermes:org:${vault.organizationId}:vault:${vaultId}:group:*`;
-    const hasFullGroupRead = await evaluateAccess(userId, vault.organizationId, "groups:read", resourceUrn);
+    if (!accessContext.canBypass && forPolicyBuilder) {
+      const canManagePolicies = await Promise.all([
+        evaluateAccess(userId, vault.organizationId, "policies:read", buildPolicyUrn(vault.organizationId, "*")),
+        evaluateAccess(userId, vault.organizationId, "policies:create", buildPolicyUrn(vault.organizationId, "*")),
+        evaluateAccess(userId, vault.organizationId, "policies:update", buildPolicyUrn(vault.organizationId, "*")),
+      ]);
 
-    if (!hasFullGroupRead) {
-      // Feature request: Users with only secrets:read should only see folders that actively contain secrets (or nested secrets via children limit)
-      return groups.filter(g => g._count.secrets > 0 || g._count.children > 0);
+      if (canManagePolicies.some(Boolean)) {
+        return groups;
+      }
     }
 
-    return groups;
+    if (accessContext.canBypass) {
+      return groups;
+    }
+
+    const groupPaths = groups.map((group) => group.path);
+
+    if (groupPaths.length === 0) {
+      return groups;
+    }
+
+    const [descendantGroups, descendantSecrets] = await Promise.all([
+      prisma.secretGroup.findMany({
+        where: {
+          vaultId,
+          OR: groupPaths.map((path) => ({
+            path: {
+              startsWith: `${path}/`,
+            },
+          })),
+        },
+        select: {
+          id: true,
+          path: true,
+        },
+      }),
+      prisma.secret.findMany({
+        where: {
+          vaultId,
+          secretGroupId: { not: null },
+          OR: groupPaths.map((path) => ({
+            secretGroup: {
+              path: {
+                startsWith: `${path}/`,
+              },
+            },
+          })),
+        },
+        select: {
+          id: true,
+          secretGroup: {
+            select: {
+              path: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return groups.filter((group) => {
+      if (
+        canAccessGroupAction(accessContext, "groups:read", {
+          orgId: vault.organizationId,
+          vaultId,
+          groupId: group.id,
+          groupPath: group.path,
+        })
+      ) {
+        return true;
+      }
+
+      if (
+        evaluateStatementsAgainstAny(
+          accessContext.policyStatements,
+          "secrets:read",
+          buildGroupCandidateResourceUrns({
+            orgId: vault.organizationId,
+            vaultId,
+            groupId: group.id,
+            path: group.path,
+          }),
+        )
+      ) {
+        return true;
+      }
+
+      if (
+        descendantGroups.some(
+          (descendantGroup) =>
+            descendantGroup.path.startsWith(`${group.path}/`) &&
+            (canAccessGroupAction(accessContext, "groups:read", {
+              orgId: vault.organizationId,
+              vaultId,
+              groupId: descendantGroup.id,
+              groupPath: descendantGroup.path,
+            }) ||
+              evaluateStatementsAgainstAny(
+                accessContext.policyStatements,
+                "secrets:read",
+                buildGroupCandidateResourceUrns({
+                  orgId: vault.organizationId,
+                  vaultId,
+                  groupId: descendantGroup.id,
+                  path: descendantGroup.path,
+                }),
+              )),
+        )
+      ) {
+        return true;
+      }
+
+      return descendantSecrets.some(
+        (secret) =>
+          secret.secretGroup?.path?.startsWith(`${group.path}/`) &&
+          canAccessSecretAction(accessContext, "secrets:read", {
+            orgId: vault.organizationId,
+            vaultId,
+            secretId: secret.id,
+            groupPath: secret.secretGroup?.path,
+          }),
+      );
+    });
   },
 
   /**
@@ -167,6 +435,30 @@ export const secretGroupWrapper = {
 
     if (!group) {
       throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Secret Group not found");
+    }
+
+    const vault = await prisma.vault.findUnique({
+      where: { id: group.vaultId },
+      select: { organizationId: true },
+    });
+
+    if (!vault) {
+      throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, "Vault not found");
+    }
+
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
+    if (
+      !canAccessGroupAction(accessContext, "groups:update", {
+        orgId: vault.organizationId,
+        vaultId: group.vaultId,
+        groupId: group.id,
+        groupPath: group.path,
+      })
+    ) {
+      throw new ForbiddenError(
+        ErrorCode.INSUFFICIENT_PERMISSIONS,
+        "Access denied by IAM policy",
+      );
     }
 
     if (name && name !== group.name) {
@@ -233,6 +525,30 @@ export const secretGroupWrapper = {
 
     if (!group) {
       throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Secret Group not found");
+    }
+
+    const vault = await prisma.vault.findUnique({
+      where: { id: group.vaultId },
+      select: { organizationId: true },
+    });
+
+    if (!vault) {
+      throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, "Vault not found");
+    }
+
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
+    if (
+      !canAccessGroupAction(accessContext, "groups:delete", {
+        orgId: vault.organizationId,
+        vaultId: group.vaultId,
+        groupId: group.id,
+        groupPath: group.path,
+      })
+    ) {
+      throw new ForbiddenError(
+        ErrorCode.INSUFFICIENT_PERMISSIONS,
+        "Access denied by IAM policy",
+      );
     }
 
     if (group._count.children > 0 || group._count.secrets > 0) {

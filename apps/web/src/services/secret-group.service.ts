@@ -6,6 +6,8 @@ export interface SecretGroup {
   description: string | null;
   vaultId: string;
   parentId: string | null;
+  path: string;
+  depth: number;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -28,10 +30,21 @@ export interface UpdateSecretGroupData {
 
 
 class SecretGroupService {
-  async getAll(vaultId: string, parentId?: string): Promise<{ success: boolean; data: SecretGroup[] }> {
+  async getAll(
+    vaultId: string,
+    parentId?: string,
+    includeChildren?: boolean,
+    forPolicyBuilder?: boolean,
+  ): Promise<{ success: boolean; data: SecretGroup[] }> {
     const params = new URLSearchParams({ vaultId });
     if (parentId) {
       params.append("parentId", parentId);
+    }
+    if (includeChildren) {
+      params.append("includeChildren", "true");
+    }
+    if (forPolicyBuilder) {
+      params.append("forPolicyBuilder", "true");
     }
     const { data } = await apiClient.get(`/vaults/${vaultId}/groups?${params.toString()}`);
     return data;

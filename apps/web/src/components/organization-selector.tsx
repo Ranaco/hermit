@@ -17,10 +17,39 @@ export function OrganizationSelector({ onCreateNew }: OrganizationSelectorProps)
   const { currentOrganization, setCurrentOrganization, clearVault } = useOrganizationStore();
 
   useEffect(() => {
-    if (!currentOrganization && organizations && organizations.length > 0) {
-      setCurrentOrganization(organizations[0]);
+    if (!organizations) {
+      return;
     }
-  }, [organizations, currentOrganization, setCurrentOrganization]);
+
+    if (organizations.length === 0) {
+      if (currentOrganization) {
+        setCurrentOrganization(null);
+        clearVault();
+      }
+      return;
+    }
+
+    if (!currentOrganization) {
+      setCurrentOrganization(organizations[0]);
+      return;
+    }
+
+    const matchingOrganization = organizations.find((organization) => organization.id === currentOrganization.id);
+
+    if (!matchingOrganization) {
+      setCurrentOrganization(organizations[0]);
+      clearVault();
+      return;
+    }
+
+    if (
+      matchingOrganization.name !== currentOrganization.name ||
+      matchingOrganization.description !== currentOrganization.description ||
+      matchingOrganization.userRole !== currentOrganization.userRole
+    ) {
+      setCurrentOrganization(matchingOrganization);
+    }
+  }, [organizations, currentOrganization, setCurrentOrganization, clearVault]);
 
   const handleSelectOrganization = (orgId: string) => {
     const org = organizations?.find((o) => o.id === orgId);

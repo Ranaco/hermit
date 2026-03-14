@@ -6,12 +6,18 @@ export interface PolicyStatement {
   resources: string[];
 }
 
+export interface PolicyDocument {
+  version: string;
+  statements: PolicyStatement[];
+}
+
 export interface Policy {
   id: string;
   name: string;
   description?: string;
   organizationId: string;
-  statements: PolicyStatement[];
+  document: PolicyDocument;
+  isManaged?: boolean;
   createdAt: string;
   updatedAt: string;
 }

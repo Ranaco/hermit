@@ -8,7 +8,9 @@ export enum Permission {
   ORG_READ = 'ORG_READ',
   ORG_UPDATE = 'ORG_UPDATE',
   ORG_DELETE = 'ORG_DELETE',
-  ORG_INVITE_MEMBER = 'ORG_INVITE_MEMBER',
+  ORG_INVITE_READ = 'ORG_INVITE_READ',
+  ORG_INVITE_CREATE = 'ORG_INVITE_CREATE',
+  ORG_INVITE_REVOKE = 'ORG_INVITE_REVOKE',
   ORG_REMOVE_MEMBER = 'ORG_REMOVE_MEMBER',
   ORG_UPDATE_MEMBER_ROLE = 'ORG_UPDATE_MEMBER_ROLE',
 
@@ -40,7 +42,9 @@ export const RolePermissions: Record<string, Permission[]> = {
   ADMIN: [
     Permission.ORG_READ,
     Permission.ORG_UPDATE,
-    Permission.ORG_INVITE_MEMBER,
+    Permission.ORG_INVITE_READ,
+    Permission.ORG_INVITE_CREATE,
+    Permission.ORG_INVITE_REVOKE,
     Permission.ORG_REMOVE_MEMBER,
     Permission.VAULT_READ,
     Permission.VAULT_CREATE,

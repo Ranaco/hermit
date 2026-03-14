@@ -13,19 +13,239 @@ interface RunOptions {
   group?: string;
   path?: string;
   secret?: string;
+  inject?: string;
   env?: string;
   config?: string;
   password?: string;
   vaultPassword?: string;
 }
 
+interface GroupTreeNode {
+  group: sdk.SecretGroupSummary;
+  path: string;
+}
+
+interface SecretMatch {
+  secret: sdk.SecretSummary;
+  path: string;
+}
+
+interface RunSelection {
+  group?: sdk.SecretGroupSummary;
+  includeDescendants?: boolean;
+  secretIds?: string[];
+  targetLabel: string;
+}
+
+const SECRET_LOOKUP_LIMIT = 200;
+
+async function collectAccessibleGroupTree(
+  vaultId: string,
+  parentId?: string,
+  pathPrefix = "",
+): Promise<GroupTreeNode[]> {
+  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
+  const nodes: GroupTreeNode[] = [];
+
+  for (const group of groups) {
+    const path = pathPrefix ? `${pathPrefix}/${group.name}` : group.name;
+    nodes.push({ group, path });
+    nodes.push(...await collectAccessibleGroupTree(vaultId, group.id, path));
+  }
+
+  return nodes;
+}
+
+async function findExactSecretsInGroup(
+  vaultId: string,
+  groupId: string | undefined,
+  secretName: string,
+): Promise<sdk.SecretSummary[]> {
+  const secrets = await sdk.getSecrets(vaultId, {
+    secretGroupId: groupId,
+    search: secretName,
+    limit: SECRET_LOOKUP_LIMIT,
+  });
+
+  return secrets.filter((secret) => secret.name.toLowerCase() === secretName.toLowerCase());
+}
+
+async function findAccessibleSecretMatches(
+  vaultId: string,
+  secretName: string,
+  scope?: {
+    group?: sdk.SecretGroupSummary;
+    includeDescendants?: boolean;
+  },
+): Promise<SecretMatch[]> {
+  const matches: SecretMatch[] = [];
+
+  if (!scope?.group) {
+    const rootSecrets = await findExactSecretsInGroup(vaultId, undefined, secretName);
+    matches.push(...rootSecrets.map((secret) => ({ secret, path: secret.name })));
+
+    const groups = await collectAccessibleGroupTree(vaultId);
+    for (const node of groups) {
+      const secrets = await findExactSecretsInGroup(vaultId, node.group.id, secretName);
+      matches.push(...secrets.map((secret) => ({ secret, path: `${node.path}/${secret.name}` })));
+    }
+
+    return matches;
+  }
+
+  const scopedNodes: GroupTreeNode[] = [
+    {
+      group: scope.group,
+      path: scope.group.name,
+    },
+  ];
+
+  if (scope.includeDescendants) {
+    scopedNodes.push(...await collectAccessibleGroupTree(vaultId, scope.group.id, scope.group.name));
+  }
+
+  for (const node of scopedNodes) {
+    const secrets = await findExactSecretsInGroup(vaultId, node.group.id, secretName);
+    matches.push(...secrets.map((secret) => ({ secret, path: `${node.path}/${secret.name}` })));
+  }
+
+  return matches;
+}
+
+function abortForAmbiguousSecret(secretName: string, matches: SecretMatch[]): never {
+  abort(`Multiple accessible secrets named "${secretName}" matched the current selection.`, {
+    suggestions: ["Use `hermes run --inject <folder/path/secret> -- <command>` to target one secret."],
+    details: {
+      matches: matches.map((match) => match.path),
+    },
+  });
+}
+
+async function resolveSingleSecretSelection(
+  vaultId: string,
+  secretName: string,
+  scope?: {
+    group?: sdk.SecretGroupSummary;
+    includeDescendants?: boolean;
+  },
+): Promise<RunSelection> {
+  const matches = await findAccessibleSecretMatches(vaultId, secretName, scope);
+
+  if (matches.length === 0) {
+    abort(`No accessible secret named "${secretName}" matched the current selection.`);
+  }
+
+  if (matches.length > 1) {
+    abortForAmbiguousSecret(secretName, matches);
+  }
+
+  return {
+    group: scope?.group,
+    secretIds: [matches[0].secret.id],
+    targetLabel: matches[0].path,
+  };
+}
+
+async function resolveInjectSelection(vaultId: string, target: string): Promise<RunSelection> {
+  if (!target.includes("/")) {
+    abort("Inject targets without a path are ambiguous.", {
+      suggestions: [
+        "Use `--group <folder>` for a folder target.",
+        "Use `--secret <name>` for a single secret target.",
+        "Use `--inject <folder/path/secret>` for a full path target.",
+      ],
+    });
+  }
+
+  try {
+    const group = await resolveGroupByPath(vaultId, target);
+    return {
+      group,
+      includeDescendants: true,
+      targetLabel: target,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("No secret group path matches")) {
+      throw error;
+    }
+
+    const segments = target.split("/").map((segment) => segment.trim()).filter(Boolean);
+    if (segments.length < 2) {
+      abort(`No accessible inject target matches "${target}".`);
+    }
+
+    const secretName = segments.pop()!;
+    const parentPath = segments.join("/");
+    const group = await resolveGroupByPath(vaultId, parentPath);
+    const matches = await findExactSecretsInGroup(vaultId, group.id, secretName);
+
+    if (matches.length === 0) {
+      abort(`No accessible secret matches "${target}".`);
+    }
+
+    if (matches.length > 1) {
+      abortForAmbiguousSecret(secretName, matches.map((secret) => ({
+        secret,
+        path: `${parentPath}/${secret.name}`,
+      })));
+    }
+
+    return {
+      group,
+      secretIds: [matches[0].id],
+      targetLabel: `${parentPath}/${matches[0].name}`,
+    };
+  }
+}
+
+function buildInjectedEnvVars(
+  revealedSecrets: Array<{ name: string; value: string }>,
+  configMap?: Record<string, string>,
+): Record<string, string> {
+  const envVars: Record<string, string> = {};
+  const assignedNames = new Map<string, string>();
+  const collisions = new Map<string, string[]>();
+
+  for (const secret of revealedSecrets) {
+    const envName = configMap?.[secret.name] || secret.name;
+    if (envVars[envName] !== undefined) {
+      const current = collisions.get(envName) || [];
+      if (current.length === 0) {
+        current.push(assignedNames.get(envName) || envName);
+      }
+      current.push(secret.name);
+      collisions.set(envName, current);
+      continue;
+    }
+
+    envVars[envName] = secret.value;
+    assignedNames.set(envName, secret.name);
+  }
+
+  if (collisions.size > 0) {
+    abort("Injected environment variable names collided.", {
+      suggestions: ["Use `.hermes.yml` `map` entries to assign unique environment variable names."],
+      details: {
+        collisions: Array.from(collisions.entries()).map(([envName, names]) => ({
+          envName,
+          sources: names,
+        })),
+      },
+    });
+  }
+
+  return envVars;
+}
+
 export const runCommand = new Command("run")
-  .description("Run a command with secrets injected as environment variables")
+  .description("Run a command with real-time Hermes secrets injected into the child process environment")
   .option("--vault <query>", "Vault name or id")
   .option("--org <query>", "Organization name or id")
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("--secret <name>", "Inject only one secret by name")
+  .option("-i, --inject <target>", "Inject a folder path or a full folder/secret path")
   .option("--env <name>", "Environment from .hermes.yml")
   .option("--config <path>", "Path to .hermes.yml")
   .option("--password <password>", "Secret-level password used for protected secrets")
@@ -36,11 +256,17 @@ export const runCommand = new Command("run")
     executeCommand(async () => {
       requireAuth();
 
+      if (opts.inject && opts.group) {
+        abort("`--inject` cannot be combined with `--group`.", {
+          suggestions: ["Use `--inject <folder/path>` or `--group <folder>`, not both."],
+        });
+      }
+
       const dashDash = process.argv.indexOf("--");
       const finalArgs = commandArgs.length > 0 ? commandArgs : dashDash >= 0 ? process.argv.slice(dashDash + 1) : [];
       if (finalArgs.length === 0) {
         abort("No command specified.", {
-          suggestions: ["Usage: hermes run -- npm run dev"],
+          suggestions: ["Usage: hermes run --inject prod/api -- npm run dev"],
         });
       }
 
@@ -50,6 +276,7 @@ export const runCommand = new Command("run")
       let configPath = opts.path;
       let configSecrets: string[] | undefined;
       let configMap: Record<string, string> | undefined;
+      let configRecursive: boolean | undefined;
 
       if (opts.env) {
         const config = loadProjectConfig(opts.config);
@@ -61,16 +288,45 @@ export const runCommand = new Command("run")
         configPath = configPath || environment.path;
         configSecrets = environment.secrets;
         configMap = environment.map;
+        configRecursive = environment.recursive;
       }
 
       const vault = await resolveVault(configVault, { organizationQuery: configOrganization });
-      const group = configPath
-        ? await resolveGroupByPath(vault.id, configPath)
-        : await resolveGroup(vault.id, configGroup);
+      const pathQuery = opts.inject ? undefined : configPath;
+      const groupQuery = opts.inject ? undefined : configGroup;
+      const scopedGroup = pathQuery
+        ? await resolveGroupByPath(vault.id, pathQuery)
+        : await resolveGroup(vault.id, groupQuery);
+
+      let selection: RunSelection;
+      if (opts.inject) {
+        selection = await resolveInjectSelection(vault.id, opts.inject);
+      } else if (opts.secret) {
+        const secretScopeRecursive = scopedGroup
+          ? (opts.path || opts.group ? true : configRecursive ?? true)
+          : false;
+        selection = await resolveSingleSecretSelection(vault.id, opts.secret, {
+          group: scopedGroup,
+          includeDescendants: secretScopeRecursive,
+        });
+      } else if (scopedGroup) {
+        const folderSelectionRecursive = opts.path || opts.group ? true : configRecursive ?? true;
+        selection = {
+          group: scopedGroup,
+          includeDescendants: folderSelectionRecursive,
+          targetLabel: pathQuery || scopedGroup.name,
+        };
+      } else {
+        selection = {
+          targetLabel: vault.name,
+        };
+      }
 
       const result = await sdk.bulkRevealSecrets({
         vaultId: vault.id,
-        secretGroupId: group?.id,
+        secretGroupId: selection.secretIds ? undefined : selection.group?.id,
+        secretIds: selection.secretIds,
+        includeDescendants: selection.includeDescendants,
         password: opts.password,
         vaultPassword: opts.vaultPassword,
       });
@@ -80,11 +336,9 @@ export const runCommand = new Command("run")
       }
 
       let revealedSecrets = result.secrets;
-      if (opts.secret) {
-        revealedSecrets = revealedSecrets.filter((secret) => secret.name.toLowerCase() === opts.secret?.toLowerCase());
-      }
-      if (configSecrets?.length) {
-        const allowed = new Set(configSecrets.map((item) => item.toLowerCase()));
+      const shouldApplyConfigSecretFilter = !opts.inject && !opts.secret && !!configSecrets?.length;
+      if (shouldApplyConfigSecretFilter) {
+        const allowed = new Set((configSecrets || []).map((item) => item.toLowerCase()));
         revealedSecrets = revealedSecrets.filter((secret) => allowed.has(secret.name.toLowerCase()));
       }
 
@@ -92,20 +346,22 @@ export const runCommand = new Command("run")
         abort("No injectable secrets matched the current selection.");
       }
 
-      const envVars = Object.fromEntries(
-        revealedSecrets.map((secret) => [configMap?.[secret.name] || secret.name, secret.value]),
-      );
+      const envVars = buildInjectedEnvVars(revealedSecrets, configMap);
 
       renderData({
         vault,
-        group,
+        group: selection.group,
+        target: selection.targetLabel,
         injected: Object.keys(envVars),
         skipped: result.skipped,
       });
 
       ui.panel("Environment Injection", [
+        ui.kv("Target", ui.colors.primary(selection.targetLabel), { overflow: "truncate" }),
         ui.kv("Injecting", ui.colors.bright(String(Object.keys(envVars).length))),
-        ...Object.keys(envVars).slice(0, 5).map((name) => ui.kv(name, ui.formatSecretValue("masked", "masked"), { overflow: "truncate" })),
+        ...Object.keys(envVars)
+          .slice(0, 5)
+          .map((name) => ui.kv(name, ui.formatSecretValue("masked", "masked"), { overflow: "truncate" })),
         ...(result.skipped.length ? [ui.kv("Skipped", ui.colors.primary(String(result.skipped.length)))] : []),
       ]);
       ui.info(`Starting: ${finalArgs.join(" ")}`);

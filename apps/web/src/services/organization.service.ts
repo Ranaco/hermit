@@ -73,6 +73,32 @@ export interface InviteUserData {
   roleId?: string;
 }
 
+export interface OrganizationInvitation {
+  id: string;
+  token: string;
+  email: string;
+  organizationId: string;
+  organizationName: string;
+  roleId: string | null;
+  roleName: string | null;
+  invitedBy: {
+    id: string;
+    email: string;
+    username?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  };
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface InviteUserResponse {
+  invitation?: OrganizationInvitation;
+  member?: OrganizationMember;
+}
+
 export interface UpdateMemberRoleData {
   roleId: string;
 }
@@ -115,7 +141,7 @@ export const organizationService = {
   inviteUser: async (
     organizationId: string,
     data: InviteUserData,
-  ): Promise<{ invitation: unknown; member?: OrganizationMember }> => {
+  ): Promise<InviteUserResponse> => {
     const response = await apiClient.post(
       `/organizations/${organizationId}/invitations`,
       data,
@@ -125,6 +151,25 @@ export const organizationService = {
 
   acceptInvitation: async (token: string): Promise<void> => {
     await apiClient.post("/organizations/invitations/accept", { token });
+  },
+
+  getMyPendingInvitations: async (): Promise<OrganizationInvitation[]> => {
+    const response = await apiClient.get("/organizations/invitations/mine");
+    return response.data.data.invitations;
+  },
+
+  getOrganizationInvitations: async (
+    organizationId: string,
+  ): Promise<OrganizationInvitation[]> => {
+    const response = await apiClient.get(`/organizations/${organizationId}/invitations`);
+    return response.data.data.invitations;
+  },
+
+  revokeInvitation: async (
+    organizationId: string,
+    invitationId: string,
+  ): Promise<void> => {
+    await apiClient.delete(`/organizations/${organizationId}/invitations/${invitationId}`);
   },
 
   removeMember: async (organizationId: string, userId: string): Promise<void> => {

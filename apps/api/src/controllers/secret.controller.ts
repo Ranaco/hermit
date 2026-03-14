@@ -56,6 +56,28 @@ export const getSecrets = asyncHandler(async (req: Request, res: Response) => {
   const result = await secretWrapper.getSecrets(req.user.id, {
     vaultId: req.query.vaultId as string,
     secretGroupId: req.query.secretGroupId as string | undefined,
+    page: req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    search: req.query.search as string | undefined,
+  });
+
+  res.json({
+    success: true,
+    data: result,
+  });
+});
+
+/**
+ * Get a specific secret
+ * GET /api/v1/secrets/:id
+ */
+export const getSecret = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  }
+
+  const result = await secretWrapper.getSecret(req.user.id, {
+    secretId: req.params.id,
   });
 
   res.json({
@@ -182,6 +204,36 @@ export const getSecretVersions = asyncHandler(
 );
 
 /**
+ * Set the current version pointer for a secret
+ * POST /api/v1/secrets/:id/current-version
+ */
+export const setCurrentSecretVersion = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+    }
+
+    const result = await secretWrapper.setCurrentSecretVersion(
+      req.user.id,
+      {
+        secretId: req.params.id,
+        versionId: req.body.versionId,
+      },
+      {
+        ipAddress: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] || "unknown",
+      },
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: "Current secret version updated successfully",
+    });
+  },
+);
+
+/**
  * Bulk reveal secrets in a vault (for CLI `hermes run`)
  * POST /api/v1/secrets/bulk-reveal
  */
@@ -196,6 +248,8 @@ export const bulkRevealSecrets = asyncHandler(
       {
         vaultId: req.body.vaultId,
         secretGroupId: req.body.secretGroupId,
+        secretIds: req.body.secretIds,
+        includeDescendants: req.body.includeDescendants,
         password: req.body.password,
         vaultPassword: req.body.vaultPassword,
       },

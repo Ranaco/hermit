@@ -5,13 +5,16 @@ export type Permission = "VIEW" | "USE" | "EDIT" | "ADMIN";
 export type Role = "OWNER" | "ADMIN" | "MEMBER";
 
 export interface RBACPermissions {
+  canReadVaults: boolean;
   canCreateVault: boolean;
   canEditVault: boolean;
   canDeleteVault: boolean;
+  canReadKeys: boolean;
   canCreateKey: boolean;
   canEditKey: boolean;
   canDeleteKey: boolean;
   canRotateKey: boolean;
+  canReadSecrets: boolean;
   canCreateSecret: boolean;
   canEditSecret: boolean;
   canDeleteSecret: boolean;
@@ -22,9 +25,17 @@ export interface RBACPermissions {
   canDeleteOrganization: boolean;
   canInviteMembers: boolean;
   canInviteUsers: boolean;
+  canReadInvitations: boolean;
+  canCreateInvitations: boolean;
+  canRevokeInvitations: boolean;
   canRemoveMembers: boolean;
   canChangeRoles: boolean;
   canManageRoles: boolean;
+  canReadPolicies: boolean;
+  canCreatePolicies: boolean;
+  canEditPolicies: boolean;
+  canDeletePolicies: boolean;
+  canManageTeams: boolean;
 }
 
 export function useRBAC(): RBACPermissions {
@@ -33,13 +44,16 @@ export function useRBAC(): RBACPermissions {
 
   if (!isAuthenticated || !currentOrganization) {
     return {
+      canReadVaults: false,
       canCreateVault: false,
       canEditVault: false,
       canDeleteVault: false,
+      canReadKeys: false,
       canCreateKey: false,
       canEditKey: false,
       canDeleteKey: false,
       canRotateKey: false,
+      canReadSecrets: false,
       canCreateSecret: false,
       canEditSecret: false,
       canDeleteSecret: false,
@@ -50,42 +64,61 @@ export function useRBAC(): RBACPermissions {
       canDeleteOrganization: false,
       canInviteMembers: false,
       canInviteUsers: false,
+      canReadInvitations: false,
+      canCreateInvitations: false,
+      canRevokeInvitations: false,
       canRemoveMembers: false,
       canChangeRoles: false,
       canManageRoles: false,
+      canReadPolicies: false,
+      canCreatePolicies: false,
+      canEditPolicies: false,
+      canDeletePolicies: false,
+      canManageTeams: false,
     };
   }
 
   const role = currentOrganization.userRole || "MEMBER";
+  const isOwner = role === "OWNER";
+  const isAdmin = role === "ADMIN";
+  const canManageWorkspace = isOwner || isAdmin;
+  const canReadWorkspace = isOwner || isAdmin || role === "MEMBER";
 
   return {
-    // Vault permissions
-    canCreateVault: ["OWNER", "ADMIN", "MEMBER"].includes(role),
-    canEditVault: ["OWNER", "ADMIN", "MEMBER"].includes(role),
-    canDeleteVault: ["OWNER", "ADMIN"].includes(role),
+    canReadVaults: canReadWorkspace,
+    canCreateVault: canManageWorkspace,
+    canEditVault: canManageWorkspace,
+    canDeleteVault: canManageWorkspace,
 
-    // Key permissions
-    canCreateKey: ["OWNER", "ADMIN", "MEMBER"].includes(role),
-    canEditKey: ["OWNER", "ADMIN", "MEMBER"].includes(role),
-    canDeleteKey: ["OWNER", "ADMIN"].includes(role),
-    canRotateKey: ["OWNER", "ADMIN", "MEMBER"].includes(role),
+    canReadKeys: canReadWorkspace,
+    canCreateKey: canManageWorkspace,
+    canEditKey: canManageWorkspace,
+    canDeleteKey: canManageWorkspace,
+    canRotateKey: canManageWorkspace,
 
-    // Secret permissions
-    canCreateSecret: ["OWNER", "ADMIN", "MEMBER"].includes(role),
-    canEditSecret: ["OWNER", "ADMIN", "MEMBER"].includes(role),
-    canDeleteSecret: ["OWNER", "ADMIN"].includes(role),
-    canRevealSecret: ["OWNER", "ADMIN", "MEMBER"].includes(role),
+    canReadSecrets: canReadWorkspace,
+    canCreateSecret: canManageWorkspace,
+    canEditSecret: canManageWorkspace,
+    canDeleteSecret: canManageWorkspace,
+    canRevealSecret: canReadWorkspace,
 
-    // Organization permissions
-    canManageMembers: ["OWNER", "ADMIN"].includes(role),
-    canManageOrganization: ["OWNER", "ADMIN"].includes(role),
-    canEditOrganization: ["OWNER", "ADMIN"].includes(role),
-    canDeleteOrganization: role === "OWNER",
-    canInviteMembers: ["OWNER", "ADMIN"].includes(role),
-    canInviteUsers: ["OWNER", "ADMIN"].includes(role),
-    canRemoveMembers: ["OWNER", "ADMIN"].includes(role),
-    canChangeRoles: role === "OWNER",
-    canManageRoles: role === "OWNER",
+    canManageMembers: canManageWorkspace,
+    canManageOrganization: canManageWorkspace,
+    canEditOrganization: canManageWorkspace,
+    canDeleteOrganization: isOwner,
+    canInviteMembers: canManageWorkspace,
+    canInviteUsers: canManageWorkspace,
+    canReadInvitations: canManageWorkspace,
+    canCreateInvitations: canManageWorkspace,
+    canRevokeInvitations: canManageWorkspace,
+    canRemoveMembers: canManageWorkspace,
+    canChangeRoles: canManageWorkspace,
+    canManageRoles: isOwner,
+    canReadPolicies: isOwner,
+    canCreatePolicies: isOwner,
+    canEditPolicies: isOwner,
+    canDeletePolicies: isOwner,
+    canManageTeams: canManageWorkspace,
   };
 }
 

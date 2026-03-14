@@ -5,6 +5,7 @@ export interface Secret {
   name: string;
   description?: string;
   value?: string; // Only present when revealed
+  versionNumber?: number;
   metadata?: Record<string, unknown>;
   tags?: string[];
   vaultId: string;
@@ -27,9 +28,23 @@ export interface Secret {
     name: string;
   };
   currentVersion?: {
+    id?: string;
     versionNumber: number;
     createdAt: string;
+    commitMessage?: string;
   };
+  latestVersion?: {
+    id: string;
+    versionNumber: number;
+    createdAt: string;
+    commitMessage?: string;
+  } | null;
+  versionCount?: number;
+  secretGroup?: {
+    id: string;
+    name: string;
+    parentId?: string | null;
+  } | null;
   _count?: {
     versions: number;
   };
@@ -46,6 +61,12 @@ export interface SecretVersion {
     firstName?: string;
     lastName?: string;
   };
+}
+
+export interface SecretVersionsResponse {
+  versions: SecretVersion[];
+  count: number;
+  currentVersionId?: string | null;
 }
 
 export interface CreateSecretData {
@@ -66,10 +87,10 @@ export interface UpdateSecretData {
   value?: string;
   valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
   description?: string;
-  password?: string;
+  password?: string | null;
   metadata?: Record<string, unknown>;
   tags?: string[];
-  expiresAt?: string;
+  expiresAt?: string | null;
   commitMessage?: string;
 }
 
@@ -139,6 +160,11 @@ export const secretService = {
     return response.data.data.secret;
   },
 
+  getById: async (id: string): Promise<Secret> => {
+    const response = await apiClient.get(`/secrets/${id}`);
+    return response.data.data.secret;
+  },
+
   update: async (id: string, data: UpdateSecretData): Promise<Secret> => {
     const response = await apiClient.put(`/secrets/${id}`, data);
     return response.data.data.secret;
@@ -150,9 +176,16 @@ export const secretService = {
 
   getVersions: async (
     id: string,
-  ): Promise<{ versions: SecretVersion[]; count: number }> => {
+  ): Promise<SecretVersionsResponse> => {
     const response = await apiClient.get(`/secrets/${id}/versions`);
     return response.data.data;
+  },
+
+  setCurrentVersion: async (id: string, versionId: string): Promise<Secret> => {
+    const response = await apiClient.post(`/secrets/${id}/current-version`, {
+      versionId,
+    });
+    return response.data.data.secret;
   },
 
 

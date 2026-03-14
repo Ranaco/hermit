@@ -17,11 +17,45 @@ export function VaultSelector({ onCreateNew }: VaultSelectorProps) {
   const { data: vaults, isLoading } = useVaults(currentOrganization?.id);
 
   useEffect(() => {
-    if (!currentVault && vaults && vaults.length > 0) {
+    if (!vaults) {
+      return;
+    }
+
+    if (vaults.length === 0) {
+      if (currentVault) {
+        setCurrentVault(null);
+      }
+      return;
+    }
+
+    if (!currentVault) {
       setCurrentVault({
         id: vaults[0].id,
         name: vaults[0].name,
         organizationId: vaults[0].organizationId,
+      });
+      return;
+    }
+
+    const matchingVault = vaults.find((vault) => vault.id === currentVault.id);
+
+    if (!matchingVault) {
+      setCurrentVault({
+        id: vaults[0].id,
+        name: vaults[0].name,
+        organizationId: vaults[0].organizationId,
+      });
+      return;
+    }
+
+    if (
+      matchingVault.name !== currentVault.name ||
+      matchingVault.organizationId !== currentVault.organizationId
+    ) {
+      setCurrentVault({
+        id: matchingVault.id,
+        name: matchingVault.name,
+        organizationId: matchingVault.organizationId,
       });
     }
   }, [vaults, currentVault, setCurrentVault]);

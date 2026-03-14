@@ -77,8 +77,10 @@ export function useInviteUser() {
   return useMutation({
     mutationFn: ({ organizationId, data }: { organizationId: string; data: InviteUserData }) =>
       organizationService.inviteUser(organizationId, data),
-    onSuccess: (data) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organizations", variables.organizationId, "invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["organization-invitations", "mine"] });
       // We let the component handle the toast so it can display the invite link
     },
     onError: (error) => {
@@ -94,10 +96,49 @@ export function useAcceptInvitation() {
     mutationFn: (token: string) => organizationService.acceptInvitation(token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organization-invitations", "mine"] });
       toast.success("Invitation accepted successfully");
     },
     onError: () => {
       toast.error("Failed to accept invitation");
+    },
+  });
+}
+
+export function useMyPendingInvitations(enabled = true) {
+  return useQuery({
+    queryKey: ["organization-invitations", "mine"],
+    queryFn: () => organizationService.getMyPendingInvitations(),
+    enabled,
+  });
+}
+
+export function useOrganizationInvitations(organizationId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["organizations", organizationId, "invitations"],
+    queryFn: () => organizationService.getOrganizationInvitations(organizationId!),
+    enabled: enabled && !!organizationId,
+  });
+}
+
+export function useRevokeInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      invitationId,
+    }: {
+      organizationId: string;
+      invitationId: string;
+    }) => organizationService.revokeInvitation(organizationId, invitationId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["organizations", variables.organizationId, "invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["organization-invitations", "mine"] });
+      toast.success("Invitation revoked");
+    },
+    onError: () => {
+      toast.error("Failed to revoke invitation");
     },
   });
 }

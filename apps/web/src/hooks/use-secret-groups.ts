@@ -2,10 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { secretGroupService, type CreateSecretGroupData, type UpdateSecretGroupData } from "@/services/secret-group.service";
 import { toast } from "sonner";
 
-export function useSecretGroups(vaultId?: string, parentId?: string) {
+export function useSecretGroups(
+  vaultId?: string,
+  parentId?: string,
+  includeChildren = false,
+  forPolicyBuilder = false,
+) {
   return useQuery({
-    queryKey: ["secret-groups", vaultId, parentId],
-    queryFn: () => secretGroupService.getAll(vaultId!, parentId),
+    queryKey: ["secret-groups", vaultId, parentId, includeChildren, forPolicyBuilder],
+    queryFn: () => secretGroupService.getAll(vaultId!, parentId, includeChildren, forPolicyBuilder),
     enabled: !!vaultId,
   });
 }

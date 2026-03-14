@@ -8,6 +8,7 @@ export interface HermesEnvironment {
   vault: string;
   group?: string;
   path?: string;
+  recursive?: boolean;
   secrets?: string[];
   map?: Record<string, string>;
 }
@@ -67,6 +68,9 @@ export function validateProjectConfig(config: HermesConfig): { valid: boolean; e
       if (environment.group && environment.path) {
         errors.push(`Environment "${name}" cannot define both group and path.`);
       }
+      if (environment.recursive !== undefined && typeof environment.recursive !== "boolean") {
+        errors.push(`Environment "${name}" recursive must be true or false.`);
+      }
     }
   }
   return { valid: errors.length === 0, errors };
@@ -101,6 +105,7 @@ environments:
     # organization: acme
     vault: my-project
     path: dev/api
+    # recursive: true
     # secrets:
     #   - DATABASE_URL
     #   - REDIS_URL
@@ -111,5 +116,6 @@ environments:
     # organization: acme
     vault: my-project
     group: prod-config
+    # recursive: true
 `;
 }

@@ -10,19 +10,44 @@ export interface CreateSharePayload {
   audienceEmail?: string;
 }
 
+export interface ShareRecord {
+  id: string;
+}
+
+export interface CreateShareResponse {
+  share: ShareRecord;
+  token: string;
+}
+
+export interface ShareMetadataResponse {
+  status: "active" | "expired" | "consumed";
+  metadata?: {
+    expiresAt?: string;
+    requirePassphrase?: boolean;
+    note?: string;
+  };
+}
+
+export interface ConsumeShareResponse {
+  value: string;
+}
+
 export const shareService = {
-  createShare: async (payload: CreateSharePayload) => {
+  createShare: async (payload: CreateSharePayload): Promise<CreateShareResponse> => {
     const { data } = await apiClient.post("/shares", payload);
-    return data;
+    return data.data;
   },
   
-  getShareMetadata: async (token: string) => {
+  getShareMetadata: async (token: string): Promise<ShareMetadataResponse> => {
     const { data } = await apiClient.get(`/shares/${token}`);
-    return data;
+    return data.data;
   },
   
-  consumeShare: async (token: string, passphrase?: string) => {
+  consumeShare: async (
+    token: string,
+    passphrase?: string,
+  ): Promise<ConsumeShareResponse> => {
     const { data } = await apiClient.post(`/shares/${token}/consume`, { passphrase });
-    return data;
-  }
+    return data.data;
+  },
 };

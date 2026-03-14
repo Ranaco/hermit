@@ -7,11 +7,9 @@ import type { Request, Response } from "express";
 import {
   asyncHandler,
   AuthenticationError,
-  ValidationError,
   ErrorCode,
-  NotFoundError,
 } from "@hermes/error-handling";
-import getPrismaClient from "../services/prisma.service";
+import { policyWrapper } from "../wrappers/policy.wrapper";
 
 /**
  * Get all policies in an organization
@@ -19,18 +17,11 @@ import getPrismaClient from "../services/prisma.service";
  */
 export const getPolicies = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-  
-  const orgId = req.params.orgId;
-  const prisma = getPrismaClient();
-  
-  const policies = await prisma.policy.findMany({
-    where: { organizationId: orgId },
-    orderBy: { createdAt: "desc" },
-  });
+  const result = await policyWrapper.getPolicies(req.user.id, req.params.orgId);
 
   res.json({
     success: true,
-    data: { policies }
+    data: result,
   });
 });
 
@@ -40,35 +31,20 @@ export const getPolicies = asyncHandler(async (req: Request, res: Response) => {
  */
 export const createPolicy = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-
-  const orgId = req.params.orgId;
-  const { name, description, document, statements } = req.body;
-
-  let policyDocument = document;
-  if (!policyDocument && statements) {
-    policyDocument = { statements };
-  }
-
-  if (!name || !policyDocument) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Name and document (or statements) are required");
-  }
-
-  const prisma = getPrismaClient();
-
-  const policy = await prisma.policy.create({
-    data: {
-      name,
-      description,
-      document: policyDocument,
-      organizationId: orgId,
-      isManaged: false,
+  const result = await policyWrapper.createPolicy(
+    req.user.id,
+    req.params.orgId,
+    req.body,
+    {
+      ipAddress: req.ip || "unknown",
+      userAgent: req.headers["user-agent"] || "unknown",
     },
-  });
+  );
 
   res.status(201).json({
     success: true,
-    data: { policy },
-    message: "Policy created successfully"
+    data: result,
+    message: "Policy created successfully",
   });
 });
 
@@ -78,43 +54,21 @@ export const createPolicy = asyncHandler(async (req: Request, res: Response) => 
  */
 export const updatePolicy = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-
-  const orgId = req.params.orgId;
-  const policyId = req.params.policyId;
-  const { name, description, document, statements } = req.body;
-
-  const prisma = getPrismaClient();
-
-  const existingPolicy = await prisma.policy.findUnique({
-    where: { id: policyId }
-  });
-
-  if (!existingPolicy || existingPolicy.organizationId !== orgId) {
-    throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Policy not found in this organization");
-  }
-
-  if (existingPolicy.isManaged) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Cannot edit a managed system policy");
-  }
-
-  let policyDocument = document;
-  if (!policyDocument && statements) {
-    policyDocument = { statements };
-  }
-
-  const updatedPolicy = await prisma.policy.update({
-    where: { id: policyId },
-    data: {
-      name: name || undefined,
-      description: description !== undefined ? description : undefined,
-      document: policyDocument || undefined,
+  const result = await policyWrapper.updatePolicy(
+    req.user.id,
+    req.params.orgId,
+    req.params.policyId,
+    req.body,
+    {
+      ipAddress: req.ip || "unknown",
+      userAgent: req.headers["user-agent"] || "unknown",
     },
-  });
+  );
 
   res.json({
     success: true,
-    data: { policy: updatedPolicy },
-    message: "Policy updated successfully"
+    data: result,
+    message: "Policy updated successfully",
   });
 });
 
@@ -124,30 +78,18 @@ export const updatePolicy = asyncHandler(async (req: Request, res: Response) => 
  */
 export const deletePolicy = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
-
-  const orgId = req.params.orgId;
-  const policyId = req.params.policyId;
-
-  const prisma = getPrismaClient();
-
-  const existingPolicy = await prisma.policy.findUnique({
-    where: { id: policyId }
-  });
-
-  if (!existingPolicy || existingPolicy.organizationId !== orgId) {
-    throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Policy not found in this organization");
-  }
-
-  if (existingPolicy.isManaged) {
-    throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Cannot delete a managed system policy");
-  }
-
-  await prisma.policy.delete({
-    where: { id: policyId }
-  });
+  await policyWrapper.deletePolicy(
+    req.user.id,
+    req.params.orgId,
+    req.params.policyId,
+    {
+      ipAddress: req.ip || "unknown",
+      userAgent: req.headers["user-agent"] || "unknown",
+    },
+  );
 
   res.json({
     success: true,
-    message: "Policy deleted successfully"
+    message: "Policy deleted successfully",
   });
 });

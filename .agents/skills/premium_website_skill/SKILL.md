@@ -1,12 +1,6 @@
 ---
-
-title: Build Clean and Premium Websites 
-
-description: This skill enables the agent to analyze, critique, and provide design specifications for creating "premium" websites. It focuses on the intersection of applied psychology and UI/UX design to build trust, authority, and perceived quality within milliseconds of a user landing on a page.
-
----
-
-
+name: premium-website-skill
+description: Analyze, critique, and specify premium website design using first-impression psychology, cognitive-load reduction, and micro-interaction strategy. Use when reviewing landing pages or shaping high-trust, premium-feeling marketing and brand website experiences.
 ---
 
 ## Core Psychological Principles
@@ -50,7 +44,7 @@ description: This skill enables the agent to analyze, critique, and provide desi
 ### Step 1: Engineer the First Impression
 **Action:** Audit the Hero Section (above the fold).
 
-**Question:** What is the *single feeling* the visitor should have in the first 15–50ms? (e.g., Calm, Confidence, Innovation).
+**Question:** What is the *single feeling* the visitor should have in the first 15-50ms? (e.g., Calm, Confidence, Innovation).
 
 **Design Note:** Use a bold headline, minimalist navigation, and a single, high-impact visual.
 
@@ -80,7 +74,7 @@ description: This skill enables the agent to analyze, critique, and provide desi
 ## Brand Case Studies for Reference
 
 - **Apple:** Masters of the **Halo Effect**. They use minimalist hero sections with high-resolution product shots to signal premium status instantly.
-- **Hermès / Bottega Veneta:** Use **Extreme White Space** to signal exclusivity and reduce cognitive load, focusing attention purely on the product.
+- **Hermes / Bottega Veneta:** Use **Extreme White Space** to signal exclusivity and reduce cognitive load, focusing attention purely on the product.
 - **Stripe / Figma:** Combine **Logical Layouts** with **Smooth Micro-interactions** to create a feeling of innovation and technical trustworthiness.
 
 ---
@@ -89,7 +83,7 @@ description: This skill enables the agent to analyze, critique, and provide desi
 
 When asked to review a website or provide design instructions, the agent should:
 
-1. **Assess the "Halo":** Evaluate the hero section’s immediate impact.  
-2. **Calculate the "Load":** Identify areas where the user might feel overwhelmed or confused.  
-3. **Identify "Peaks":** Suggest specific micro-animations to elevate the "lifeless" parts of the UI.  
+1. **Assess the "Halo":** Evaluate the hero section's immediate impact.
+2. **Calculate the "Load":** Identify areas where the user might feel overwhelmed or confused.
+3. **Identify "Peaks":** Suggest specific micro-animations to elevate the "lifeless" parts of the UI.
 4. **Prioritize Respect:** Remind the user that premium design is about respecting the visitor's **time** (simplicity), **intelligence** (craftsmanship), and **emotional response** (delight).

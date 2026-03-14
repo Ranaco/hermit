@@ -17,7 +17,158 @@ import {
 import getPrismaClient from "../services/prisma.service";
 import encryptionService from "../services/encryption.service";
 import { createAuditLog } from "../services/audit.service";
+import {
+  evaluateStatementsAgainstAny,
+  getUserPolicies,
+  type PolicyStatement,
+} from "../services/policy-engine";
+import {
+  buildGroupCandidateResourceUrns,
+  buildSecretCandidateResourceUrns,
+  buildSecretUrn,
+} from "../services/iam-resource.service";
 import { hashPassword, verifyPassword } from "../utils/password";
+
+async function collectDescendantGroupIds(
+  prisma: ReturnType<typeof getPrismaClient>,
+  vaultId: string,
+  parentId: string,
+): Promise<string[]> {
+  const parent = await prisma.secretGroup.findUnique({
+    where: { id: parentId },
+    select: { path: true },
+  });
+
+  if (!parent?.path) {
+    return [];
+  }
+
+  const descendants = await prisma.secretGroup.findMany({
+    where: {
+      vaultId,
+      path: {
+        startsWith: `${parent.path}/`,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return descendants.map((group) => group.id);
+}
+
+type AccessContext = {
+  canBypass: boolean;
+  policyStatements: PolicyStatement[];
+};
+
+async function getAccessContext(
+  prisma: ReturnType<typeof getPrismaClient>,
+  userId: string,
+  orgId: string,
+): Promise<AccessContext> {
+  const membership = await prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId: orgId,
+        userId,
+      },
+    },
+    include: {
+      role: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  const canBypass = membership?.role?.name === "OWNER";
+
+  return {
+    canBypass,
+    policyStatements: canBypass ? [] : await getUserPolicies(userId, orgId),
+  };
+}
+
+function canAccessSecretAction(
+  accessContext: AccessContext,
+  action: string,
+  data: {
+    orgId: string;
+    vaultId: string;
+    secretId: string;
+    groupPath?: string | null;
+  },
+) {
+  if (accessContext.canBypass) {
+    return true;
+  }
+
+  return evaluateStatementsAgainstAny(
+    accessContext.policyStatements,
+    action,
+    buildSecretCandidateResourceUrns({
+      orgId: data.orgId,
+      vaultId: data.vaultId,
+      secretId: data.secretId,
+      groupPath: data.groupPath,
+    }),
+  );
+}
+
+function canAccessGroupScopedAction(
+  accessContext: AccessContext,
+  action: string,
+  data: {
+    orgId: string;
+    vaultId: string;
+    groupId?: string | null;
+    groupPath?: string | null;
+  },
+) {
+  if (accessContext.canBypass) {
+    return true;
+  }
+
+  if (data.groupId) {
+    return evaluateStatementsAgainstAny(
+      accessContext.policyStatements,
+      action,
+      buildGroupCandidateResourceUrns({
+        orgId: data.orgId,
+        vaultId: data.vaultId,
+        groupId: data.groupId,
+        path: data.groupPath,
+      }),
+    );
+  }
+
+  return evaluateStatementsAgainstAny(accessContext.policyStatements, action, [
+    buildSecretUrn(data.orgId, data.vaultId, "*"),
+  ]);
+}
+
+function assertSecretAction(
+  accessContext: AccessContext,
+  action: string,
+  data: {
+    orgId: string;
+    vaultId: string;
+    secretId: string;
+    groupPath?: string | null;
+  },
+) {
+  if (canAccessSecretAction(accessContext, action, data)) {
+    return;
+  }
+
+  throw new ForbiddenError(
+    ErrorCode.INSUFFICIENT_PERMISSIONS,
+    "Access denied by IAM policy",
+  );
+}
 
 export const secretWrapper = {
   /**
@@ -78,6 +229,8 @@ export const secretWrapper = {
       );
     }
 
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
+
     // Verify key exists and belongs to the vault
     const key = await prisma.key.findFirst({
       where: {
@@ -96,6 +249,43 @@ export const secretWrapper = {
       throw new NotFoundError(
         ErrorCode.KEY_NOT_FOUND,
         "Key not found in this vault",
+      );
+    }
+
+    if (secretGroupId) {
+      const secretGroup = await prisma.secretGroup.findUnique({
+        where: { id: secretGroupId },
+        select: { id: true, vaultId: true, path: true },
+      });
+
+      if (!secretGroup || secretGroup.vaultId !== vaultId) {
+        throw new ValidationError(
+          "Secret group must belong to the selected vault",
+        );
+      }
+
+      if (
+        !canAccessGroupScopedAction(accessContext, "secrets:create", {
+          orgId: vault.organizationId,
+          vaultId,
+          groupId: secretGroup.id,
+          groupPath: secretGroup.path,
+        })
+      ) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Access denied by IAM policy",
+        );
+      }
+    } else if (
+      !canAccessGroupScopedAction(accessContext, "secrets:create", {
+        orgId: vault.organizationId,
+        vaultId,
+      })
+    ) {
+      throw new ForbiddenError(
+        ErrorCode.INSUFFICIENT_PERMISSIONS,
+        "Access denied by IAM policy",
       );
     }
 
@@ -171,6 +361,8 @@ export const secretWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: vault.organizationId,
+      vaultId,
       action: "CREATE_SECRET",
       resourceType: "SECRET",
       resourceId: secret.id,
@@ -238,6 +430,7 @@ export const secretWrapper = {
 
     if (search) {
       where.OR = [
+        { id: { startsWith: search } },
         { name: { contains: search, mode: "insensitive" } as any },
         { description: { contains: search, mode: "insensitive" } as any },
       ];
@@ -247,6 +440,12 @@ export const secretWrapper = {
       prisma.secret.findMany({
         where,
         include: {
+          secretGroup: {
+            select: {
+              id: true,
+              path: true,
+            },
+          },
           key: {
             select: {
               id: true,
@@ -270,20 +469,133 @@ export const secretWrapper = {
       prisma.secret.count({ where }),
     ]);
 
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
+
     // Don't return encrypted values or password hashes in list view
-    const sanitizedSecrets = secrets.map((secret) => ({
-      ...secret,
-      hasPassword: !!secret.passwordHash,
-      passwordHash: undefined,
-    }));
+    const sanitizedSecrets = secrets
+      .filter((secret) => {
+        return canAccessSecretAction(accessContext, "secrets:read", {
+          orgId: vault.organizationId,
+          vaultId,
+          secretId: secret.id,
+          groupPath: secret.secretGroup?.path,
+        });
+      })
+      .map((secret) => ({
+        ...secret,
+        secretGroup: secret.secretGroup
+          ? {
+              id: secret.secretGroup.id,
+            }
+          : null,
+        hasPassword: !!secret.passwordHash,
+        passwordHash: undefined,
+      }));
 
     return {
       secrets: sanitizedSecrets,
       meta: {
-        total,
+        total: accessContext.canBypass ? total : sanitizedSecrets.length,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil((accessContext.canBypass ? total : sanitizedSecrets.length) / limit),
+      },
+    };
+  },
+
+  /**
+   * Get a single secret with current and latest version metadata
+   */
+  async getSecret(
+    userId: string,
+    data: {
+      secretId: string;
+    },
+  ) {
+    const { secretId } = data;
+    const prisma = getPrismaClient();
+
+    const secret = await prisma.secret.findUnique({
+      where: { id: secretId },
+      include: {
+        vault: {
+          select: {
+            id: true,
+            name: true,
+            organizationId: true,
+          },
+        },
+        key: {
+          select: {
+            id: true,
+            name: true,
+            valueType: true,
+          },
+        },
+        secretGroup: {
+          select: {
+            id: true,
+            name: true,
+            parentId: true,
+            path: true,
+            depth: true,
+          },
+        },
+        currentVersion: {
+          select: {
+            id: true,
+            versionNumber: true,
+            createdAt: true,
+            commitMessage: true,
+          },
+        },
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            versionNumber: true,
+            createdAt: true,
+            commitMessage: true,
+          },
+        },
+        _count: {
+          select: {
+            versions: true,
+          },
+        },
+      },
+    });
+
+    if (!secret) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
+    }
+
+    const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
+    assertSecretAction(accessContext, "secrets:read", {
+      orgId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      secretId: secret.id,
+      groupPath: secret.secretGroup?.path,
+    });
+
+    return {
+      secret: {
+        ...secret,
+        secretGroup: secret.secretGroup
+          ? {
+              id: secret.secretGroup.id,
+              name: secret.secretGroup.name,
+              parentId: secret.secretGroup.parentId,
+              depth: secret.secretGroup.depth,
+            }
+          : null,
+        latestVersion: secret.versions[0] || null,
+        versionCount: secret._count.versions,
+        hasPassword: !!secret.passwordHash,
+        passwordHash: undefined,
+        versions: undefined,
+        _count: undefined,
       },
     };
   },
@@ -316,6 +628,12 @@ export const secretWrapper = {
             id: true,
             name: true,
             passwordHash: true,
+            organizationId: true,
+          },
+        },
+        secretGroup: {
+          select: {
+            path: true,
           },
         },
         key: {
@@ -324,6 +642,13 @@ export const secretWrapper = {
               orderBy: { versionNumber: "desc" },
               take: 1,
             },
+          },
+        },
+        currentVersion: {
+          select: {
+            id: true,
+            versionNumber: true,
+            encryptedValue: true,
           },
         },
         versions: {
@@ -338,17 +663,13 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-    // Check if the vault even exists anymore (Permissions handled by RBAC or via child keys/vault properties)
-    // Note: If you want to handle the specific secret-reveal permissions, the user must have USE permission.
-    // However, because we aren't passing vaultId explicitly in `revealSecret`, we do need to check permissions here 
-    // manually to prevent IDOR since the router wrapper couldn't.
-    // Let's implement the equivalent of `requireKeyPermission('USE')` here for the secret's vault.
-    
-    // We already fetch `secret.vault.id` above. 
-    // We need to verify org admin, direct user vault binding, or team vault binding.
-    // For simplicity, we just check if the user has >= USE access on the vault.
-    
-
+    const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
+    assertSecretAction(accessContext, "secrets:use", {
+      orgId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      secretId: secret.id,
+      groupPath: secret.secretGroup?.path,
+    });
 
     // Three-tier security verification
     // 1. Secret-level password (highest priority)
@@ -370,6 +691,8 @@ export const secretWrapper = {
       if (!isValidPassword) {
         await createAuditLog({
           userId,
+          organizationId: secret.vault.organizationId,
+          vaultId: secret.vault.id,
           action: "READ_SECRET",
           resourceType: "SECRET",
           resourceId: secret.id,
@@ -403,6 +726,8 @@ export const secretWrapper = {
       if (!isValidVaultPassword) {
         await createAuditLog({
           userId,
+          organizationId: secret.vault.organizationId,
+          vaultId: secret.vault.id,
           action: "READ_SECRET",
           resourceType: "SECRET",
           resourceId: secret.id,
@@ -427,7 +752,7 @@ export const secretWrapper = {
       );
     }
 
-    const version = secret.versions[0];
+    const version = versionNumber ? secret.versions[0] : secret.currentVersion;
     if (!version) {
       throw new NotFoundError(
         ErrorCode.RESOURCE_NOT_FOUND,
@@ -458,6 +783,8 @@ export const secretWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
       action: "READ_SECRET",
       resourceType: "SECRET",
       resourceId: secret.id,
@@ -517,6 +844,7 @@ export const secretWrapper = {
     const {
       secretId,
       value,
+      valueType,
       description,
       password,
       metadata,
@@ -535,6 +863,12 @@ export const secretWrapper = {
           select: {
             id: true,
             passwordHash: true,
+            organizationId: true,
+          },
+        },
+        secretGroup: {
+          select: {
+            path: true,
           },
         },
         key: {
@@ -556,7 +890,13 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-
+    const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
+    assertSecretAction(accessContext, "secrets:update", {
+      orgId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      secretId: secret.id,
+      groupPath: secret.secretGroup?.path,
+    });
 
     const currentVersion = secret.versions[0];
     const nextVersionNumber = currentVersion
@@ -579,8 +919,49 @@ export const secretWrapper = {
       updateData.expiresAt = expiresAt ? new Date(expiresAt) : null;
     if (secretGroupId !== undefined)
       updateData.secretGroupId = secretGroupId;
-    if (data.valueType !== undefined)
-      updateData.valueType = data.valueType;
+    if (valueType !== undefined)
+      updateData.valueType = valueType;
+
+    if (secretGroupId !== undefined && secretGroupId !== null) {
+      const secretGroup = await prisma.secretGroup.findUnique({
+        where: { id: secretGroupId },
+        select: { id: true, vaultId: true, path: true },
+      });
+
+      if (!secretGroup || secretGroup.vaultId !== secret.vaultId) {
+        throw new ValidationError(
+          "Secret group must belong to the same vault as the secret",
+        );
+      }
+
+      if (
+        !canAccessGroupScopedAction(accessContext, "secrets:update", {
+          orgId: secret.vault.organizationId,
+          vaultId: secret.vault.id,
+          groupId: secretGroup.id,
+          groupPath: secretGroup.path,
+        })
+      ) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Access denied by IAM policy",
+        );
+      }
+    }
+
+    if (secretGroupId === null) {
+      if (
+        !canAccessGroupScopedAction(accessContext, "secrets:update", {
+          orgId: secret.vault.organizationId,
+          vaultId: secret.vault.id,
+        })
+      ) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Access denied by IAM policy",
+        );
+      }
+    }
 
     // Update password if provided
     if (password !== undefined) {
@@ -678,7 +1059,15 @@ export const secretWrapper = {
       where: { id: secretId },
       include: {
         vault: {
-          select: { id: true },
+          select: {
+            id: true,
+            organizationId: true,
+          },
+        },
+        secretGroup: {
+          select: {
+            path: true,
+          },
         },
       },
     });
@@ -687,7 +1076,13 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-
+    const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
+    assertSecretAction(accessContext, "secrets:delete", {
+      orgId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      secretId: secret.id,
+      groupPath: secret.secretGroup?.path,
+    });
 
     await prisma.secret.delete({
       where: { id: secretId },
@@ -695,6 +1090,8 @@ export const secretWrapper = {
 
     await createAuditLog({
       userId,
+      organizationId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
       action: "DELETE_SECRET",
       resourceType: "SECRET",
       resourceId: secretId,
@@ -723,7 +1120,12 @@ export const secretWrapper = {
       where: { id: secretId },
       include: {
         vault: {
-          select: { id: true },
+          select: { id: true, organizationId: true },
+        },
+        secretGroup: {
+          select: {
+            path: true,
+          },
         },
       },
     });
@@ -732,7 +1134,13 @@ export const secretWrapper = {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
     }
 
-
+    const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
+    assertSecretAction(accessContext, "secrets:read", {
+      orgId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      secretId,
+      groupPath: secret.secretGroup?.path,
+    });
 
     const versions = await prisma.secretVersion.findMany({
       where: { secretId },
@@ -753,7 +1161,150 @@ export const secretWrapper = {
       orderBy: { versionNumber: "desc" },
     });
 
-    return { versions, count: versions.length };
+    return {
+      versions,
+      count: versions.length,
+      currentVersionId: secret.currentVersionId,
+    };
+  },
+
+  /**
+   * Point the secret at an existing version without creating a new one
+   */
+  async setCurrentSecretVersion(
+    userId: string,
+    data: {
+      secretId: string;
+      versionId: string;
+    },
+    auditInfo: {
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ) {
+    const { secretId, versionId } = data;
+    const prisma = getPrismaClient();
+
+    const secret = await prisma.secret.findUnique({
+      where: { id: secretId },
+      include: {
+        vault: {
+          select: {
+            id: true,
+            organizationId: true,
+          },
+        },
+        secretGroup: {
+          select: {
+            path: true,
+          },
+        },
+        currentVersion: {
+          select: {
+            id: true,
+            versionNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!secret) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Secret not found");
+    }
+
+    const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
+    assertSecretAction(accessContext, "secrets:update", {
+      orgId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      secretId: secret.id,
+      groupPath: secret.secretGroup?.path,
+    });
+
+    const version = await prisma.secretVersion.findFirst({
+      where: {
+        id: versionId,
+        secretId,
+      },
+      select: {
+        id: true,
+        versionNumber: true,
+        createdAt: true,
+        commitMessage: true,
+      },
+    });
+
+    if (!version) {
+      throw new NotFoundError(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        "Secret version not found",
+      );
+    }
+
+    const updatedSecret = await prisma.secret.update({
+      where: { id: secretId },
+      data: {
+        currentVersionId: version.id,
+      },
+      include: {
+        vault: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        key: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        currentVersion: {
+          select: {
+            id: true,
+            versionNumber: true,
+            createdAt: true,
+            commitMessage: true,
+          },
+        },
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            versionNumber: true,
+            createdAt: true,
+            commitMessage: true,
+          },
+        },
+      },
+    });
+
+    await createAuditLog({
+      userId,
+      organizationId: secret.vault.organizationId,
+      vaultId: secret.vault.id,
+      action: "UPDATE_SECRET",
+      resourceType: "SECRET",
+      resourceId: secret.id,
+      details: {
+        currentVersionId: version.id,
+        currentVersionNumber: version.versionNumber,
+        previousVersionId: secret.currentVersionId,
+        previousVersionNumber: secret.currentVersion?.versionNumber,
+      },
+      ipAddress: auditInfo.ipAddress || "unknown",
+      userAgent: auditInfo.userAgent || "unknown",
+    });
+
+    return {
+      secret: {
+        ...updatedSecret,
+        latestVersion: updatedSecret.versions[0] || null,
+        hasPassword: !!updatedSecret.passwordHash,
+        passwordHash: undefined,
+        versions: undefined,
+      },
+    };
   },
 
   /**
@@ -766,6 +1317,8 @@ export const secretWrapper = {
     data: {
       vaultId: string;
       secretGroupId?: string;
+      secretIds?: string[];
+      includeDescendants?: boolean;
       password?: string;
       vaultPassword?: string;
     },
@@ -774,9 +1327,23 @@ export const secretWrapper = {
       userAgent?: string;
     },
   ) {
-    const { vaultId, secretGroupId, password, vaultPassword } = data;
+    const {
+      vaultId,
+      secretGroupId,
+      secretIds,
+      includeDescendants,
+      password,
+      vaultPassword,
+    } = data;
 
     const prisma = getPrismaClient();
+
+    if (secretGroupId && secretIds?.length) {
+      throw new ValidationError(
+        ErrorCode.VALIDATION_ERROR,
+        "secretGroupId and secretIds cannot be combined in one bulk reveal request",
+      );
+    }
 
     // Check vault exists
     const vault = await prisma.vault.findUnique({
@@ -785,6 +1352,7 @@ export const secretWrapper = {
         id: true,
         name: true,
         passwordHash: true,
+        organizationId: true,
       },
     });
 
@@ -818,14 +1386,26 @@ export const secretWrapper = {
     }
 
     // Build query — fetch ALL secrets in the vault (or group)
+    const accessContext = await getAccessContext(prisma, userId, vault.organizationId);
+
     const where: any = { vaultId };
-    if (secretGroupId) {
+    if (secretIds?.length) {
+      where.id = { in: secretIds };
+    } else if (secretGroupId && includeDescendants) {
+      const descendantGroupIds = await collectDescendantGroupIds(prisma, vaultId, secretGroupId);
+      where.secretGroupId = { in: [secretGroupId, ...descendantGroupIds] };
+    } else if (secretGroupId) {
       where.secretGroupId = secretGroupId;
     }
 
     const secrets = await prisma.secret.findMany({
       where,
       include: {
+        secretGroup: {
+          select: {
+            path: true,
+          },
+        },
         key: {
           include: {
             versions: {
@@ -834,9 +1414,12 @@ export const secretWrapper = {
             },
           },
         },
-        versions: {
-          orderBy: { versionNumber: "desc" as const },
-          take: 1,
+        currentVersion: {
+          select: {
+            id: true,
+            versionNumber: true,
+            encryptedValue: true,
+          },
         },
       },
     });
@@ -845,6 +1428,15 @@ export const secretWrapper = {
     const skipped: Array<{ name: string; reason: string }> = [];
 
     for (const secret of secrets) {
+      if (!canAccessSecretAction(accessContext, "secrets:use", {
+        orgId: vault.organizationId,
+        vaultId,
+        secretId: secret.id,
+        groupPath: secret.secretGroup?.path,
+      })) {
+        continue;
+      }
+
       // Skip expired secrets
       if (secret.expiresAt && new Date() > secret.expiresAt) {
         skipped.push({ name: secret.name, reason: "expired" });
@@ -864,7 +1456,7 @@ export const secretWrapper = {
         }
       }
 
-      const version = secret.versions[0];
+      const version = secret.currentVersion;
       if (!version) {
         skipped.push({ name: secret.name, reason: "no-version" });
         continue;
@@ -899,6 +1491,8 @@ export const secretWrapper = {
     // Single audit log for the bulk operation
     await createAuditLog({
       userId,
+      organizationId: vault.organizationId,
+      vaultId,
       action: "READ_SECRET",
       resourceType: "VAULT",
       resourceId: vaultId,
@@ -906,6 +1500,8 @@ export const secretWrapper = {
         revealedCount: revealed.length,
         skippedCount: skipped.length,
         secretGroupId,
+        secretIdsCount: secretIds?.length || 0,
+        includeDescendants: !!includeDescendants,
       },
       ipAddress: auditInfo.ipAddress || "unknown",
       userAgent: auditInfo.userAgent || "unknown",

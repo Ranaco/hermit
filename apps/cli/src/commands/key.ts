@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { resolveVault } from "../lib/context.js";
+import { requireActiveVault, resolveKey, resolveVault } from "../lib/context.js";
 import { renderData, requireAuth, runCommand } from "../lib/command-helpers.js";
 import { promptConfirm, promptInput, promptSelect } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
@@ -103,12 +103,13 @@ keyCommand
 
 keyCommand
   .command("get")
-  .description("Show a key by id")
-  .argument("<id>", "Key id")
-  .action((id: string) =>
+  .description("Show a key by id, short id, or name")
+  .argument("<query>", "Key id, short id prefix, or name")
+  .action((query: string) =>
     runCommand(async () => {
       requireAuth();
-      const key = await sdk.getKey(id);
+      const vault = await requireActiveVault();
+      const key = await resolveKey(vault.id, query);
       renderData({ key });
       ui.panel("Key", [
         ui.kv("Name", ui.colors.primary(key.name), { overflow: "truncate" }),
@@ -122,13 +123,15 @@ keyCommand
 keyCommand
   .command("rotate")
   .description("Rotate a key")
-  .argument("<id>", "Key id")
-  .action((id: string) =>
+  .argument("<query>", "Key id, short id prefix, or name")
+  .action((query: string) =>
     runCommand(async () => {
       requireAuth();
-      const result = await sdk.rotateKey(id);
+      const vault = await requireActiveVault();
+      const key = await resolveKey(vault.id, query);
+      const result = await sdk.rotateKey(key.id);
       renderData({ success: true, ...result });
-      ui.success(`Key rotated to version ${result.versionNumber}`);
+      ui.success(`Key "${key.name}" rotated to version ${result.versionNumber}`);
       ui.newline();
     }),
   );
@@ -136,12 +139,13 @@ keyCommand
 keyCommand
   .command("delete")
   .description("Delete a key")
-  .argument("<id>", "Key id")
+  .argument("<query>", "Key id, short id prefix, or name")
   .option("-y, --yes", "Skip confirmation")
-  .action((id: string, opts: DeleteOptions) =>
+  .action((query: string, opts: DeleteOptions) =>
     runCommand(async () => {
       requireAuth();
-      const key = await sdk.getKey(id);
+      const vault = await requireActiveVault();
+      const key = await resolveKey(vault.id, query);
       if (!opts.yes) {
         const confirmed = await promptConfirm(
           { message: `Delete key "${key.name}"?`, default: false },
@@ -153,8 +157,8 @@ keyCommand
           return;
         }
       }
-      await sdk.deleteKey(id);
-      renderData({ success: true, keyId: id });
+      await sdk.deleteKey(key.id);
+      renderData({ success: true, keyId: key.id });
       ui.success(`Key "${key.name}" deleted`);
       ui.newline();
     }),

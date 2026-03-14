@@ -3,6 +3,8 @@ import { AuditAction, ResourceType } from "@hermes/prisma";
 
 export const getAuditLogsSchema = z.object({
   userId: z.string().uuid().optional(),
+  organizationId: z.string().uuid().optional(),
+  vaultId: z.string().uuid().optional(),
   resourceType: z.nativeEnum(ResourceType).optional(),
   resourceId: z.string().optional(),
   action: z.nativeEnum(AuditAction).optional(),

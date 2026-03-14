@@ -1,108 +1,74 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuthStore } from "@/store/auth.store";
-import { useAcceptInvitation } from "@/hooks/use-organizations";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { AuthShell } from "@/components/auth-shell";
+import { Button } from "@/components/ui/button";
 
 function AcceptInvitationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  
-  const { isAuthenticated } = useAuthStore();
-  const { mutate: acceptInvitation, isPending, isError, error } = useAcceptInvitation();
-  
-  const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      return;
+    if (token) {
+      router.replace(`/invite?token=${encodeURIComponent(token)}`);
     }
-
-    if (!isAuthenticated) {
-      // Redirect to login with callback URL
-      const callbackUrl = encodeURIComponent(`/invitations/accept?token=${token}`);
-      router.push(`/login?callbackUrl=${callbackUrl}`);
-      return;
-    }
-
-    if (!hasAttempted) {
-      setHasAttempted(true);
-      acceptInvitation(token, {
-        onSuccess: (data) => {
-          router.push("/dashboard"); 
-        },
-        onError: () => {
-          setHasAttempted(true); 
-        }
-      });
-    }
-  }, [token, isAuthenticated, acceptInvitation, router, hasAttempted]);
+  }, [router, token]);
 
   if (!token) {
     return (
-      <div className="flex h-screen items-center justify-center bg-muted/20">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-destructive">Invalid Invitation</CardTitle>
-            <CardDescription>No invitation token was provided.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <Button onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthShell
+        eyebrow="Legacy Route"
+        title="Invitation link is incomplete"
+        description="This URL is missing its token."
+        asideTitle="One invitation flow."
+        asideDescription="Invitation handling stays in one place."
+        features={[]}
+      >
+        <div className="space-y-4">
+          <div className="rounded-[22px] border border-destructive/15 bg-destructive/8 px-4 py-4 text-sm leading-6 text-muted-foreground">
+            No invitation token was provided.
+          </div>
+          <Button
+            className="h-12 w-full rounded-2xl text-base font-semibold"
+            onClick={() => router.push("/")}
+          >
+            Return Home
+          </Button>
+        </div>
+      </AuthShell>
     );
   }
 
   return (
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-            {isPending ? (
-                <>
-                    <CardTitle>Accepting Invitation</CardTitle>
-                    <CardDescription>Please wait while we process your invitation...</CardDescription>
-                </>
-            ) : isError ? (
-                <>
-                    <CardTitle className="text-destructive">Invitation Failed</CardTitle>
-                    <CardDescription>{(error as any)?.response?.data?.message || "There was an error accepting the invitation."}</CardDescription>
-                </>
-            ) : hasAttempted ? (
-                 <>
-                    <CardTitle className="text-green-600">Success!</CardTitle>
-                    <CardDescription>Redirecting you to the dashboard...</CardDescription>
-                </>
-            ) : (
-                <>
-                    <CardTitle>Processing...</CardTitle>
-                    <CardDescription>Verifying your session...</CardDescription>
-                </>
-            )}
-        </CardHeader>
-        <CardContent className="flex justify-center">
-          {isPending && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
-          {isError && (
-              <Button onClick={() => router.push("/dashboard")} variant="outline" className="mt-4">
-                  Go to Dashboard
-              </Button>
-          )}
-        </CardContent>
-      </Card>
+    <AuthShell
+      eyebrow="Legacy Route"
+      title="Forwarding invitation"
+      description="Redirecting to the primary invitation flow."
+      asideTitle="One canonical path."
+      asideDescription="The token is preserved automatically."
+      features={[]}
+    >
+      <Button className="h-12 w-full rounded-2xl text-base font-semibold" disabled>
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Redirecting to invitation flow...
+      </Button>
+    </AuthShell>
   );
 }
 
 export default function AcceptInvitationPage() {
-    return (
-        <div className="flex h-screen items-center justify-center bg-muted/20">
-            <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin text-primary" />}>
-                <AcceptInvitationContent />
-            </Suspense>
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+          Loading invitation redirect...
         </div>
-    )
+      }
+    >
+      <AcceptInvitationContent />
+    </Suspense>
+  );
 }

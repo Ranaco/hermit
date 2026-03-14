@@ -1,4 +1,31 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { constants } from "node:os";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+
+function resolveCommand(command: string): string {
+  if (process.platform !== "win32") {
+    return command;
+  }
+
+  if (/[\\/]/.test(command) || /\.[a-z0-9]+$/i.test(command)) {
+    return command;
+  }
+
+  const result = spawnSync("where.exe", [command], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+
+  if (result.status !== 0 || !result.stdout) {
+    return command;
+  }
+
+  const matches = result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return matches[0] || command;
+}
 
 /**
  * Spawn a child process with injected environment variables.
@@ -12,39 +39,46 @@ export function runWithEnv(
   envVars: Record<string, string>
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    const child: ChildProcess = spawn(command, args, {
+    const child: ChildProcess = spawn(resolveCommand(command), args, {
       stdio: "inherit",
       env: {
         ...process.env,
         ...envVars,
       },
-      shell: true,
+      shell: false,
+      windowsHide: true,
     });
 
-    // Forward signals to child
-    const forwardSignal = (signal: NodeJS.Signals) => {
-      child.kill(signal);
+    const cleanupSignalHandlers = new Map<NodeJS.Signals, () => void>();
+    const registeredSignals: NodeJS.Signals[] = ["SIGTERM", "SIGINT", "SIGHUP"];
+    const removeSignalHandlers = () => {
+      for (const [signal, handler] of cleanupSignalHandlers) {
+        process.removeListener(signal, handler);
+      }
+      cleanupSignalHandlers.clear();
     };
 
-    process.on("SIGTERM", () => forwardSignal("SIGTERM"));
-    process.on("SIGINT", () => forwardSignal("SIGINT"));
-    process.on("SIGHUP", () => forwardSignal("SIGHUP"));
+    for (const signal of registeredSignals) {
+      const handler = () => {
+        if (!child.killed) {
+          child.kill(signal);
+        }
+      };
+      cleanupSignalHandlers.set(signal, handler);
+      process.on(signal, handler);
+    }
 
     child.on("error", (err) => {
+      removeSignalHandlers();
       reject(err);
     });
 
-    child.on("close", (code) => {
-      // Clear secret env vars from our process after child exits
-      for (const key of Object.keys(envVars)) {
-        delete process.env[key];
+    child.on("close", (code, signal) => {
+      removeSignalHandlers();
+      if (signal) {
+        resolve(128 + (constants.signals[signal] ?? 1));
+        return;
       }
-
-      // Clean up signal handlers
-      process.removeAllListeners("SIGTERM");
-      process.removeAllListeners("SIGINT");
-      process.removeAllListeners("SIGHUP");
-
       resolve(code ?? 1);
     });
   });

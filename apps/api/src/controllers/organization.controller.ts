@@ -117,6 +117,18 @@ export const inviteUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+export const getMyPendingInvitations = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.getMyPendingInvitations(user.id, user.email);
+  res.json({ success: true, data: result });
+});
+
+export const getOrganizationInvitations = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.getOrganizationInvitations(user.id, req.params.id);
+  res.json({ success: true, data: result });
+});
+
 export const acceptInvitation = asyncHandler(async (req: Request, res: Response) => {
   const user = assertUser(req);
   const { token } = req.body;
@@ -125,12 +137,31 @@ export const acceptInvitation = asyncHandler(async (req: Request, res: Response)
     throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Invitation token is required");
   }
 
-  const result = await organizationWrapper.acceptInvitation(user.id, token);
+  const result = await organizationWrapper.acceptInvitation(
+    { id: user.id, email: user.email },
+    token,
+  );
 
   res.json({
     success: true,
     data: result,
     message: "Invitation accepted successfully",
+  });
+});
+
+export const revokeInvitation = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.revokeInvitation(
+    user.id,
+    req.params.id,
+    req.params.invitationId,
+    { ipAddress: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown" },
+  );
+
+  res.json({
+    success: true,
+    data: result,
+    message: "Invitation revoked successfully",
   });
 });
 

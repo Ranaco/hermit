@@ -3,13 +3,13 @@ import { policyService, type CreatePolicyData, type CreateRoleData } from "@/ser
 import { toast } from "sonner";
 import { useOrganizationStore } from "@/store/organization.store";
 
-export function usePolicies() {
+export function usePolicies(enabled = true) {
   const { currentOrganization } = useOrganizationStore();
   
   return useQuery({
     queryKey: ["policies", currentOrganization?.id],
     queryFn: () => policyService.getPolicies(currentOrganization!.id),
-    enabled: !!currentOrganization?.id,
+    enabled: enabled && !!currentOrganization?.id,
   });
 }
 
@@ -62,13 +62,13 @@ export function useDeletePolicy() {
   });
 }
 
-export function useRoles() {
+export function useRoles(enabled = true) {
   const { currentOrganization } = useOrganizationStore();
   
   return useQuery({
     queryKey: ["roles", currentOrganization?.id],
     queryFn: () => policyService.getRoles(currentOrganization!.id),
-    enabled: !!currentOrganization?.id,
+    enabled: enabled && !!currentOrganization?.id,
   });
 }
 

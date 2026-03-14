@@ -1,123 +1,153 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
+import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Building2, Loader2, CheckCircle2 } from "lucide-react";
 import { organizationService } from "@/services/organization.service";
 import { toast } from "sonner";
+
+type InviteStatus = "idle" | "loading" | "success" | "error";
+
+type InviteApiError = {
+  response?: {
+    status?: number;
+    data?: {
+      error?: {
+        message?: string;
+      };
+    };
+  };
+};
 
 function InviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const hasAttempted = useRef(false);
 
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<InviteStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const hasAttempted = React.useRef(false);
 
-  // We define handleAccept first so we can call it in the effect
   const handleAccept = async () => {
-    if (!token) return;
+    if (!token) {
+      return;
+    }
+
     setStatus("loading");
+
     try {
       await organizationService.acceptInvitation(token);
       setStatus("success");
-      toast.success("Invitation accepted successfully!");
-      setTimeout(() => {
+      toast.success("Invitation accepted successfully");
+      window.setTimeout(() => {
         router.push("/dashboard");
-      }, 1500);
-    } catch (error: any) {
+      }, 1400);
+    } catch (error) {
+      const inviteError = error as InviteApiError;
+
       setStatus("error");
-      if (error?.response?.status === 401) {
-        toast.info("Please log in to accept the invitation");
-        router.push(`/login?returnUrl=/invite?token=${token}`);
-      } else {
-        setErrorMessage(
-          error?.response?.data?.error?.message || 
-          "Failed to accept invitation. It may be invalid or expired."
-        );
-        toast.error("Failed to accept invitation");
+
+      if (inviteError.response?.status === 401) {
+        toast.info("Please sign in to accept this invitation");
+        router.push(`/login?returnUrl=${encodeURIComponent(`/invite?token=${token}`)}`);
+        return;
       }
+
+      setErrorMessage(
+        inviteError.response?.data?.error?.message ||
+          "This invitation is invalid, expired, or no longer available.",
+      );
+      toast.error("Unable to accept invitation");
     }
   };
 
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setErrorMessage("No invitation token provided.");
-    } else if (!hasAttempted.current) {
+      setErrorMessage("No invitation token was provided.");
+      return;
+    }
+
+    if (!hasAttempted.current) {
       hasAttempted.current = true;
-      handleAccept();
+      void handleAccept();
     }
   }, [token]);
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-primary text-primary-foreground shadow-md border-2 border-border rounded-md">
-          <Building2 className="h-8 w-8" />
+    <AuthShell
+      eyebrow="Invitation Flow"
+      title="Join your Hermes organization"
+      description="Invitation links are processed automatically."
+      asideTitle="Direct workspace entry."
+      asideDescription="Identity and membership stay aligned."
+      features={[]}
+      footerNote="Membership changes stay explicit."
+    >
+      {status === "success" ? (
+        <div className="space-y-5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted text-foreground">
+            <CheckCircle2 className="h-10 w-10" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-2xl font-semibold tracking-tight text-foreground">Invitation accepted</h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Redirecting to the dashboard.
+            </p>
+          </div>
+          <Button className="h-12 w-full text-base font-medium" onClick={() => router.push("/dashboard")}>
+            Enter dashboard
+          </Button>
         </div>
-        <CardTitle className="text-2xl font-bold">Organization Invite</CardTitle>
-        <CardDescription className="text-base">
-          You have been invited to join an organization on Hermes KMS
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center gap-6">
-        {status === "success" ? (
-          <div className="flex flex-col items-center justify-center space-y-3 py-6 text-green-600 dark:text-green-500">
-            <CheckCircle2 className="h-16 w-16" />
-            <p className="text-lg font-medium text-center">Invitation Accepted!</p>
-            <p className="text-sm text-muted-foreground text-center">Redirecting you to the dashboard...</p>
+      ) : status === "error" ? (
+        <div className="space-y-5">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted text-foreground">
+            <ShieldAlert className="h-10 w-10" />
           </div>
-        ) : status === "error" ? (
-          <div className="flex flex-col items-center justify-center space-y-4 py-6 w-full">
-            <div className="rounded-lg bg-destructive/10 p-4 w-full">
-              <p className="text-sm font-medium text-destructive text-center">{errorMessage}</p>
-            </div>
-            <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
-              Return Home
+          <div className="border-b border-border pb-4">
+            <p className="text-sm font-medium text-foreground">Invitation unavailable</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{errorMessage}</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button className="h-12 flex-1 text-base font-medium" onClick={() => router.push("/")}>
+              Return home
             </Button>
-          </div>
-        ) : (
-          <div className="w-full space-y-4">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-sm text-center text-muted-foreground">
-                Processing your invitation...
-              </p>
-            </div>
             <Button
-              className="w-full shadow-md"
-              size="lg"
-              disabled={true}
+              variant="outline"
+              className="h-12 flex-1 text-base font-medium"
+              onClick={() => token && void handleAccept()}
             >
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Accepting...
+              Try again
             </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <div className="border-b border-border pb-4 text-sm leading-6 text-muted-foreground">
+            Validating invitation.
+          </div>
+          <Button className="h-12 w-full text-base font-medium" disabled>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Processing invitation...
+          </Button>
+        </div>
+      )}
+    </AuthShell>
   );
 }
 
 export default function InvitePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/50 to-accent/10 p-4">
-      <Suspense fallback={
-        <Card className="w-full max-w-md flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </Card>
-      }>
-        <InviteContent />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+          Loading invitation flow...
+        </div>
+      }
+    >
+      <InviteContent />
+    </Suspense>
   );
 }

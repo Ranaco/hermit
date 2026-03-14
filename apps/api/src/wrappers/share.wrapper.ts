@@ -61,24 +61,44 @@ export const shareWrapper = {
     let payloadToEncrypt = value;
 
     // If sharing an existing secret, resolve its current plaintext value
-    let targetSecretVersionId = undefined;
     if (secretId) {
-      // Enforce IAM Policies for the referenced secret (Fix IDOR)
-      const secretUrn = `urn:hermes:org:${key.vault.organizationId}:vault:${key.vaultId}:secret:${secretId}`;
-      const isAllowed = await evaluateAccess(userId, key.vault.organizationId, "secrets:read", secretUrn);
-      if (!isAllowed) {
-          throw new ForbiddenError(ErrorCode.INSUFFICIENT_PERMISSIONS, "You do not have 'secrets:read' permission for the referenced secret.");
-      }
-
       const secret = await prisma.secret.findUnique({
         where: { id: secretId },
         include: {
+          vault: {
+            select: {
+              id: true,
+              organizationId: true,
+            },
+          },
           key: { include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } } },
-          versions: { orderBy: { versionNumber: "desc" }, take: 1 },
+          currentVersion: {
+            select: {
+              id: true,
+              encryptedValue: true,
+              versionNumber: true,
+            },
+          },
         }
       });
-      if (!secret || !secret.versions[0]) {
+      if (!secret || !secret.currentVersion) {
         throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Referenced secret not found");
+      }
+
+      if (!secret.vault || secret.vault.organizationId !== key.vault.organizationId) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Referenced secret does not belong to the same organization as the share key.",
+        );
+      }
+
+      const secretUrn = `urn:hermes:org:${secret.vault.organizationId}:vault:${secret.vault.id}:secret:${secret.id}`;
+      const isAllowed = await evaluateAccess(userId, secret.vault.organizationId, "secrets:read", secretUrn);
+      if (!isAllowed) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "You do not have 'secrets:read' permission for the referenced secret.",
+        );
       }
       
       const secretKeyName = secret.key.versions[0]?.encryptedValue;
@@ -88,11 +108,10 @@ export const shareWrapper = {
       
       const decryptedSecret = await encryptionService.decrypt(
         secretKeyName,
-        secret.versions[0].encryptedValue
+        secret.currentVersion.encryptedValue
       );
       
       payloadToEncrypt = decryptedSecret;
-      targetSecretVersionId = secret.versions[0].id;
     }
 
     // Get the target vault transit key name for the share

@@ -12,6 +12,11 @@ import getPrismaClient from "../services/prisma.service";
 import { requireVaultHealth } from "../middleware/vault-health";
 import { NotFoundError, ErrorCode } from "@hermes/error-handling";
 import {
+  buildGroupCandidateResourceUrns,
+  buildGroupUrn,
+} from "../services/iam-resource.service";
+import { buildPolicyUrn } from "../services/organization-iam.service";
+import {
   createSecretGroupSchema,
   updateSecretGroupSchema,
   getSecretGroupsSchema,
@@ -21,29 +26,100 @@ const router = Router({ mergeParams: true });
 
 const getGroupUrn = async (req: Request & { organizationId?: string }) => {
   const groupId = req.params.groupId || req.params.id || req.query.groupId || req.body.groupId;
+  const parentId = req.query.parentId || req.body.parentId;
   const vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
 
   const prisma = getPrismaClient();
 
   if (groupId) {
-    const group = await prisma.secretGroup.findUnique({ where: { id: groupId }, include: { vault: { select: { organizationId: true, id: true } } } });
+    const group = await prisma.secretGroup.findUnique({
+      where: { id: groupId as string },
+      include: { vault: { select: { organizationId: true, id: true } } },
+    });
     if (!group || !group.vault) {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Group not found");
     }
     req.organizationId = group.vault.organizationId;
-    return `urn:hermes:org:${group.vault.organizationId}:vault:${group.vault.id}:group:${groupId}`;
+    return buildGroupCandidateResourceUrns({
+      orgId: group.vault.organizationId,
+      vaultId: group.vault.id,
+      groupId: group.id,
+      path: group.path,
+    });
+  }
+
+  if (parentId) {
+    const parent = await prisma.secretGroup.findUnique({
+      where: { id: parentId as string },
+      include: { vault: { select: { organizationId: true, id: true } } },
+    });
+    if (!parent || !parent.vault) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Group not found");
+    }
+    req.organizationId = parent.vault.organizationId;
+
+    return [
+      buildGroupUrn(parent.vault.organizationId, parent.vault.id, "*"),
+      ...buildGroupCandidateResourceUrns({
+        orgId: parent.vault.organizationId,
+        vaultId: parent.vault.id,
+        groupId: parent.id,
+        path: parent.path,
+      }),
+    ];
   }
 
   if (vaultId) {
-    const vault = await prisma.vault.findUnique({ where: { id: vaultId }, select: { organizationId: true } });
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId as string },
+      select: { id: true, organizationId: true },
+    });
     if (!vault) {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
     }
     req.organizationId = vault.organizationId;
-    return `urn:hermes:org:${vault.organizationId}:vault:${vaultId}:group:*`;
+    const groups = await prisma.secretGroup.findMany({
+      where: { vaultId: vault.id },
+      select: { id: true, path: true },
+    });
+
+    return Array.from(
+      new Set([
+        buildGroupUrn(vault.organizationId, vault.id, "*"),
+        ...groups.flatMap((group) =>
+          buildGroupCandidateResourceUrns({
+            orgId: vault.organizationId,
+            vaultId: vault.id,
+            groupId: group.id,
+            path: group.path,
+          }),
+        ),
+      ]),
+    );
   }
 
   return "urn:hermes:org:*:vault:*:group:*";
+};
+
+const getPolicyBuilderUrn = async (req: Request & { organizationId?: string }) => {
+  const vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
+  const prisma = getPrismaClient();
+
+  if (vaultId) {
+    const vault = await prisma.vault.findUnique({
+      where: { id: vaultId as string },
+      select: { organizationId: true },
+    });
+
+    if (!vault) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
+    }
+
+    req.organizationId = vault.organizationId;
+    return buildPolicyUrn(vault.organizationId, "*");
+  }
+
+  return buildPolicyUrn(req.organizationId || "*", "*");
 };
 
 router.use(authenticate);
@@ -51,7 +127,16 @@ router.use(authenticate);
 router.get(
   "/",
   validate({ query: getSecretGroupsSchema }),
-  requirePolicy(["groups:read", "secrets:read"], getGroupUrn),
+  async (req, res, next) => {
+    if (req.query.forPolicyBuilder === "true") {
+      return requirePolicy(
+        ["policies:read", "policies:create", "policies:update"],
+        getPolicyBuilderUrn,
+      )(req, res, next);
+    }
+
+    return requirePolicy(["groups:read", "secrets:read"], getGroupUrn)(req, res, next);
+  },
   getGroups,
 );
 

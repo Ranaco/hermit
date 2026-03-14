@@ -190,11 +190,12 @@ model OrganizationInvitation {
     updatedAt      DateTime     @updatedAt
     organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     invitedBy      User         @relation("UserInvitations", fields: [invitedById], references: [id])
+    role           OrganizationRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
-    @@unique([email, organizationId])
     @@index([token])
     @@index([email])
     @@index([organizationId])
+    @@index([email, organizationId])
 }
 
 model OrganizationMember {
@@ -385,6 +386,8 @@ model TeamMember {
 model AuditLog {
     id           String       @id @default(uuid())
     userId       String?
+    organizationId String?
+    vaultId     String?
     action       AuditAction
     resourceType ResourceType
     resourceId   String?
@@ -396,6 +399,9 @@ model AuditLog {
 
     @@index([createdAt])
     @@index([userId])
+    @@index([organizationId])
+    @@index([vaultId])
+    @@index([organizationId, vaultId, createdAt])
     @@index([resourceType, resourceId])
 }
 
@@ -532,6 +538,7 @@ model OrganizationRole {
     updatedAt         DateTime               @updatedAt
     organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     members           OrganizationMember[]
+    invitations       OrganizationInvitation[]
     policyAttachments RolePolicyAttachment[]
     teamAssignments   TeamRoleAssignment[]
 
@@ -544,6 +551,8 @@ model SecretGroup {
     description String?
     vaultId     String
     parentId    String?
+    path        String
+    depth       Int
     createdAt   DateTime      @default(now())
     updatedAt   DateTime      @updatedAt
     vault       Vault         @relation(fields: [vaultId], references: [id], onDelete: Cascade)
@@ -552,6 +561,7 @@ model SecretGroup {
     secrets     Secret[]
 
     @@unique([vaultId, parentId, name])
+    @@index([vaultId, path])
 }
 
 model Policy {

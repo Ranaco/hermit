@@ -4,6 +4,8 @@ import { apiClient } from "@/lib/api";
 export interface AuditLog {
   id: string;
   userId: string | null;
+  organizationId?: string | null;
+  vaultId?: string | null;
   action: string;
   resourceType: string;
   resourceId: string | null;
@@ -20,6 +22,8 @@ export interface AuditLog {
 
 export interface GetAuditLogsParams {
   userId?: string;
+  organizationId?: string;
+  vaultId?: string;
   action?: AuditAction;
   resourceType?: ResourceType;
   resourceId?: string;

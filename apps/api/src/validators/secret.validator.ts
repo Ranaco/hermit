@@ -5,6 +5,10 @@
 
 import { z } from 'zod';
 
+export const secretIdParamSchema = z.object({
+  id: z.string().uuid('Invalid secret ID format'),
+});
+
 /**
  * Create Secret Schema
  */
@@ -89,6 +93,12 @@ export const revealSecretSchema = z.object({
     .optional(),
 });
 
+export const setCurrentSecretVersionSchema = z.object({
+  versionId: z
+    .string()
+    .uuid('Invalid secret version ID format'),
+});
+
 /**
  * Bulk Reveal Secrets Schema
  * For CLI's `hermes run` — fetch and decrypt multiple secrets at once
@@ -101,6 +111,15 @@ export const bulkRevealSecretsSchema = z.object({
   secretGroupId: z
     .string()
     .uuid('Invalid secret group ID format')
+    .optional(),
+
+  secretIds: z
+    .array(z.string().uuid('Invalid secret ID format'))
+    .min(1, 'At least one secret ID is required')
+    .optional(),
+
+  includeDescendants: z
+    .boolean()
     .optional(),
 
   password: z
