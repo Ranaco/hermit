@@ -1,6 +1,6 @@
 {
   "name": "@hermit/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hermit KMS CLI — Secure secret management from your terminal",
   "type": "module",
   "license": "MIT",
