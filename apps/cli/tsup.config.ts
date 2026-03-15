@@ -16,12 +16,13 @@ const esmConfig: Options = {
 
 // CJS bundle — input for @yao-pkg/pkg to produce standalone binaries
 const cjsConfig: Options = {
-  entry: { "index.cjs": "src/index.ts" },
+  entry: { "index": "src/index.ts" },
   format: ["cjs"],
   target: "node18",
   outDir: "dist",
   bundle: true,
   noExternal: [/.*/],
+  shims: true,
   banner: {
     js: "#!/usr/bin/env node",
   },

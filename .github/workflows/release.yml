@@ -52,17 +52,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: linux-x64
-            os: ubuntu-latest
+          - os: ubuntu-latest
+            pkg_target: node18-linux-x64
             binary: hermit-linux-x64
-          - target: macos-x64
-            os: macos-13
+          - os: macos-13
+            pkg_target: node18-macos-x64
             binary: hermit-macos-x64
-          - target: macos-arm64
-            os: macos-latest
+          - os: macos-latest
+            pkg_target: node18-macos-arm64
             binary: hermit-macos-arm64
-          - target: win-x64
-            os: windows-latest
+          - os: windows-latest
+            pkg_target: node18-win-x64
             binary: hermit-win-x64.exe
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
         run: npm run build -w @hermit-kms/cli
 
       - name: Build standalone binary
-        run: npm run build:binaries -w @hermit-kms/cli
+        run: npx pkg apps/cli/dist/index.cjs --target ${{ matrix.pkg_target }} --output apps/cli/release/${{ matrix.binary }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
