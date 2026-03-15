@@ -1,0 +1,119 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL ──────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-hermit}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hermit
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── HashiCorp Vault ─────────────────────────────
+  hcv:
+    build:
+      context: ./apps/hcv_engine
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ENV: production
+      VAULT_ADDR: http://127.0.0.1:8200
+      VAULT_SKIP_VERIFY: "true"
+      WEBHOOK_URL: ${VAULT_WEBHOOK_URL:-}
+      CREDENTIALS_FILE: ./vault_credentials.json
+      WEBHOOK_SECRET: ${VAULT_WEBHOOK_SECRET:-}
+    volumes:
+      - vault_data:/etc/hashicorp_vault/raft_storage
+    networks:
+      - hermit
+    healthcheck:
+      test: ["CMD", "vault", "status", "-format=json"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ── Express API ─────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-hermit}?schema=public
+      VAULT_ADDR: http://hcv:8200
+    depends_on:
+      db:
+        condition: service_healthy
+      hcv:
+        condition: service_started
+    networks:
+      - hermit
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5001/health').then(r=>{if(!r.ok)throw 1})"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Next.js Web ─────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - hermit
+
+  # ── Nginx reverse proxy ─────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - hermit
+
+  # ── Certbot (SSL) ───────────────────────────────
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:
+  vault_data:
+  certbot_www:
+  certbot_conf:
+
+networks:
+  hermit:
+    driver: bridge
