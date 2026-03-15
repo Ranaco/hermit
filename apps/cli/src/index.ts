@@ -50,4 +50,9 @@ program.addCommand(secretRunCommand);
 program.addCommand(configCommand);
 program.addCommand(whoamiCommand);
 
-await program.parseAsync(process.argv);
+(async () => {
+  await program.parseAsync(process.argv);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
