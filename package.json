@@ -1,6 +1,6 @@
 {
-  "name": "hermes-kms",
-  "description": "Hermes Key Management System",
+  "name": "hermit-kms",
+  "description": "Hermit Key Management System",
   "private": true,
   "type": "module",
   "scripts": {

@@ -15,7 +15,7 @@ export interface PolicyDocument {
 
 /**
  * Helper to match an action or resource string against a pattern that may contain a wildcard `*`.
- * e.g., matchURN("urn:hermes:org:123:vault:*", "urn:hermes:org:123:vault:456:secret:789") -> true
+ * e.g., matchURN("urn:hermit:org:123:vault:*", "urn:hermit:org:123:vault:456:secret:789") -> true
  */
 function isMatch(pattern: string, target: string): boolean {
   if (pattern === target) return true;

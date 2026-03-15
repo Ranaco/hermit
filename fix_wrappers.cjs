@@ -2,7 +2,7 @@ const fs = require('fs');
 let vaultStr = fs.readFileSync('apps/api/src/wrappers/vault.wrapper.ts', 'utf8');
 
 // Strip PermissionLevel import
-vaultStr = vaultStr.replace(/import \{ PermissionLevel \} from "@hermes\/prisma";\n/, '');
+vaultStr = vaultStr.replace(/import \{ PermissionLevel \} from "@hermit\/prisma";\n/, '');
 
 // Fix createVault permissions insertion
 vaultStr = vaultStr.replace(/        permissions: \{\n          create: \{\n            userId,\n            permissionLevel: "ADMIN" as PermissionLevel,\n          \},\n        \},\n/, '');

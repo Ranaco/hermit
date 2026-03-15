@@ -72,17 +72,17 @@ type ParsedPolicyState = {
 };
 
 const ORG_RESOURCE_PATTERNS = {
-  invitationWorkspace: /^urn:hermes:org:([^:]+):invitation:\*$/,
-  vaultWorkspace: /^urn:hermes:org:([^:]+):vault:\*$/,
-  vaultExact: /^urn:hermes:org:([^:]+):vault:([^:]+)$/,
-  keyWorkspace: /^urn:hermes:org:([^:]+):vault:\*:key:\*$/,
-  keyVault: /^urn:hermes:org:([^:]+):vault:([^:]+):key:\*$/,
-  secretWorkspace: /^urn:hermes:org:([^:]+):vault:\*:secret:\*$/,
-  secretVault: /^urn:hermes:org:([^:]+):vault:([^:]+):secret:\*$/,
-  secretExact: /^urn:hermes:org:([^:]+):vault:([^:]+):secret:([^:]+)$/,
-  groupWorkspace: /^urn:hermes:org:([^:]+):vault:\*:group:\*$/,
-  groupVault: /^urn:hermes:org:([^:]+):vault:([^:]+):group:\*$/,
-  groupSubtree: /^urn:hermes:org:([^:]+):vault:([^:]+):group:([^:]+):subtree$/,
+  invitationWorkspace: /^urn:hermit:org:([^:]+):invitation:\*$/,
+  vaultWorkspace: /^urn:hermit:org:([^:]+):vault:\*$/,
+  vaultExact: /^urn:hermit:org:([^:]+):vault:([^:]+)$/,
+  keyWorkspace: /^urn:hermit:org:([^:]+):vault:\*:key:\*$/,
+  keyVault: /^urn:hermit:org:([^:]+):vault:([^:]+):key:\*$/,
+  secretWorkspace: /^urn:hermit:org:([^:]+):vault:\*:secret:\*$/,
+  secretVault: /^urn:hermit:org:([^:]+):vault:([^:]+):secret:\*$/,
+  secretExact: /^urn:hermit:org:([^:]+):vault:([^:]+):secret:([^:]+)$/,
+  groupWorkspace: /^urn:hermit:org:([^:]+):vault:\*:group:\*$/,
+  groupVault: /^urn:hermit:org:([^:]+):vault:([^:]+):group:\*$/,
+  groupSubtree: /^urn:hermit:org:([^:]+):vault:([^:]+):group:([^:]+):subtree$/,
 } as const;
 
 export const POLICY_SCOPE_GROUPS: PolicyScopeGroup[] = [
@@ -230,22 +230,22 @@ function getScopeLabel(scope: BuilderScope) {
 function getRuleResources(rule: BuilderRule, group: PolicyScopeGroup, orgId: string) {
   if (rule.scope === "workspace") {
     if (group.resourceKind === "invitation") {
-      return [`urn:hermes:org:${orgId}:invitation:*`];
+      return [`urn:hermit:org:${orgId}:invitation:*`];
     }
 
     if (group.resourceKind === "vault") {
-      return [`urn:hermes:org:${orgId}:vault:*`];
+      return [`urn:hermit:org:${orgId}:vault:*`];
     }
 
     if (group.resourceKind === "key") {
-      return [`urn:hermes:org:${orgId}:vault:*:key:*`];
+      return [`urn:hermit:org:${orgId}:vault:*:key:*`];
     }
 
     if (group.resourceKind === "secret") {
-      return [`urn:hermes:org:${orgId}:vault:*:secret:*`];
+      return [`urn:hermit:org:${orgId}:vault:*:secret:*`];
     }
 
-    return [`urn:hermes:org:${orgId}:vault:*:group:*`];
+    return [`urn:hermit:org:${orgId}:vault:*:group:*`];
   }
 
   if (rule.scope === "vault") {
@@ -254,19 +254,19 @@ function getRuleResources(rule: BuilderRule, group: PolicyScopeGroup, orgId: str
     }
 
     if (group.resourceKind === "vault") {
-      return [`urn:hermes:org:${orgId}:vault:${rule.vaultId}`];
+      return [`urn:hermit:org:${orgId}:vault:${rule.vaultId}`];
     }
 
     if (group.resourceKind === "key") {
-      return [`urn:hermes:org:${orgId}:vault:${rule.vaultId}:key:*`];
+      return [`urn:hermit:org:${orgId}:vault:${rule.vaultId}:key:*`];
     }
 
     if (group.resourceKind === "secret") {
-      return [`urn:hermes:org:${orgId}:vault:${rule.vaultId}:secret:*`];
+      return [`urn:hermit:org:${orgId}:vault:${rule.vaultId}:secret:*`];
     }
 
     if (group.resourceKind === "group") {
-      return [`urn:hermes:org:${orgId}:vault:${rule.vaultId}:group:*`];
+      return [`urn:hermit:org:${orgId}:vault:${rule.vaultId}:group:*`];
     }
 
     return null;
@@ -278,7 +278,7 @@ function getRuleResources(rule: BuilderRule, group: PolicyScopeGroup, orgId: str
     }
 
     return rule.secretIds.map(
-      (secretId) => `urn:hermes:org:${orgId}:vault:${rule.vaultId}:secret:${secretId}`,
+      (secretId) => `urn:hermit:org:${orgId}:vault:${rule.vaultId}:secret:${secretId}`,
     );
   }
 
@@ -286,7 +286,7 @@ function getRuleResources(rule: BuilderRule, group: PolicyScopeGroup, orgId: str
     return null;
   }
 
-  return [`urn:hermes:org:${orgId}:vault:${rule.vaultId}:group:${rule.groupId}:subtree`];
+  return [`urn:hermit:org:${orgId}:vault:${rule.vaultId}:group:${rule.groupId}:subtree`];
 }
 
 function parseRuleScope(group: PolicyScopeGroup, resources: string[]) {

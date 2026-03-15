@@ -1,6 +1,6 @@
-# Hermes KMS Project Context
+# Hermit KMS Project Context
 
-This file provides system context for AI assistants to align themselves with the architectural patterns, security models, and recent system updates in the Hermes project. Read this to avoid rebuilding features or breaking existing paradigms.
+This file provides system context for AI assistants to align themselves with the architectural patterns, security models, and recent system updates in the Hermit project. Read this to avoid rebuilding features or breaking existing paradigms.
 
 ## 1. Vault \u0026 Secret Architecture
 
@@ -11,7 +11,7 @@ This file provides system context for AI assistants to align themselves with the
 ## 2. IAM Policy Engine & Custom Roles
 
 - **Access Control Model**: The application uses a dynamic Identity and Access Management (IAM) Policy Engine instead of standard static RBAC.
-- **Resource URNs**: Every resource (Vault, Secret, Key, SecretGroup) is identified by a unique URN (e.g., `urn:hermes:org:ORG_ID:vault:VAULT_ID:secret:SECRET_ID`).
+- **Resource URNs**: Every resource (Vault, Secret, Key, SecretGroup) is identified by a unique URN (e.g., `urn:hermit:org:ORG_ID:vault:VAULT_ID:secret:SECRET_ID`).
 - **Policy Evaluation**: The `requirePolicy(action, getResourceUrn)` middleware intercepts requests and evaluates the user's assigned custom roles, team roles, and implicitly attached JSON IAM policies to grant or deny access in real-time. Explicit DENY statements always override ALLOW statements.
 - **Default Owner Bypass**: Organization `OWNER`s implicitly bypass all policy evaluations and have universal access.
 

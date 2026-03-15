@@ -109,7 +109,7 @@ vaultCommand
       const organization = await requireActiveOrganization();
       const vaults = await sdk.getVaults(organization.id);
       if (vaults.length === 0) {
-        abort("No vaults found.", { suggestions: ["Run: hermes vault create"] });
+        abort("No vaults found.", { suggestions: ["Run: hermit vault create"] });
       }
 
       let vault = query ? await resolveVault(query) : undefined;

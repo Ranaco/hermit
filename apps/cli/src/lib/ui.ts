@@ -357,9 +357,9 @@ export async function banner(): Promise<void> {
   }
 
   await new Promise<void>((resolve) => {
-    figlet.text("HERMES", { font: "ANSI Shadow" }, (_err, result) => {
+    figlet.text("HERMIT", { font: "ANSI Shadow" }, (_err, result) => {
       if (!result) {
-        console.log(colors.sage("  HERMES"));
+        console.log(colors.sage("  HERMIT"));
         resolve();
         return;
       }

@@ -1,12 +1,12 @@
-# Hermes
+# Hermit
 
-Hermes is a multi-tenant key management and secret operations platform built around HashiCorp Vault Transit, a PostgreSQL-backed metadata layer, and a modern web dashboard plus CLI.
+Hermit is a multi-tenant key management and secret operations platform built around HashiCorp Vault Transit, a PostgreSQL-backed metadata layer, and a modern web dashboard plus CLI.
 
-This document is the high-level reference for the repository as it exists today. It explains the system model, major applications, security boundaries, and local development workflow without replacing the deeper feature-specific docs under [`docs/`](/home/astar/Code/web/hermes/docs).
+This document is the high-level reference for the repository as it exists today. It explains the system model, major applications, security boundaries, and local development workflow without replacing the deeper feature-specific docs under [`docs/`](/home/astar/Code/web/hermit/docs).
 
-## What Hermes Does
+## What Hermit Does
 
-Hermes is designed to help teams manage:
+Hermit is designed to help teams manage:
 
 - Organizations and memberships
 - Vaults scoped under organizations
@@ -14,7 +14,7 @@ Hermes is designed to help teams manage:
 - Secrets and secret versions protected by vault and secret passwords
 - Dynamic IAM policies and custom roles
 - One-time secret sharing
-- Terminal-native workflows through the Hermes CLI
+- Terminal-native workflows through the Hermit CLI
 
 At a high level, the hierarchy is:
 
@@ -28,7 +28,7 @@ Organization
 
 ## Core Architecture
 
-Hermes uses a monorepo with Turborepo workspaces.
+Hermit uses a monorepo with Turborepo workspaces.
 
 ### Applications
 
@@ -53,7 +53,7 @@ Hermes uses a monorepo with Turborepo workspaces.
 
 ### Multi-tenant hierarchy
 
-Hermes is organization-first. Every protected resource belongs to an organization, directly or indirectly.
+Hermit is organization-first. Every protected resource belongs to an organization, directly or indirectly.
 
 - A user can belong to multiple organizations
 - An organization owns many vaults
@@ -64,7 +64,7 @@ This hierarchy matters across both API design and policy evaluation. Creation fl
 
 ### Encryption model
 
-Hermes does not persist plaintext secret material in the database.
+Hermit does not persist plaintext secret material in the database.
 
 - Secret and key operations go through the encryption service and wrapper layer
 - HashiCorp Vault Transit performs encryption and decryption
@@ -73,9 +73,9 @@ Hermes does not persist plaintext secret material in the database.
 
 ### Identity and access model
 
-Hermes uses a dynamic IAM policy engine instead of fixed RBAC alone.
+Hermit uses a dynamic IAM policy engine instead of fixed RBAC alone.
 
-- Resources are addressed by URNs such as `urn:hermes:org:{orgId}:vault:{vaultId}:secret:{secretId}`
+- Resources are addressed by URNs such as `urn:hermit:org:{orgId}:vault:{vaultId}:secret:{secretId}`
 - Requests are checked through `requirePolicy(action, getResourceUrn)`
 - Policies can be inherited from direct custom-role assignment and team-role assignment
 - Explicit `DENY` overrides `ALLOW`
@@ -85,7 +85,7 @@ This means the authorization layer is runtime-evaluated and resource-specific ra
 
 ## Secret Protection Model
 
-Hermes supports a three-tier protection model for secrets:
+Hermit supports a three-tier protection model for secrets:
 
 1. Authentication only
 2. Vault-level password
@@ -147,21 +147,21 @@ The app uses React Query heavily for data fetching and mutation orchestration.
 
 ### CLI
 
-The CLI under `apps/cli` exposes Hermes from the terminal.
+The CLI under `apps/cli` exposes Hermit from the terminal.
 
 Primary capabilities include:
 
 - auth and MFA flows
 - organization, team, vault, key, and secret commands
 - path and group-aware secret lookup
-- `hermes run -- ...` environment injection for child processes
+- `hermit run -- ...` environment injection for child processes
 - non-interactive and JSON-friendly execution modes
 
 The CLI is intended for developer workflow and automation use cases without writing secrets to disk.
 
 ### One-time secret sharing
 
-Hermes supports externally shareable one-time links:
+Hermit supports externally shareable one-time links:
 
 - payloads are encrypted at rest
 - shares can expire
@@ -171,7 +171,7 @@ Hermes supports externally shareable one-time links:
 ## Repository Layout
 
 ```text
-hermes/
+hermit/
 ├── apps/
 │   ├── api/
 │   ├── cli/
@@ -216,7 +216,7 @@ npm run check-types
 
 ### API setup
 
-Use [`apps/api/.env.example`](/home/astar/Code/web/hermes/apps/api/.env.example) as the template for local API configuration.
+Use [`apps/api/.env.example`](/home/astar/Code/web/hermit/apps/api/.env.example) as the template for local API configuration.
 
 Key defaults in the repository:
 
@@ -244,7 +244,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1
 
 ## Engineering Constraints
 
-When working in Hermes, preserve these project-level rules:
+When working in Hermit, preserve these project-level rules:
 
 - Keep TypeScript strict and avoid `any`
 - Do not bypass encryption services for secrets or keys
@@ -255,13 +255,13 @@ When working in Hermes, preserve these project-level rules:
 
 ## Related Documents
 
-- [`README.md`](/home/astar/Code/web/hermes/README.md)
-- [`AGENTS.md`](/home/astar/Code/web/hermes/AGENTS.md)
-- [`docs/quickstart.md`](/home/astar/Code/web/hermes/docs/quickstart.md)
-- [`docs/features/iam-policy-engine.md`](/home/astar/Code/web/hermes/docs/features/iam-policy-engine.md)
-- [`docs/features/organization_system.md`](/home/astar/Code/web/hermes/docs/features/organization_system.md)
-- [`docs/features/one-time-secret-sharing.md`](/home/astar/Code/web/hermes/docs/features/one-time-secret-sharing.md)
-- [`docs/features/CLI.md`](/home/astar/Code/web/hermes/docs/features/CLI.md)
+- [`README.md`](/home/astar/Code/web/hermit/README.md)
+- [`AGENTS.md`](/home/astar/Code/web/hermit/AGENTS.md)
+- [`docs/quickstart.md`](/home/astar/Code/web/hermit/docs/quickstart.md)
+- [`docs/features/iam-policy-engine.md`](/home/astar/Code/web/hermit/docs/features/iam-policy-engine.md)
+- [`docs/features/organization_system.md`](/home/astar/Code/web/hermit/docs/features/organization_system.md)
+- [`docs/features/one-time-secret-sharing.md`](/home/astar/Code/web/hermit/docs/features/one-time-secret-sharing.md)
+- [`docs/features/CLI.md`](/home/astar/Code/web/hermit/docs/features/CLI.md)
 
 ## Current Status
 

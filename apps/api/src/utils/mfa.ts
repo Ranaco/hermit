@@ -6,7 +6,7 @@
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import config from '../config';
-import { AuthenticationError, ErrorCode } from '@hermes/error-handling';
+import { AuthenticationError, ErrorCode } from '@hermit/error-handling';
 
 /**
  * Generate a new TOTP secret for a user

@@ -4,7 +4,7 @@ import { authenticate } from "../middleware/auth";
 import { requirePolicy } from "../middleware/policy";
 import { authRateLimiter } from "../middleware/security";
 import getPrismaClient from "../services/prisma.service";
-import { NotFoundError, ErrorCode } from "@hermes/error-handling";
+import { NotFoundError, ErrorCode } from "@hermit/error-handling";
 
 const router = Router();
 
@@ -18,10 +18,10 @@ const getKeyUrn = async (req: Request & { organizationId?: string }) => {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Key not found");
     }
     req.organizationId = key.vault.organizationId;
-    return `urn:hermes:org:${key.vault.organizationId}:vault:${key.vault.id}:key:${keyId}`;
+    return `urn:hermit:org:${key.vault.organizationId}:vault:${key.vault.id}:key:${keyId}`;
   }
 
-  return "urn:hermes:org:*:vault:*:key:*";
+  return "urn:hermit:org:*:vault:*:key:*";
 };
 
 router.get("/:token", shareController.getShareMetadata);

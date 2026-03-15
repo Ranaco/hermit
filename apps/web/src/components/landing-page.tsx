@@ -39,7 +39,7 @@ const features = [
   {
     icon: <KeyRound className="h-5 w-5" />,
     title: "Vault transit-backed crypto",
-    body: "Hermes stores metadata in Postgres while HashiCorp Vault transit performs encryption, decryption, and key rotation.",
+    body: "Hermit stores metadata in Postgres while HashiCorp Vault transit performs encryption, decryption, and key rotation.",
   },
   {
     icon: <Lock className="h-5 w-5" />,
@@ -73,7 +73,7 @@ export function LandingPage() {
               <Logo className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-black tracking-tight text-foreground">Hermes</span>
+              <span className="text-xl font-black tracking-tight text-foreground">Hermit</span>
               <span className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
                 Secret Operations
               </span>
@@ -166,7 +166,7 @@ export function LandingPage() {
                     <div className="h-3 w-3 rounded-full bg-white/20" />
                   </div>
                   <div className="mx-auto flex h-6 w-64 items-center justify-center rounded bg-white/5 text-xs text-white/40">
-                    hermes.com/dashboard
+                    hermit.com/dashboard
                   </div>
                 </div>
 
@@ -286,7 +286,7 @@ export function LandingPage() {
                 Built for teams that need structure under pressure.
               </h2>
               <p className="mt-4 text-lg leading-8 text-muted-foreground">
-                Hermes is most useful when secret handling has to stay explicit, reviewable, and resilient across fast-moving teams.
+                Hermit is most useful when secret handling has to stay explicit, reviewable, and resilient across fast-moving teams.
               </p>
             </div>
 
@@ -371,7 +371,7 @@ export function LandingPage() {
                   href="/login"
                   className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-6 text-sm font-semibold text-background transition-transform hover:scale-[1.02]"
                 >
-                  Enter Hermes
+                  Enter Hermit
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>

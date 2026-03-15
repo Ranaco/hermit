@@ -1,4 +1,4 @@
-import { config } from "@hermes/eslint-config/react";
+import { config } from "@hermit/eslint-config/react";
 
 /** @type {import("eslint").Linter.Config} */
 export default config;

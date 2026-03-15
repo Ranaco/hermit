@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import logger from "@hermes/logger";
+import logger from "@hermit/logger";
 import encryptionService from "../services/encryption.service";
 
 /**

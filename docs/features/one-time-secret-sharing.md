@@ -1,6 +1,6 @@
 # One-Time Secret Sharing
 
-The One-Time Secret Sharing feature allows Hermes KMS users to securely share sensitive data (passwords, tokens, custom text) with external parties via a secure, self-destructing web link.
+The One-Time Secret Sharing feature allows Hermit KMS users to securely share sensitive data (passwords, tokens, custom text) with external parties via a secure, self-destructing web link.
 
 ## Overview
 

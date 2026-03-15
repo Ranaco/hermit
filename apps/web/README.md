@@ -1,6 +1,6 @@
-# Hermes KMS - Web Application
+# Hermit KMS - Web Application
 
-A modern, industrial-grade frontend for the Hermes Key Management System built with Next.js 14, React Query, Zustand, and Shadcn/ui.
+A modern, industrial-grade frontend for the Hermit Key Management System built with Next.js 14, React Query, Zustand, and Shadcn/ui.
 
 ## 🚀 Features
 
@@ -152,7 +152,7 @@ The app uses a custom Shadcn theme with:
 
 ## 🔌 API Integration
 
-The app connects to the Hermes KMS API. Make sure the API is running on `http://localhost:3000` or update `NEXT_PUBLIC_API_URL` in `.env.local`.
+The app connects to the Hermit KMS API. Make sure the API is running on `http://localhost:3000` or update `NEXT_PUBLIC_API_URL` in `.env.local`.
 
 ### API Endpoints Used
 - `POST /auth/login` - User authentication
@@ -190,5 +190,5 @@ The app connects to the Hermes KMS API. Make sure the API is running on `http://
 
 ## 📝 License
 
-Part of the Hermes KMS monorepo.
+Part of the Hermit KMS monorepo.
 

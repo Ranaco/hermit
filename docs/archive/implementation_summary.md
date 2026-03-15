@@ -1,7 +1,7 @@
-# Hermes KMS - Implementation Summary
+# Hermit KMS - Implementation Summary
 
 ## Overview
-This document summarizes the changes made to implement the proper onboarding and resource creation flow for the Hermes Key Management System.
+This document summarizes the changes made to implement the proper onboarding and resource creation flow for the Hermit Key Management System.
 
 ## Core Flow Implementation
 

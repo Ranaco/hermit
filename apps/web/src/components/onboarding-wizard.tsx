@@ -80,7 +80,7 @@ export function OnboardingWizard() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome to Hermes KMS</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Hermit KMS</CardTitle>
           <CardDescription>
             Let&apos;s set up your secure key management system
           </CardDescription>

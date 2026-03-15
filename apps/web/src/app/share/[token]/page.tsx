@@ -131,7 +131,7 @@ export default function ConsumeSharePage() {
                   <Shield className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-xl font-black tracking-tight text-white">Hermes Secure Share</p>
+                  <p className="text-xl font-black tracking-tight text-white">Hermit Secure Share</p>
                   <p className="text-[11px] uppercase tracking-[0.26em] text-white/42">
                     One-time delivery flow
                   </p>
@@ -146,7 +146,7 @@ export default function ConsumeSharePage() {
                   Send a secret once. Destroy access after reveal.
                 </h1>
                 <p className="max-w-[46ch] text-lg leading-8 text-white/62">
-                  Hermes keeps shared payloads encrypted at rest, supports passphrase protection, and wipes the underlying value immediately after successful consumption.
+                  Hermit keeps shared payloads encrypted at rest, supports passphrase protection, and wipes the underlying value immediately after successful consumption.
                 </p>
               </div>
             </div>

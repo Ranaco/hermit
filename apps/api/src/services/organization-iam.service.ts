@@ -1,4 +1,4 @@
-import type { Prisma } from "@hermes/prisma";
+import type { Prisma } from "@hermit/prisma";
 import getPrismaClient from "./prisma.service";
 
 interface PolicyStatement {
@@ -22,7 +22,7 @@ const MANAGED_POLICY_NAMES = {
 } as const;
 
 function orgUrn(orgId: string): string {
-  return `urn:hermes:org:${orgId}`;
+  return `urn:hermit:org:${orgId}`;
 }
 
 function vaultWildcardUrn(orgId: string): string {

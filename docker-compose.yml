@@ -22,7 +22,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=hermes
+      - POSTGRES_DB=hermit
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

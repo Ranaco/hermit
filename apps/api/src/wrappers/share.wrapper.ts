@@ -3,7 +3,7 @@ import {
   ErrorCode,
   NotFoundError,
   ForbiddenError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import encryptionService from "../services/encryption.service";
 import { createAuditLog } from "../services/audit.service";
@@ -92,7 +92,7 @@ export const shareWrapper = {
         );
       }
 
-      const secretUrn = `urn:hermes:org:${secret.vault.organizationId}:vault:${secret.vault.id}:secret:${secret.id}`;
+      const secretUrn = `urn:hermit:org:${secret.vault.organizationId}:vault:${secret.vault.id}:secret:${secret.id}`;
       const isAllowed = await evaluateAccess(userId, secret.vault.organizationId, "secrets:read", secretUrn);
       if (!isAllowed) {
         throw new ForbiddenError(

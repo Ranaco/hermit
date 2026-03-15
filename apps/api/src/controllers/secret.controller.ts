@@ -14,7 +14,7 @@ import {
   AuthenticationError,
   ValidationError,
   ErrorCode,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import { secretWrapper } from "../wrappers/secret.wrapper";
 
 /**
@@ -234,7 +234,7 @@ export const setCurrentSecretVersion = asyncHandler(
 );
 
 /**
- * Bulk reveal secrets in a vault (for CLI `hermes run`)
+ * Bulk reveal secrets in a vault (for CLI `hermit run`)
  * POST /api/v1/secrets/bulk-reveal
  */
 export const bulkRevealSecrets = asyncHandler(

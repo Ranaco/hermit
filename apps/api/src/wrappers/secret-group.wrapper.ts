@@ -3,7 +3,7 @@ import {
   ErrorCode,
   NotFoundError,
   ForbiddenError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import { randomUUID } from "crypto";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";

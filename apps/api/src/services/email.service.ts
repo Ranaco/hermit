@@ -1,5 +1,5 @@
 
-import { log } from "@hermes/logger";
+import { log } from "@hermit/logger";
 
 /**
  * Email Service

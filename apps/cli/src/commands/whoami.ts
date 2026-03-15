@@ -22,7 +22,7 @@ export const whoamiCommand = new Command("whoami")
 
       if (!authenticated) {
         ui.warn("Not logged in");
-        ui.info("Run: hermes auth login");
+        ui.info("Run: hermit auth login");
         ui.newline();
         return;
       }

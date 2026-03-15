@@ -10,7 +10,7 @@ import { authenticate } from "../middleware/auth";
 import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
 import { requireVaultHealth } from "../middleware/vault-health";
-import { NotFoundError, ErrorCode } from "@hermes/error-handling";
+import { NotFoundError, ErrorCode } from "@hermit/error-handling";
 import {
   buildGroupCandidateResourceUrns,
   buildGroupUrn,
@@ -98,7 +98,7 @@ const getGroupUrn = async (req: Request & { organizationId?: string }) => {
     );
   }
 
-  return "urn:hermes:org:*:vault:*:group:*";
+  return "urn:hermit:org:*:vault:*:group:*";
 };
 
 const getPolicyBuilderUrn = async (req: Request & { organizationId?: string }) => {

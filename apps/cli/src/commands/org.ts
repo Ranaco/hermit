@@ -92,7 +92,7 @@ orgCommand
       requireAuth();
       const organizations = await sdk.getOrganizations();
       if (organizations.length === 0) {
-        abort("No organizations found.", { suggestions: ["Run: hermes org create"] });
+        abort("No organizations found.", { suggestions: ["Run: hermit org create"] });
       }
 
       let organization = query ? await resolveOrganization(query) : undefined;

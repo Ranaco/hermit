@@ -10,7 +10,7 @@ import {
   ValidationError,
   ErrorCode,
   NotFoundError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import { onboardingWrapper } from "../wrappers/onboarding.wrapper";
 
 /**

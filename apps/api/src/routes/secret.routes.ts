@@ -9,7 +9,7 @@ import { requireVaultHealth } from "../middleware/vault-health";
 import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
 import { validate } from "../validators/validation.middleware";
-import { NotFoundError, ErrorCode } from "@hermes/error-handling";
+import { NotFoundError, ErrorCode } from "@hermit/error-handling";
 import {
   buildGroupCandidateResourceUrns,
   buildSecretCandidateResourceUrns,
@@ -164,7 +164,7 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
     return buildSecretUrn(vault.organizationId, vaultId as string, "*");
   }
 
-  return "urn:hermes:org:*:vault:*:secret:*";
+  return "urn:hermit:org:*:vault:*:secret:*";
 };
 
 router.options("/:id/reveal", (req, res) => {

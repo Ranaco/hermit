@@ -1,7 +1,7 @@
-# Hermes KMS Update - 2026-02-22
+# Hermit KMS Update - 2026-02-22
 
 ## Scope
-This update is a full internal revamp (no backward-compatibility guarantees) of the Hermes KMS stack across:
+This update is a full internal revamp (no backward-compatibility guarantees) of the Hermit KMS stack across:
 - Prisma schema model layer
 - API contracts and wrappers
 - Web integration and dashboard UX

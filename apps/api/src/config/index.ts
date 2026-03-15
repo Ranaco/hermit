@@ -10,13 +10,13 @@ const readEnv = (name: string): string | undefined => {
 
 /**
  * Application Configuration
- * Centralized configuration management for the Hermes KMS API
+ * Centralized configuration management for the Hermit KMS API
  */
 
 const config = {
   // Application
   app: {
-    name: "Hermes KMS API",
+    name: "Hermit KMS API",
     version: "1.0.0",
     env: process.env.NODE_ENV || "development",
     port: parseInt(process.env.PORT || "5001", 10),
@@ -25,7 +25,7 @@ const config = {
 
   // Database
   database: {
-    url: process.env.DATABASE_URL || "postgresql://localhost:5432/hermes",
+    url: process.env.DATABASE_URL || "postgresql://localhost:5432/hermit",
   },
 
   // HashiCorp Vault
@@ -35,7 +35,7 @@ const config = {
     namespace: readEnv("VAULT_NAMESPACE") || "", // Empty for root namespace
     transitMount: readEnv("VAULT_TRANSIT_MOUNT") || "transit",
     requestTimeout: parseInt(process.env.VAULT_REQUEST_TIMEOUT || "5000", 10),
-    keyName: process.env.VAULT_KEY_NAME || "hermes-master-key",
+    keyName: process.env.VAULT_KEY_NAME || "hermit-master-key",
     appRole: {
       readRoleId: readEnv("VAULT_APPROLE_ROLE_ID_READ") || "",
       readSecretId: readEnv("VAULT_APPROLE_SECRET_ID_READ") || "",
@@ -52,8 +52,8 @@ const config = {
       process.env.JWT_REFRESH_SECRET || "your-refresh-token-secret-change-this",
     accessTokenExpiry: process.env.JWT_ACCESS_EXPIRY || "15m",
     refreshTokenExpiry: process.env.JWT_REFRESH_EXPIRY || "7d",
-    issuer: process.env.JWT_ISSUER || "hermes-kms",
-    audience: process.env.JWT_AUDIENCE || "hermes-api",
+    issuer: process.env.JWT_ISSUER || "hermit-kms",
+    audience: process.env.JWT_AUDIENCE || "hermit-api",
   },
 
   // Security
@@ -63,7 +63,7 @@ const config = {
     lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || "900000", 10), // 15 minutes
     sessionDuration: parseInt(process.env.SESSION_DURATION || "604800000", 10), // 7 days
     passwordMinLength: parseInt(process.env.PASSWORD_MIN_LENGTH || "12", 10),
-    mfaIssuer: process.env.MFA_ISSUER || "Hermes KMS",
+    mfaIssuer: process.env.MFA_ISSUER || "Hermit KMS",
     trustedProxies: process.env.TRUSTED_PROXIES?.split(",") || [],
   },
 
@@ -95,7 +95,7 @@ const config = {
 
   // Email (for future implementation)
   email: {
-    from: process.env.EMAIL_FROM || "noreply@hermes-kms.com",
+    from: process.env.EMAIL_FROM || "noreply@hermit-kms.com",
     smtp: {
       host: process.env.SMTP_HOST || "",
       port: parseInt(process.env.SMTP_PORT || "587", 10),

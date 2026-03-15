@@ -5,7 +5,7 @@
 
 import bcrypt from 'bcryptjs';
 import config from '../config';
-import { ValidationError, ErrorCode } from '@hermes/error-handling';
+import { ValidationError, ErrorCode } from '@hermit/error-handling';
 
 /**
  * Hash password with bcrypt

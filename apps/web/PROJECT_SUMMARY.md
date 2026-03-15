@@ -1,8 +1,8 @@
-# Hermes KMS - Frontend Setup Summary
+# Hermit KMS - Frontend Setup Summary
 
 ## ✅ Successfully Created!
 
-A complete, production-ready Next.js frontend application for the Hermes KMS API has been created at `apps/web/`.
+A complete, production-ready Next.js frontend application for the Hermit KMS API has been created at `apps/web/`.
 
 ## 🎯 What Was Built
 
@@ -318,7 +318,7 @@ npm run start
 
 ## 🎉 Summary
 
-You now have a **complete, industrial-grade frontend application** for Hermes KMS with:
+You now have a **complete, industrial-grade frontend application** for Hermit KMS with:
 
 - ✅ Modern, funky UI matching the reference design
 - ✅ Efficient state management (React Query + Zustand)

@@ -1,6 +1,6 @@
-# Hermes KMS
+# Hermit KMS
 
-A secure, enterprise-grade Key Management System (KMS) built with modern web technologies. Hermes KMS provides a RESTful API for managing encryption keys, storing secrets, and handling cryptographic operations with multi-tier security controls.
+A secure, enterprise-grade Key Management System (KMS) built with modern web technologies. Hermit KMS provides a RESTful API for managing encryption keys, storing secrets, and handling cryptographic operations with multi-tier security controls.
 
 ## Features
 
@@ -58,7 +58,7 @@ For detailed setup instructions, see [Quick Start Guide](./docs/quickstart.md).
 
 ### Documentation
 
-- [Hermes Overview](./docs/hermes.md)
+- [Hermit Overview](./docs/hermit.md)
 - [Architecture Overview](./docs/features/organization_system.md)
 - [Frontend Guide](./docs/frontend/guide.md)
 - [Bug Fixes](./docs/changelog/fixes.md)
@@ -68,7 +68,7 @@ For detailed setup instructions, see [Quick Start Guide](./docs/quickstart.md).
 
 ```bash
 git clone <repository-url>
-cd hermes
+cd hermit
 yarn install
 ```
 
@@ -76,14 +76,14 @@ yarn install
 
 ```bash
 # Start PostgreSQL
-docker run --name hermes-postgres \
+docker run --name hermit-postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=hermes \
+  -e POSTGRES_DB=hermit \
   -p 5432:5432 \
   -d postgres:15-alpine
 
 # Start HashiCorp Vault
-docker run --name hermes-vault \
+docker run --name hermit-vault \
   -p 8200:8200 \
   -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' \
   -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' \
@@ -178,7 +178,7 @@ yarn clean        # Clean build artifacts
 ### Project Structure
 
 ```
-hermes/
+hermit/
 ├── apps/
 │   ├── api/           # Main API server
 │   └── hcv_engine/    # Vault integration

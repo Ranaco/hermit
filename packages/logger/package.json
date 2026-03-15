@@ -1,5 +1,5 @@
 {
-  "name": "@hermes/logger",
+  "name": "@hermit/logger",
   "version": "0.0.0",
   "type": "module",
   "private": true,
@@ -29,13 +29,13 @@
     "test": "jest"
   },
   "jest": {
-    "preset": "@hermes/jest-presets/node"
+    "preset": "@hermit/jest-presets/node"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "@hermes/eslint-config": "*",
-    "@hermes/jest-presets": "*",
-    "@hermes/typescript-config": "*",
+    "@hermit/eslint-config": "*",
+    "@hermit/jest-presets": "*",
+    "@hermit/typescript-config": "*",
     "@types/node": "^22.15.3",
     "bunchee": "^6.4.0",
     "eslint": "^9.38.0",

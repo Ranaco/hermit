@@ -1,4 +1,4 @@
-# Hermes KMS API
+# Hermit KMS API
 
 A production-ready Key Management System API built with Express, TypeScript, Prisma, and HashiCorp Vault.
 
@@ -75,21 +75,21 @@ cp apps/api/.env.example apps/api/.env
 
 ```bash
 # Using Docker
-docker run --name hermes-postgres \
+docker run --name hermit-postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=hermes \
+  -e POSTGRES_DB=hermit \
   -p 5432:5432 \
   -d postgres:15
 
 # Update DATABASE_URL in .env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hermes"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hermit"
 ```
 
 4. **Set up HashiCorp Vault:**
 
 ```bash
 # Using Docker (development mode - NOT for production!)
-docker run --name hermes-vault \
+docker run --name hermit-vault \
   --cap-add=IPC_LOCK \
   -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' \
   -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' \
@@ -101,7 +101,7 @@ export VAULT_ADDR='http://localhost:8200'
 export VAULT_TOKEN='myroot'
 
 vault secrets enable transit
-vault write -f transit/keys/hermes-master-key
+vault write -f transit/keys/hermit-master-key
 
 # Update VAULT_TOKEN in .env
 VAULT_TOKEN=myroot
@@ -255,13 +255,13 @@ yarn test --watch
 
 ```bash
 # Build image
-docker build -t hermes-kms-api .
+docker build -t hermit-kms-api .
 
 # Run container
 docker run -p 5001:5001 \
   -e DATABASE_URL="postgresql://..." \
   -e VAULT_TOKEN="..." \
-  hermes-kms-api
+  hermit-kms-api
 ```
 
 ## 📚 Development
@@ -303,7 +303,7 @@ MIT
 docker ps | grep postgres
 
 # Test connection
-psql postgresql://postgres:postgres@localhost:5432/hermes
+psql postgresql://postgres:postgres@localhost:5432/hermit
 ```
 
 ### Vault Connection Issues

@@ -16,7 +16,7 @@ import {
   getVaultsQuerySchema,
   vaultIdParamSchema,
 } from "../validators/vault.validator";
-import { ErrorCode, NotFoundError } from "@hermes/error-handling";
+import { ErrorCode, NotFoundError } from "@hermit/error-handling";
 
 const router = Router();
 
@@ -31,7 +31,7 @@ const getVaultUrn = async (req: Request & { organizationId?: string }) => {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
     }
     req.organizationId = vault.organizationId;
-    return `urn:hermes:org:${vault.organizationId}:vault:${vaultId}`;
+    return `urn:hermit:org:${vault.organizationId}:vault:${vaultId}`;
   }
 
   if (explicitOrgId) {
@@ -44,13 +44,13 @@ const getVaultUrn = async (req: Request & { organizationId?: string }) => {
 
     return Array.from(
       new Set([
-        `urn:hermes:org:${explicitOrgId}:vault:*`,
-        ...vaults.map((vault) => `urn:hermes:org:${explicitOrgId}:vault:${vault.id}`),
+        `urn:hermit:org:${explicitOrgId}:vault:*`,
+        ...vaults.map((vault) => `urn:hermit:org:${explicitOrgId}:vault:${vault.id}`),
       ]),
     );
   }
 
-  return "urn:hermes:org:*:vault:*";
+  return "urn:hermit:org:*:vault:*";
 };
 
 router.use(authenticate);

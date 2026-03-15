@@ -1,5 +1,5 @@
 {
-  "name": "@hermes/error-handling",
+  "name": "@hermit/error-handling",
   "version": "0.0.0",
   "type": "module",
   "private": true,
@@ -28,8 +28,8 @@
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
-    "@hermes/eslint-config": "*",
-    "@hermes/typescript-config": "*",
+    "@hermit/eslint-config": "*",
+    "@hermit/typescript-config": "*",
     "@types/node": "^22.15.3",
     "bunchee": "^6.4.0",
     "eslint": "^9.38.0",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AuditAction, ResourceType } from "@hermes/prisma";
+import { AuditAction, ResourceType } from "@hermit/prisma";
 
 export const getAuditLogsSchema = z.object({
   userId: z.string().uuid().optional(),

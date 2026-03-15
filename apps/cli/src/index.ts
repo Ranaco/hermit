@@ -21,8 +21,8 @@ interface GlobalOptions {
 const program = new Command();
 
 program
-  .name("hermes")
-  .description("Hermes KMS - Secure secret management from your terminal")
+  .name("hermit")
+  .description("Hermit KMS - Secure secret management from your terminal")
   .version("0.1.0")
   .option("--json", "Emit machine-readable JSON output")
   .option("--non-interactive", "Disable prompts and animated output")
