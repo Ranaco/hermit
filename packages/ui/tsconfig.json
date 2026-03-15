@@ -1,5 +1,5 @@
 {
-  "extends": "@hermes/typescript-config/react-library.json",
+  "extends": "@hermit/typescript-config/react-library.json",
   "compilerOptions": {
     "lib": ["dom", "ES2015"],
     "sourceMap": true,

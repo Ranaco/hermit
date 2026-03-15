@@ -79,7 +79,7 @@ function InviteContent() {
   return (
     <AuthShell
       eyebrow="Invitation Flow"
-      title="Join your Hermes organization"
+      title="Join your Hermit organization"
       description="Invitation links are processed automatically."
       asideTitle="Direct workspace entry."
       asideDescription="Identity and membership stay aligned."

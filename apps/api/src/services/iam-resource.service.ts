@@ -13,7 +13,7 @@ type SecretScopeInput = {
 };
 
 export function buildGroupUrn(orgId: string, vaultId: string, groupId: string) {
-  return `urn:hermes:org:${orgId}:vault:${vaultId}:group:${groupId}`;
+  return `urn:hermit:org:${orgId}:vault:${vaultId}:group:${groupId}`;
 }
 
 export function buildGroupSubtreeUrn(orgId: string, vaultId: string, groupId: string) {
@@ -21,7 +21,7 @@ export function buildGroupSubtreeUrn(orgId: string, vaultId: string, groupId: st
 }
 
 export function buildSecretUrn(orgId: string, vaultId: string, secretId: string) {
-  return `urn:hermes:org:${orgId}:vault:${vaultId}:secret:${secretId}`;
+  return `urn:hermit:org:${orgId}:vault:${vaultId}:secret:${secretId}`;
 }
 
 export function getGroupPathIds(path?: string | null) {

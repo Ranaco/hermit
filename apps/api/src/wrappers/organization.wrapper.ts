@@ -10,7 +10,7 @@ import {
   NotFoundError,
   AuthorizationError,
   ConflictError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 import { evaluateAccess } from "../services/policy-engine";

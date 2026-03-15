@@ -8,7 +8,7 @@ import {
   AuthenticationError,
   ValidationError,
   ErrorCode,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import { organizationWrapper } from "../wrappers/organization.wrapper";
 
 function assertUser(req: Request) {

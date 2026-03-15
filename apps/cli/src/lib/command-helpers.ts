@@ -23,7 +23,7 @@ export function abort(
 
 export function requireAuth(): void {
   if (!authStore.isAuthenticated()) {
-    abort("Not logged in", { suggestions: ["Run: hermes auth login"], exitCode: 1 });
+    abort("Not logged in", { suggestions: ["Run: hermit auth login"], exitCode: 1 });
   }
 }
 

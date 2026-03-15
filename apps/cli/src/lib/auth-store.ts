@@ -39,7 +39,7 @@ export interface StoreSchema {
 const CURRENT_SCHEMA_VERSION = 1;
 
 const store = new Conf<StoreSchema>({
-  projectName: "hermes-cli",
+  projectName: "hermit-cli",
   schema: {
     schemaVersion: { type: "number", default: CURRENT_SCHEMA_VERSION },
     accessToken: { type: "string", default: "" },
@@ -52,7 +52,7 @@ const store = new Conf<StoreSchema>({
       default: "http://localhost:5001/api/v1",
     },
   },
-  encryptionKey: "hermes-cli-encryption-key-v1",
+  encryptionKey: "hermit-cli-encryption-key-v1",
 });
 
 function migrateStore(): void {

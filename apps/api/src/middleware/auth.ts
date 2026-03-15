@@ -4,7 +4,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, ErrorCode, asyncHandler } from '@hermes/error-handling';
+import { AuthenticationError, ErrorCode, asyncHandler } from '@hermit/error-handling';
 import { verifyAccessToken } from '../utils/jwt';
 import getPrismaClient from '../services/prisma.service';
 import { validateMfaToken } from '../utils/mfa';

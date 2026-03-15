@@ -1,4 +1,4 @@
-# Hermes KMS - Proper Flow Implementation Plan
+# Hermit KMS - Proper Flow Implementation Plan
 
 ## Current Issues
 The system doesn't enforce the correct flow for user onboarding and resource creation.

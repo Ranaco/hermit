@@ -10,7 +10,7 @@ import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
 import { cryptoOperationsRateLimiter, generalRateLimiter } from "../middleware/security";
 import { validate } from "../validators/validation.middleware";
-import { NotFoundError, ErrorCode } from "@hermes/error-handling";
+import { NotFoundError, ErrorCode } from "@hermit/error-handling";
 import {
   createKeySchema,
   getKeysQuerySchema,
@@ -36,7 +36,7 @@ const getKeyUrn = async (req: Request & { organizationId?: string }) => {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Key not found");
     }
     req.organizationId = key.vault.organizationId;
-    return `urn:hermes:org:${key.vault.organizationId}:vault:${key.vault.id}:key:${keyId}`;
+    return `urn:hermit:org:${key.vault.organizationId}:vault:${key.vault.id}:key:${keyId}`;
   }
 
   if (vaultId) {
@@ -45,10 +45,10 @@ const getKeyUrn = async (req: Request & { organizationId?: string }) => {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
     }
     req.organizationId = vault.organizationId;
-    return `urn:hermes:org:${vault.organizationId}:vault:${vaultId}:key:*`;
+    return `urn:hermit:org:${vault.organizationId}:vault:${vaultId}:key:*`;
   }
 
-  return "urn:hermes:org:*:vault:*:key:*";
+  return "urn:hermit:org:*:vault:*:key:*";
 };
 
 router.use(authenticate);

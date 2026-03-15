@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth";
 import { validate } from "../validators/validation.middleware";
-import { asyncHandler } from "@hermes/error-handling";
+import { asyncHandler } from "@hermit/error-handling";
 import { getAuditLogsSchema } from "../validators/audit.validator";
 import { getAuditLogs } from "../controllers/audit.controller";
 

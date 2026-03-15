@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { asyncHandler, AuthenticationError, ErrorCode, ValidationError } from "@hermes/error-handling";
+import { asyncHandler, AuthenticationError, ErrorCode, ValidationError } from "@hermit/error-handling";
 import { shareWrapper } from "../wrappers/share.wrapper";
 
 /**

@@ -3,9 +3,9 @@
  * Comprehensive audit logging for all security-sensitive operations
  */
 
-import { AuditAction, ResourceType } from "@hermes/prisma";
+import { AuditAction, ResourceType } from "@hermit/prisma";
 import getPrismaClient from "./prisma.service";
-import { log } from "@hermes/logger";
+import { log } from "@hermit/logger";
 
 export interface AuditLogData {
   userId?: string;

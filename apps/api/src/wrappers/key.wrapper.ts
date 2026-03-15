@@ -8,7 +8,7 @@ import {
   ValidationError,
   ErrorCode,
   NotFoundError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import encryptionService from "../services/encryption.service";
 import { createAuditLog } from "../services/audit.service";

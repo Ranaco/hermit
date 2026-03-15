@@ -13,7 +13,7 @@ import {
   ErrorCode,
   NotFoundError,
   ForbiddenError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import encryptionService from "../services/encryption.service";
 import { createAuditLog } from "../services/audit.service";
@@ -1308,7 +1308,7 @@ export const secretWrapper = {
   },
 
   /**
-   * Bulk reveal secrets in a vault (for CLI `hermes run`)
+   * Bulk reveal secrets in a vault (for CLI `hermit run`)
    * Skips password-protected and expired secrets unless passwords are provided.
    * Returns { name: decryptedValue } pairs.
    */

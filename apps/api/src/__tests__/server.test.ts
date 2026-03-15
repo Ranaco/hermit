@@ -1,7 +1,7 @@
 import supertest from "supertest";
 import { describe, it, expect, jest } from "@jest/globals";
 
-jest.mock("@hermes/logger", () => ({
+jest.mock("@hermit/logger", () => ({
   log: {
     info: jest.fn(),
     warn: jest.fn(),
@@ -13,7 +13,7 @@ jest.mock("@hermes/logger", () => ({
   },
 }));
 
-jest.mock("@hermes/vault-client", () => ({
+jest.mock("@hermit/vault-client", () => ({
   createVaultService: () => ({
     initialize: async () => undefined,
     testConnection: async () => true,

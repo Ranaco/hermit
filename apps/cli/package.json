@@ -1,13 +1,13 @@
 {
-  "name": "@hermes/cli",
+  "name": "@hermit/cli",
   "version": "0.1.0",
-  "description": "Hermes KMS CLI — Secure secret management from your terminal",
+  "description": "Hermit KMS CLI — Secure secret management from your terminal",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://github.com/hermes-kms/hermes",
+  "homepage": "https://github.com/Ranaco/hermit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hermes-kms/hermes.git",
+    "url": "https://github.com/Ranaco/hermit.git",
     "directory": "apps/cli"
   },
   "keywords": [
@@ -19,7 +19,7 @@
     "devops"
   ],
   "bin": {
-    "hermes": "./dist/index.js"
+    "hermit": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -50,8 +50,8 @@
     "clipboardy": "^4.0.0"
   },
   "devDependencies": {
-    "@hermes/typescript-config": "*",
-    "@hermes/eslint-config": "*",
+    "@hermit/typescript-config": "*",
+    "@hermit/eslint-config": "*",
     "@types/figlet": "^1.7.0",
     "@types/node": "^22.15.3",
     "eslint": "^9.39.3",

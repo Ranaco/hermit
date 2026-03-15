@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { queryAuditLogs } from "../services/audit.service";
 import type { GetAuditLogsInput } from "../validators/audit.validator";
-import { AuditAction, ResourceType } from "@hermes/prisma";
+import { AuditAction, ResourceType } from "@hermit/prisma";
 import getPrismaClient from "../services/prisma.service";
 
 /**

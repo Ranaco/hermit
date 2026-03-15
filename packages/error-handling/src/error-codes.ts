@@ -1,5 +1,5 @@
 /**
- * Standardized Error Codes for Hermes KMS
+ * Standardized Error Codes for Hermit KMS
  */
 
 export enum ErrorCode {

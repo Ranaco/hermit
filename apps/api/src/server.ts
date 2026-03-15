@@ -1,5 +1,5 @@
 /**
- * Hermes KMS API Server
+ * Hermit KMS API Server
  * Production-ready Express server with comprehensive security and middleware
  */
 
@@ -8,8 +8,8 @@ import { json, urlencoded } from "body-parser";
 import morgan from "morgan";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import { log, httpLogStream } from "@hermes/logger";
-import { errorHandler, notFoundHandler } from "@hermes/error-handling";
+import { log, httpLogStream } from "@hermit/logger";
+import { errorHandler, notFoundHandler } from "@hermit/error-handling";
 import config from "./config";
 import {
   setupHelmet,
@@ -18,7 +18,7 @@ import {
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
-import { createVaultService } from "@hermes/vault-client";
+import { createVaultService } from "@hermit/vault-client";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -128,7 +128,7 @@ export const createServer = (): Express => {
     res.json({
       name: config.app.name,
       version: config.app.version,
-      description: "Hermes Key Management System API",
+      description: "Hermit Key Management System API",
       features: config.features,
     });
   });
@@ -175,7 +175,7 @@ async function checkVaultConnection(): Promise<boolean> {
  * Performs startup checks and setup
  */
 export async function initializeApp(): Promise<void> {
-  log.info("Initializing Hermes KMS API...", {
+  log.info("Initializing Hermit KMS API...", {
     environment: config.app.env,
     version: config.app.version,
   });

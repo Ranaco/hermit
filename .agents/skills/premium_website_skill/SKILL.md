@@ -74,7 +74,7 @@ description: Analyze, critique, and specify premium website design using first-i
 ## Brand Case Studies for Reference
 
 - **Apple:** Masters of the **Halo Effect**. They use minimalist hero sections with high-resolution product shots to signal premium status instantly.
-- **Hermes / Bottega Veneta:** Use **Extreme White Space** to signal exclusivity and reduce cognitive load, focusing attention purely on the product.
+- **Hermit / Bottega Veneta:** Use **Extreme White Space** to signal exclusivity and reduce cognitive load, focusing attention purely on the product.
 - **Stripe / Figma:** Combine **Logical Layouts** with **Smooth Micro-interactions** to create a feeling of innovation and technical trustworthiness.
 
 ---

@@ -1,6 +1,6 @@
 /**
  * Security Middleware
- * Implements various security measures for the Hermes KMS API
+ * Implements various security measures for the Hermit KMS API
  */
 
 import helmet from 'helmet';

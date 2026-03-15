@@ -1,6 +1,6 @@
-# Hermes CLI Revamp - 2026-03-06
+# Hermit CLI Revamp - 2026-03-06
 
-This update revamps the Hermes CLI into a publish-ready, terminal-native interface aligned with the current Hermes API.
+This update revamps the Hermit CLI into a publish-ready, terminal-native interface aligned with the current Hermit API.
 
 ## Included
 
@@ -12,7 +12,7 @@ This update revamps the Hermes CLI into a publish-ready, terminal-native interfa
   - `key`
   - `group`
 - rewritten `secret`, `vault`, `org`, `config`, `run`, and `whoami` commands
-- `.hermes.yml` validation and path-aware environment resolution
+- `.hermit.yml` validation and path-aware environment resolution
 - publish-ready package metadata for `apps/cli/package.json`
 - CLI-local ESLint config
 

@@ -1,3 +1,3 @@
-import baseConfig from "@hermes/eslint-config/base";
+import baseConfig from "@hermit/eslint-config/base";
 
 export default [...baseConfig];

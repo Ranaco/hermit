@@ -9,7 +9,7 @@ import {
   ErrorCode,
   ConflictError,
   NotFoundError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import {
   hashPassword,

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { asyncHandler, AuthenticationError, ErrorCode } from "@hermes/error-handling";
+import { asyncHandler, AuthenticationError, ErrorCode } from "@hermit/error-handling";
 import { secretGroupWrapper } from "../wrappers/secret-group.wrapper";
 
 /**

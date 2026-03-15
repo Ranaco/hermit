@@ -1,9 +1,9 @@
 /**
- * Hermes KMS API Entry Point
+ * Hermit KMS API Entry Point
  * Starts the Express server with proper error handling
  */
 
-import { log } from "@hermes/logger";
+import { log } from "@hermit/logger";
 import { createServer, initializeApp, gracefulShutdown } from "./server";
 import { cleanupOldAuditLogs } from "./services/audit.service";
 import config from "./config";
@@ -23,7 +23,7 @@ async function start(): Promise<void> {
 
     // Start listening
     const server = app.listen(port, () => {
-      log.info(`🚀 Hermes KMS API running on port ${port}`, {
+      log.info(`🚀 Hermit KMS API running on port ${port}`, {
         environment: config.app.env,
         version: config.app.version,
         apiPrefix: config.app.apiPrefix,

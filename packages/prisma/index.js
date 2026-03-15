@@ -521,7 +521,7 @@ const fs = require('fs')
 
 config.dirname = __dirname
 if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
-  config.dirname = path.join(process.cwd(), "../../node_modules/@hermes/prisma")
+  config.dirname = path.join(process.cwd(), "../../node_modules/@hermit/prisma")
   config.isBundled = true
 }
 
@@ -545,6 +545,6 @@ exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
 
 path.join(__dirname, "query_engine-windows.dll.node");
-path.join(process.cwd(), "../../node_modules/@hermes/prisma/query_engine-windows.dll.node")
+path.join(process.cwd(), "../../node_modules/@hermit/prisma/query_engine-windows.dll.node")
 path.join(__dirname, "schema.prisma");
-path.join(process.cwd(), "../../node_modules/@hermes/prisma/schema.prisma")
+path.join(process.cwd(), "../../node_modules/@hermit/prisma/schema.prisma")

@@ -42,7 +42,7 @@ export function AuthShell({
                     <Logo className="h-4 w-4 text-foreground" />
                   </span>
                   <span className="flex flex-col">
-                    <span className="text-sm font-semibold text-foreground">Hermes</span>
+                    <span className="text-sm font-semibold text-foreground">Hermit</span>
                     <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       Control Plane
                     </span>
@@ -116,7 +116,7 @@ export function AuthShell({
                     <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card">
                       <Logo className="h-4 w-4 text-foreground" />
                     </span>
-                    <span className="text-sm font-semibold text-foreground">Hermes</span>
+                    <span className="text-sm font-semibold text-foreground">Hermit</span>
                   </Link>
                   <Link
                     href="/"

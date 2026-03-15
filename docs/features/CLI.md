@@ -1,101 +1,101 @@
-# Hermes CLI Documentation
+# Hermit CLI Documentation
 
 > **Version**: `0.1.0`
-> **Package**: `@hermes/cli`
-> **Binary**: `hermes`
+> **Package**: `@hermit/cli`
+> **Binary**: `hermit`
 > **Runtime**: Node.js 18+
 > **Last Updated**: `2026-03-08`
 
-Hermes CLI is a terminal-native secret management tool for the Hermes KMS platform. It provides authentication, organization and vault context management, vault, key, secret, team, and organization management, and environment injection for development and CI workflows.
+Hermit CLI is a terminal-native secret management tool for the Hermit KMS platform. It provides authentication, organization and vault context management, vault, key, secret, team, and organization management, and environment injection for development and CI workflows.
 
 ## Command Surface
 
 ### Global flags
 
 ```bash
-hermes --json
-hermes --non-interactive
-hermes --no-color
+hermit --json
+hermit --non-interactive
+hermit --no-color
 ```
 
 ### `auth`
 
 ```bash
-hermes auth login
-hermes auth logout
-hermes auth status
-hermes auth mfa setup
-hermes auth mfa enable
-hermes auth mfa disable
+hermit auth login
+hermit auth logout
+hermit auth status
+hermit auth mfa setup
+hermit auth mfa enable
+hermit auth mfa disable
 ```
 
 Compatibility alias:
 
 ```bash
-hermes auth setup-mfa
+hermit auth setup-mfa
 ```
 
 ### `org`
 
 ```bash
-hermes org list
-hermes org create --name "Acme"
-hermes org select acme
-hermes org current
+hermit org list
+hermit org create --name "Acme"
+hermit org select acme
+hermit org current
 ```
 
 ### `team`
 
 ```bash
-hermes team list
-hermes team create --name platform
-hermes team members platform
-hermes team add-member platform --user <userId>
+hermit team list
+hermit team create --name platform
+hermit team members platform
+hermit team add-member platform --user <userId>
 ```
 
 ### `vault`
 
 ```bash
-hermes vault list
-hermes vault create --name production --password
-hermes vault select prod
-hermes vault get
-hermes vault delete prod --yes
+hermit vault list
+hermit vault create --name production --password
+hermit vault select prod
+hermit vault get
+hermit vault delete prod --yes
 ```
 
 ### `key`
 
 ```bash
-hermes key list
-hermes key create --name app-key --type STRING
-hermes key get <id>
-hermes key rotate <id>
-hermes key delete <id> --yes
+hermit key list
+hermit key create --name app-key --type STRING
+hermit key get <id>
+hermit key rotate <id>
+hermit key delete <id> --yes
 ```
 
 ### `group`
 
-Hermes supports both legacy `group` terminology and path-first hierarchy UX.
+Hermit supports both legacy `group` terminology and path-first hierarchy UX.
 
 ```bash
-hermes group list
-hermes group create --name api
-hermes group create --path prod --name api
-hermes group tree
-hermes group update api --name backend
-hermes group delete backend --yes
+hermit group list
+hermit group create --name api
+hermit group create --path prod --name api
+hermit group tree
+hermit group update api --name backend
+hermit group delete backend --yes
 ```
 
 ### `secret`
 
 ```bash
-hermes secret list
-hermes secret list --path prod/api
-hermes secret set DATABASE_URL postgres://...
-hermes secret get DATABASE_URL --copy
-hermes secret get DATABASE_URL --password <secret-password>
-hermes secret get DATABASE_URL --vault-password <vault-password>
-hermes secret delete DATABASE_URL --yes
+hermit secret list
+hermit secret list --path prod/api
+hermit secret set DATABASE_URL postgres://...
+hermit secret get DATABASE_URL --copy
+hermit secret get DATABASE_URL --password <secret-password>
+hermit secret get DATABASE_URL --vault-password <vault-password>
+hermit secret delete DATABASE_URL --yes
 ```
 
 Key behavior:
@@ -107,11 +107,11 @@ Key behavior:
 ### `run`
 
 ```bash
-hermes run -- npm run dev
-hermes run --vault production -- npm start
-hermes run --org acme --vault production --path prod/api -- docker compose up
-hermes run --env development -- npm run dev
-hermes run --env production --vault-password <vault-password> -- node server.js
+hermit run -- npm run dev
+hermit run --vault production -- npm start
+hermit run --org acme --vault production --path prod/api -- docker compose up
+hermit run --env development -- npm run dev
+hermit run --env production --vault-password <vault-password> -- node server.js
 ```
 
 Behavior:
@@ -125,25 +125,25 @@ Behavior:
 ### `config`
 
 ```bash
-hermes config init
-hermes config show
-hermes config set-server https://example.com/api/v1
+hermit config init
+hermit config show
+hermit config set-server https://example.com/api/v1
 ```
 
 ### `whoami`
 
 ```bash
-hermes whoami
+hermit whoami
 ```
 
 Shows current user, active org, active vault, server, and MFA status.
 
-## `.hermes.yml`
+## `.hermit.yml`
 
 Supported filenames:
 
-- `.hermes.yml`
-- `.hermes.yaml`
+- `.hermit.yml`
+- `.hermit.yaml`
 
 Example:
 
@@ -173,21 +173,21 @@ Rules:
 - `vault` is required
 - `organization` is optional but recommended for deterministic multi-org usage
 - `group` and `path` are mutually exclusive
-- top-level `server` overrides the stored server for commands that load `.hermes.yml`
+- top-level `server` overrides the stored server for commands that load `.hermit.yml`
 - CLI flag precedence is: explicit flags > env block > active stored context
 
 ## Context Resolution
 
 - If exactly one organization is available, the CLI can adopt it automatically.
-- If multiple organizations are available and none is selected, the CLI stops and requires `hermes org select <org>` or an explicit `--org`.
+- If multiple organizations are available and none is selected, the CLI stops and requires `hermit org select <org>` or an explicit `--org`.
 - If exactly one vault exists in the resolved organization, the CLI can adopt it automatically.
-- If multiple vaults exist, the CLI stops and requires `hermes vault select <vault>` or an explicit `--vault`.
+- If multiple vaults exist, the CLI stops and requires `hermit vault select <vault>` or an explicit `--vault`.
 
 ## Output Modes
 
 ### Interactive mode
 
-- Hermes-styled cards and boxes
+- Hermit-styled cards and boxes
 - animated status lines
 - prompts for selection and confirmation
 
@@ -212,7 +212,7 @@ Rules:
 
 ## Notes
 
-- The CLI aligns with the current Hermes API and active schema naming, including `teams` and secret-group hierarchy.
+- The CLI aligns with the current Hermit API and active schema naming, including `teams` and secret-group hierarchy.
 - Full IAM authoring is intentionally not exposed yet; the CLI focuses on the core developer and operations workflow first.
 
 ## Installation and release usage
@@ -230,14 +230,14 @@ node apps/cli/dist/index.js --help
 ```bash
 cd apps/cli
 npm link
-hermes --help
+hermit --help
 ```
 
 ### Package install
 
 ```bash
-npm install -g @hermes/cli
-hermes --help
+npm install -g @hermit/cli
+hermit --help
 ```
 
 ## CI/CD guidance
@@ -245,8 +245,8 @@ hermes --help
 Recommended flags for automation:
 
 ```bash
-hermes --non-interactive --json auth status
-hermes --non-interactive run --env production --vault-password "$HERMES_VAULT_PASSWORD" -- node server.js
+hermit --non-interactive --json auth status
+hermit --non-interactive run --env production --vault-password "$HERMIT_VAULT_PASSWORD" -- node server.js
 ```
 
 Expected CI behavior:

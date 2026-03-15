@@ -1,5 +1,5 @@
 {
-  "name": "@hermes/jest-presets",
+  "name": "@hermit/jest-presets",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",

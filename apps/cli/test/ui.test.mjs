@@ -50,7 +50,7 @@ test("panel wraps long MFA secret with hanging indentation", async () => {
   const lines = await captureOutput(() => {
     ui.panel("MFA Setup", [
       ui.kv("Secret", "JJBXGUJ4O5VUWKKVVNFYFI3LHLB5UYXRJHFXTMQKLKRIGG23SM5EA", { overflow: "wrap" }),
-      ui.kv("Next", "Run `hermes auth mfa enable`", { overflow: "wrap" }),
+      ui.kv("Next", "Run `hermit auth mfa enable`", { overflow: "wrap" }),
     ]);
   });
 
@@ -65,7 +65,7 @@ test("panel truncates routine metadata like long server URLs", async () => {
 
   const lines = await captureOutput(() => {
     ui.panel("Authentication", [
-      ui.kv("Server", "https://very-long-subdomain.hermes.internal.example.com/api/v1/session/current", { overflow: "truncate" }),
+      ui.kv("Server", "https://very-long-subdomain.hermit.internal.example.com/api/v1/session/current", { overflow: "truncate" }),
     ]);
   }, { columns: 58 });
 
@@ -102,7 +102,7 @@ test("narrow terminals degrade stacked key value rows instead of breaking layout
 
   const lines = await captureOutput(() => {
     ui.panel("Session", [
-      ui.kv("Server", "https://local.hermes.example.dev/api/v1", { overflow: "truncate" }),
+      ui.kv("Server", "https://local.hermit.example.dev/api/v1", { overflow: "truncate" }),
       ui.kv("Vault", "customer-facing-platform-production", { overflow: "truncate" }),
     ]);
   }, { columns: 48 });
@@ -118,7 +118,7 @@ test("panel wraps multiline secret values cleanly", async () => {
 
   const lines = await captureOutput(() => {
     ui.panel("DATABASE_URL", [
-      ui.kv("Value", "postgres://app-user:secret-password@db.internal.example.com:5432/hermes_prod", { overflow: "wrap" }),
+      ui.kv("Value", "postgres://app-user:secret-password@db.internal.example.com:5432/hermit_prod", { overflow: "wrap" }),
       ui.spacer(),
       ui.kv("Updated", ui.formatDateTime("2026-03-06T10:30:00.000Z"), { overflow: "wrap" }),
     ]);

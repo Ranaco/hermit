@@ -3,7 +3,7 @@
  * Contains business logic for user profile management and settings
  */
 
-import { AuthenticationError, ValidationError, ErrorCode, ConflictError } from '@hermes/error-handling';
+import { AuthenticationError, ValidationError, ErrorCode, ConflictError } from '@hermit/error-handling';
 import getPrismaClient from '../services/prisma.service';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../utils/password';
 import { createAuditLog } from '../services/audit.service';

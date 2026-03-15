@@ -71,7 +71,7 @@ export async function requireActiveOrganization(): Promise<sdk.OrganizationSumma
   }
 
   if (organizations.length === 0) {
-    abort("No organizations found.", { suggestions: ["Run: hermes org create"] });
+    abort("No organizations found.", { suggestions: ["Run: hermit org create"] });
   }
 
   if (organizations.length === 1) {
@@ -82,7 +82,7 @@ export async function requireActiveOrganization(): Promise<sdk.OrganizationSumma
   }
 
   abort("No active organization selected.", {
-    suggestions: ["Run: hermes org select <org>"],
+    suggestions: ["Run: hermit org select <org>"],
     details: { organizations: organizations.map((organization) => ({ id: organization.id, name: organization.name })) },
   });
 }
@@ -109,7 +109,7 @@ export async function requireActiveVault(organizationQuery?: string): Promise<sd
   }
 
   if (vaults.length === 0) {
-    throw new Error("No vaults found. Create one with `hermes vault create`.");
+    throw new Error("No vaults found. Create one with `hermit vault create`.");
   }
 
   if (vaults.length === 1) {
@@ -122,7 +122,7 @@ export async function requireActiveVault(organizationQuery?: string): Promise<sd
   }
 
   abort("No active vault selected.", {
-    suggestions: ["Run: hermes vault select <vault>"],
+    suggestions: ["Run: hermit vault select <vault>"],
     details: { vaults: vaults.map((vault) => ({ id: vault.id, name: vault.name })) },
   });
 }

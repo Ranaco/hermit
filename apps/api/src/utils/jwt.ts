@@ -5,7 +5,7 @@
 
 import jwt from "jsonwebtoken";
 import config from "../config";
-import { AuthenticationError, ErrorCode } from "@hermes/error-handling";
+import { AuthenticationError, ErrorCode } from "@hermit/error-handling";
 
 export interface JwtPayload {
   userId: string;

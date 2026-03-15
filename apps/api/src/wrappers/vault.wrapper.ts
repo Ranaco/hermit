@@ -9,7 +9,7 @@ import {
   ErrorCode,
   NotFoundError,
   AuthorizationError,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 import { hashPassword } from "../utils/password";

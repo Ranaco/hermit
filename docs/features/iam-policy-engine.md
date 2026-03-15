@@ -2,7 +2,7 @@
 
 ## High-Level Overview
 
-Hermes has transitioned from a legacy, static Role-Based Access Control (RBAC) model (where permissions were hardcoded enums like `VIEW`, `USE`, `EDIT`) to a highly dynamic, AWS-style Identity and Access Management (IAM) Policy Engine.
+Hermit has transitioned from a legacy, static Role-Based Access Control (RBAC) model (where permissions were hardcoded enums like `VIEW`, `USE`, `EDIT`) to a highly dynamic, AWS-style Identity and Access Management (IAM) Policy Engine.
 
 This allows Organization Admins to create **Custom Roles**, define granular JSON **Policies**, and assign them directly to individual users or entirely to **Teams** (Groups).
 
@@ -10,15 +10,15 @@ This allows Organization Admins to create **Custom Roles**, define granular JSON
 
 ### 1. Resource URNs
 
-Every entity in the hierarchical structure of Hermes is addressed via a standard Uniform Resource Name (URN). This ensures precise matching during policy evaluation.
+Every entity in the hierarchical structure of Hermit is addressed via a standard Uniform Resource Name (URN). This ensures precise matching during policy evaluation.
 
-**Pattern**: `urn:hermes:org:{orgId}:{resourceType}:{resourceId}:[...subResources]`
+**Pattern**: `urn:hermit:org:{orgId}:{resourceType}:{resourceId}:[...subResources]`
 
 Examples:
 
-- **Vault**: `urn:hermes:org:abc-123:vault:xyz-789`
-- **Secret**: `urn:hermes:org:abc-123:vault:xyz-789:secret:foo-456`
-- **Key**: `urn:hermes:org:abc-123:vault:xyz-789:key:bar-321`
+- **Vault**: `urn:hermit:org:abc-123:vault:xyz-789`
+- **Secret**: `urn:hermit:org:abc-123:vault:xyz-789:secret:foo-456`
+- **Key**: `urn:hermit:org:abc-123:vault:xyz-789:key:bar-321`
 
 ### 2. The Policy JSON Structure
 
@@ -31,7 +31,7 @@ Policies are stored as JSON documents outlining an array of statements.
     {
       "effect": "ALLOW",
       "actions": ["secrets:read", "secrets:create"],
-      "resources": ["urn:hermes:org:*:vault:*:secret:*"]
+      "resources": ["urn:hermit:org:*:vault:*:secret:*"]
     },
     {
       "effect": "DENY",
@@ -71,12 +71,12 @@ The `requirePolicy` middleware automatically extracts the user context, infers t
 
 ## 5. HashiCorp Vault AppRole Integration
 
-To enforce secure, machine-to-machine authentication between the Hermes API and the local Vault container (`hcv_engine`), Hermes relies on Vault **AppRoles**.
+To enforce secure, machine-to-machine authentication between the Hermit API and the local Vault container (`hcv_engine`), Hermit relies on Vault **AppRoles**.
 
 ### Role Definitions & Capabilities
 
 - **`read-only-role`**: Maps to `read-only-policy`. Used strictly for accessing and decrypting secrets. Cannot mount new engines or generate keys.
-- **`write-role`**: Maps to `write-policy`. Grants overarching permissions including `sys/mounts/*` and `transit/keys/*`. The Hermes API initializes its `VaultService` client using this role to legitimately provision new transit keys and mount dynamic engines when users execute KMS actions.
+- **`write-role`**: Maps to `write-policy`. Grants overarching permissions including `sys/mounts/*` and `transit/keys/*`. The Hermit API initializes its `VaultService` client using this role to legitimately provision new transit keys and mount dynamic engines when users execute KMS actions.
 
 ### Authentication Lifecycle
 

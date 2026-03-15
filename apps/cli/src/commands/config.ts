@@ -9,20 +9,20 @@ export const configCommand = new Command("config").description("Manage CLI confi
 
 configCommand
   .command("init")
-  .description("Generate a .hermes.yml config file")
+  .description("Generate a .hermit.yml config file")
   .option("-f, --force", "Overwrite existing file")
   .action((opts) =>
     runCommand(async () => {
-      const filePath = `${process.cwd()}/.hermes.yml`;
+      const filePath = `${process.cwd()}/.hermit.yml`;
       if (existsSync(filePath) && !opts.force) {
-        ui.warn(".hermes.yml already exists");
+        ui.warn(".hermit.yml already exists");
         ui.info("Use --force to overwrite");
         ui.newline();
         return;
       }
       writeFileSync(filePath, generateTemplate(), "utf8");
       renderData({ success: true, path: filePath });
-      ui.success("Created .hermes.yml");
+      ui.success("Created .hermit.yml");
       ui.newline();
     }),
   );
@@ -65,7 +65,7 @@ configCommand
 
 configCommand
   .command("set-server <url>")
-  .description("Persist the Hermes API base URL")
+  .description("Persist the Hermit API base URL")
   .action((url: string) =>
     runCommand(async () => {
       authStore.setServerUrl(url);

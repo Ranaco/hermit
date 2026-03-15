@@ -8,7 +8,7 @@ import {
   asyncHandler,
   AuthenticationError,
   ErrorCode,
-} from "@hermes/error-handling";
+} from "@hermit/error-handling";
 import { authWrapper } from "../wrappers/auth.wrapper";
 
 /**

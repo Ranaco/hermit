@@ -5,7 +5,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { z, ZodError } from "zod";
-import { ValidationError, ErrorCode } from "@hermes/error-handling";
+import { ValidationError, ErrorCode } from "@hermit/error-handling";
 
 export interface ValidationSchemas {
   body?: z.ZodSchema;

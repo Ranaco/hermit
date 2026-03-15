@@ -1,5 +1,5 @@
 {
-  "extends": "@hermes/typescript-config/base.json",
+  "extends": "@hermit/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"

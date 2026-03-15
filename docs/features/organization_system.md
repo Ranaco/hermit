@@ -1,7 +1,7 @@
 # Organization System Documentation
 
 ## Overview
-The Hermes KMS organization system provides a comprehensive multi-tenant architecture with role-based access control (RBAC). This system allows users to create organizations, invite team members, manage roles, and organize their keys and secrets within vaults.
+The Hermit KMS organization system provides a comprehensive multi-tenant architecture with role-based access control (RBAC). This system allows users to create organizations, invite team members, manage roles, and organize their keys and secrets within vaults.
 
 ## Architecture
 

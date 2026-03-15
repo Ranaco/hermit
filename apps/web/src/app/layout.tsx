@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Hermes KMS - Key Management System",
+  title: "Hermit KMS - Key Management System",
   description: "Secure, fast, and efficient key management system",
 };
 

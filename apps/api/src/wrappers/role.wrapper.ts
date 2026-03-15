@@ -4,8 +4,8 @@ import {
   ErrorCode,
   NotFoundError,
   ValidationError,
-} from "@hermes/error-handling";
-import { AuditAction, ResourceType } from "@hermes/prisma";
+} from "@hermit/error-handling";
+import { AuditAction, ResourceType } from "@hermit/prisma";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 import { evaluateAccess } from "../services/policy-engine";

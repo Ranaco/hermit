@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { parse } from "yaml";
 import { abort } from "./command-helpers.js";
 
-export interface HermesEnvironment {
+export interface HermitEnvironment {
   organization?: string;
   vault: string;
   group?: string;
@@ -13,13 +13,13 @@ export interface HermesEnvironment {
   map?: Record<string, string>;
 }
 
-export interface HermesConfig {
+export interface HermitConfig {
   version: number;
   server?: string;
-  environments: Record<string, HermesEnvironment>;
+  environments: Record<string, HermitEnvironment>;
 }
 
-const CONFIG_FILENAMES = [".hermes.yml", ".hermes.yaml"];
+const CONFIG_FILENAMES = [".hermit.yml", ".hermit.yaml"];
 
 export function resolveConfigPath(explicitPath?: string): string | null {
   if (explicitPath) {
@@ -37,13 +37,13 @@ export function resolveConfigPath(explicitPath?: string): string | null {
   return null;
 }
 
-export function loadProjectConfig(explicitPath?: string): HermesConfig | null {
+export function loadProjectConfig(explicitPath?: string): HermitConfig | null {
   const path = resolveConfigPath(explicitPath);
   if (!path) {
     return null;
   }
 
-  const parsed = parse(readFileSync(path, "utf8")) as HermesConfig;
+  const parsed = parse(readFileSync(path, "utf8")) as HermitConfig;
   return parsed;
 }
 
@@ -53,7 +53,7 @@ export function resolveConfiguredServerUrl(explicitPath?: string): string | null
   return server ? server : null;
 }
 
-export function validateProjectConfig(config: HermesConfig): { valid: boolean; errors: string[] } {
+export function validateProjectConfig(config: HermitConfig): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   if (config.version !== 1) {
     errors.push("Only config version 1 is supported.");
@@ -76,13 +76,13 @@ export function validateProjectConfig(config: HermesConfig): { valid: boolean; e
   return { valid: errors.length === 0, errors };
 }
 
-export function resolveEnvironmentConfig(config: HermesConfig | null, environmentName: string): HermesEnvironment {
+export function resolveEnvironmentConfig(config: HermitConfig | null, environmentName: string): HermitEnvironment {
   if (!config) {
-    abort("No .hermes.yml found.", { suggestions: ["Run: hermes config init"] });
+    abort("No .hermit.yml found.", { suggestions: ["Run: hermit config init"] });
   }
   const validation = validateProjectConfig(config);
   if (!validation.valid) {
-    abort("Invalid .hermes.yml configuration.", { details: validation.errors });
+    abort("Invalid .hermit.yml configuration.", { details: validation.errors });
   }
   const environment = config.environments[environmentName];
   if (!environment) {
@@ -94,11 +94,11 @@ export function resolveEnvironmentConfig(config: HermesConfig | null, environmen
 }
 
 export function generateTemplate(): string {
-  return `# Hermes CLI configuration
-# Docs: https://hermes.dev/docs/cli
+  return `# Hermit CLI configuration
+# Docs: https://hermit.dev/docs/cli
 
 version: 1
-# server: https://hermes.example.com/api/v1
+# server: https://hermit.example.com/api/v1
 
 environments:
   development:

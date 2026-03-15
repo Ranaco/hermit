@@ -1,4 +1,4 @@
-# 🚀 Hermes KMS - Quick Start Guide
+# 🚀 Hermit KMS - Quick Start Guide
 
 ## Prerequisites
 
@@ -21,9 +21,9 @@ This will install all dependencies for all packages in the monorepo.
 ### Start PostgreSQL
 
 ```powershell
-docker run --name hermes-postgres `
+docker run --name hermit-postgres `
   -e POSTGRES_PASSWORD=postgres `
-  -e POSTGRES_DB=hermes `
+  -e POSTGRES_DB=hermit `
   -p 5432:5432 `
   -d postgres:15-alpine
 ```
@@ -31,7 +31,7 @@ docker run --name hermes-postgres `
 ### Start HashiCorp Vault (Dev Mode)
 
 ```powershell
-docker run --name hermes-vault `
+docker run --name hermit-vault `
   -p 8200:8200 `
   -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' `
   -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' `
@@ -68,7 +68,7 @@ PORT=5001
 API_PREFIX=/api/v1
 
 # Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hermes?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hermit?schema=public"
 
 # Vault
 VAULT_ENDPOINT=http://localhost:8200
@@ -173,7 +173,7 @@ Response:
 curl -X POST http://localhost5001/api/v1/auth/register `
   -H "Content-Type: application/json" `
   -d '{
-    \"email\": \"admin@hermes.local\",
+    \"email\": \"admin@hermit.local\",
     \"password\": \"SecurePass123!@#\",
     \"name\": \"Admin User\"
   }'
@@ -186,7 +186,7 @@ Response:
   "data": {
     "user": {
       "id": "...",
-      "email": "admin@hermes.local",
+      "email": "admin@hermit.local",
       "name": "Admin User",
       ...
     },
@@ -205,7 +205,7 @@ Response:
 curl -X POST http://localhost5001/api/v1/auth/login `
   -H "Content-Type: application/json" `
   -d '{
-    \"email\": \"admin@hermes.local\",
+    \"email\": \"admin@hermit.local\",
     \"password\": \"SecurePass123!@#\"
   }'
 ```
@@ -251,7 +251,7 @@ curl -X POST http://localhost5001/api/v1/keys `
 
 ### Store a Secret (Encrypted Data)
 
-Now you can store secrets using the encryption key. Hermes KMS supports **three-tier security**:
+Now you can store secrets using the encryption key. Hermit KMS supports **three-tier security**:
 
 1. **Secret-level password** (highest) - requires password to decrypt this specific secret
 2. **Vault-level password** (medium) - requires vault password (if vault has one)
@@ -404,7 +404,7 @@ Response:
         "versionNumber": 2,
         "commitMessage": "Rotated AWS key after security audit",
         "createdAt": "2025-11-02T...",
-        "createdBy": { "email": "admin@hermes.local" }
+        "createdBy": { "email": "admin@hermit.local" }
       },
       {
         "versionNumber": 1,
@@ -439,7 +439,7 @@ curl -X POST http://localhost5001/api/v1/keys/$KEY_ID/encrypt `
   -H "Authorization: Bearer $TOKEN" `
   -H "Content-Type: application/json" `
   -d '{
-    \"plaintext\": \"Hello, Hermes KMS!\"
+    \"plaintext\": \"Hello, Hermit KMS!\"
   }'
 ```
 
@@ -469,7 +469,7 @@ Response:
 {
   "success": true,
   "data": {
-    "plaintext": "Hello, Hermes KMS!"
+    "plaintext": "Hello, Hermit KMS!"
   }
 }
 ```
@@ -500,10 +500,10 @@ Get-Content logs/error.log -Tail 50 -Wait
 
 ```powershell
 # Stop Docker containers
-docker stop hermes-postgres hermes-vault
+docker stop hermit-postgres hermit-vault
 
 # Remove containers (optional)
-docker rm hermes-postgres hermes-vault
+docker rm hermit-postgres hermit-vault
 ```
 
 ### Reset Database
@@ -532,7 +532,7 @@ taskkill /PID <process-id> /F
 Make sure PostgreSQL container is running:
 
 ```powershell
-docker ps | Select-String hermes-postgres
+docker ps | Select-String hermit-postgres
 ```
 
 ### Vault Connection Error
@@ -540,7 +540,7 @@ docker ps | Select-String hermes-postgres
 Check Vault is running and Transit engine is enabled:
 
 ```powershell
-docker logs hermes-vault
+docker logs hermit-vault
 ```
 
 ### TypeScript Errors
@@ -589,4 +589,4 @@ For production deployment:
 
 ---
 
-**Congratulations!** 🎉 Your Hermes KMS API is now running!
+**Congratulations!** 🎉 Your Hermit KMS API is now running!

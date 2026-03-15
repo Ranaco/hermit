@@ -1,4 +1,4 @@
-import { AuditAction, ResourceType } from "@hermes/prisma";
+import { AuditAction, ResourceType } from "@hermit/prisma";
 import { apiClient } from "@/lib/api";
 
 export interface AuditLog {

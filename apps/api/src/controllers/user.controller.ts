@@ -4,7 +4,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { asyncHandler, AuthenticationError, ValidationError, ErrorCode } from '@hermes/error-handling';
+import { asyncHandler, AuthenticationError, ValidationError, ErrorCode } from '@hermit/error-handling';
 import { userWrapper } from '../wrappers/user.wrapper';
 
 /**

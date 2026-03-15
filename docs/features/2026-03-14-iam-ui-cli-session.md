@@ -1,4 +1,4 @@
-# Hermes Session Handoff: IAM, Policy Builder, Dashboard, And CLI
+# Hermit Session Handoff: IAM, Policy Builder, Dashboard, And CLI
 
 > Last Updated: `2026-03-14`
 > Scope: web UI, IAM engine, policy builder, invitations, dashboard, secrets UX, CLI injection/runtime
@@ -19,10 +19,10 @@ Main outcomes:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\components\dashboard-layout.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\components\auth-shell.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\app\globals.css`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\components\ui\dialog.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\components\dashboard-layout.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\components\auth-shell.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\app\globals.css`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\components\ui\dialog.tsx`
 
 ## 2. Workspace Dashboard And Invitation Visibility
 
@@ -49,10 +49,10 @@ Defaults:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\services\organization-iam.service.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\routes\organization.routes.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\app\dashboard\page.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\app\dashboard\organizations\page.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\services\organization-iam.service.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\routes\organization.routes.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\app\dashboard\page.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\app\dashboard\organizations\page.tsx`
 
 ## 3. Secret Version Model And Secret Detail Page
 
@@ -71,10 +71,10 @@ Implemented:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\wrappers\secret.wrapper.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\controllers\secret.controller.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\app\dashboard\secrets\[id]\page.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\services\secret.service.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\wrappers\secret.wrapper.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\controllers\secret.controller.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\app\dashboard\secrets\[id]\page.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\services\secret.service.ts`
 
 ## 4. Vault Password Support In Web UI
 
@@ -89,8 +89,8 @@ Implemented:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\app\dashboard\vaults\page.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\services\vault.service.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\app\dashboard\vaults\page.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\services\vault.service.ts`
 
 ## 5. Frontend Permission Gating Cleanup
 
@@ -106,9 +106,9 @@ Implemented:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\hooks\use-rbac.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\components\dashboard-layout.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\hooks\use-auto-context.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\hooks\use-rbac.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\components\dashboard-layout.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\hooks\use-auto-context.ts`
 
 Important limitation:
 
@@ -123,8 +123,8 @@ Implemented:
 
 - `SecretGroup.path` and `SecretGroup.depth`
 - folder subtree resource semantics:
-  - exact folder: `urn:hermes:org:ORG:vault:VAULT:group:GROUP`
-  - subtree folder: `urn:hermes:org:ORG:vault:VAULT:group:GROUP:subtree`
+  - exact folder: `urn:hermit:org:ORG:vault:VAULT:group:GROUP`
+  - subtree folder: `urn:hermit:org:ORG:vault:VAULT:group:GROUP:subtree`
 - candidate-resource policy evaluation
 - subtree-aware folder and secret authorization in wrappers and routes
 
@@ -137,12 +137,12 @@ Security preserved:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\packages\prisma\schema.prisma`
-- `C:\Users\ranas\Code\web\hermes\packages\prisma\migrations\20260314193000_add_secret_group_paths\migration.sql`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\services\iam-resource.service.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\services\policy-engine.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\wrappers\secret-group.wrapper.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\wrappers\secret.wrapper.ts`
+- `C:\Users\ranas\Code\web\hermit\packages\prisma\schema.prisma`
+- `C:\Users\ranas\Code\web\hermit\packages\prisma\migrations\20260314193000_add_secret_group_paths\migration.sql`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\services\iam-resource.service.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\services\policy-engine.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\wrappers\secret-group.wrapper.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\wrappers\secret.wrapper.ts`
 
 ## 7. Policy Page And Builder Revamp
 
@@ -174,9 +174,9 @@ Raw mode remains necessary for:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\app\dashboard\policies\page.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\components\policy-editor.tsx`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\components\ui\switch.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\app\dashboard\policies\page.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\components\policy-editor.tsx`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\components\ui\switch.tsx`
 
 ## 8. Policy Builder Folder Picker Fix
 
@@ -190,10 +190,10 @@ Implemented:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\validators\secret-group.validator.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\routes\secret-group.routes.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\services\secret-group.service.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\web\src\hooks\use-secret-groups.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\validators\secret-group.validator.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\routes\secret-group.routes.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\services\secret-group.service.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\web\src\hooks\use-secret-groups.ts`
 
 Operational note:
 
@@ -201,11 +201,11 @@ Operational note:
 
 ## 9. CLI Injection And Runtime Improvements
 
-The CLI runtime flow was extended so `hermes run` is the main ephemeral injection command with permission-aware resolution.
+The CLI runtime flow was extended so `hermit run` is the main ephemeral injection command with permission-aware resolution.
 
 Implemented:
 
-- `hermes run --inject <target> -- <command>`
+- `hermit run --inject <target> -- <command>`
 - permission-aware resolution for vaults, folders, and secrets
 - folder and secret path resolution constrained to accessible resources
 - recursive folder injection via group or full folder path
@@ -216,10 +216,10 @@ Implemented:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\commands\run.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\lib\context.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\lib\sdk.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\lib\process-runner.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\commands\run.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\lib\context.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\lib\sdk.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\lib\process-runner.ts`
 
 Behavior note:
 
@@ -234,7 +234,7 @@ CLI selectors were expanded so short unique ID prefixes work across more command
 Implemented:
 
 - unique ID-prefix resolution for orgs, vaults, keys, groups, and secrets
-- `hermes secret get` and `hermes secret delete` accept:
+- `hermit secret get` and `hermit secret delete` accept:
   - exact name
   - full ID
   - short unique ID prefix
@@ -245,14 +245,14 @@ Additional fix:
 
 Important files:
 
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\lib\context.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\commands\secret.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\routes\secret.routes.ts`
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\wrappers\secret.wrapper.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\lib\context.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\commands\secret.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\routes\secret.routes.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\wrappers\secret.wrapper.ts`
 
 ## 11. Windows CLI Runtime Fix
 
-During live testing, `hermes run` was found to break quoted commands on Windows because the runner used `shell: true`.
+During live testing, `hermit run` was found to break quoted commands on Windows because the runner used `shell: true`.
 
 Implemented:
 
@@ -263,7 +263,7 @@ Implemented:
 
 Important file:
 
-- `C:\Users\ranas\Code\web\hermes\apps\cli\src\lib\process-runner.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\cli\src\lib\process-runner.ts`
 
 ## 12. Safe Authorization Error Messaging
 
@@ -275,7 +275,7 @@ Implemented:
 
 Important file:
 
-- `C:\Users\ranas\Code\web\hermes\apps\api\src\middleware\policy.ts`
+- `C:\Users\ranas\Code\web\hermit\apps\api\src\middleware\policy.ts`
 
 ## 13. Live Validation Completed
 
@@ -303,15 +303,15 @@ These can be cleaned up later if no longer needed.
 
 Relevant migration introduced in this session:
 
-- `C:\Users\ranas\Code\web\hermes\packages\prisma\migrations\20260314193000_add_secret_group_paths\migration.sql`
+- `C:\Users\ranas\Code\web\hermit\packages\prisma\migrations\20260314193000_add_secret_group_paths\migration.sql`
 
 Builds run successfully during this session:
 
-- `npm run build --workspace @hermes/web`
-- `npm run build --workspace @hermes/api`
-- `npm run build --workspace @hermes/cli`
-- `npm run check-types --workspace @hermes/api`
-- `npm run check-types --workspace @hermes/cli`
+- `npm run build --workspace @hermit/web`
+- `npm run build --workspace @hermit/api`
+- `npm run build --workspace @hermit/cli`
+- `npm run check-types --workspace @hermit/api`
+- `npm run check-types --workspace @hermit/cli`
 
 Existing warnings still present and not introduced by this session:
 

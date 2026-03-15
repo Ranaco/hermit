@@ -101,7 +101,7 @@ export const setCurrentSecretVersionSchema = z.object({
 
 /**
  * Bulk Reveal Secrets Schema
- * For CLI's `hermes run` — fetch and decrypt multiple secrets at once
+ * For CLI's `hermit run` — fetch and decrypt multiple secrets at once
  */
 export const bulkRevealSecretsSchema = z.object({
   vaultId: z

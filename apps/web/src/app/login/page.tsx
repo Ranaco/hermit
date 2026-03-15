@@ -17,13 +17,13 @@ type AuthMode = "signin" | "signup";
 const modeCopy = {
   signin: {
     eyebrow: "Secure Access",
-    title: "Sign in to Hermes",
+    title: "Sign in to Hermit",
     description: "Return to your workspace.",
     asideTitle: "Direct access for operators.",
     asideDescription: "Identity, policy, and reveal flow stay aligned.",
     submitLabel: "Enter workspace",
     pendingLabel: "Signing in...",
-    switchLead: "New to Hermes?",
+    switchLead: "New to Hermit?",
     switchAction: "Create account",
     formNote: "Secret and vault prompts happen at reveal time.",
     introTitle: "Returning operator",

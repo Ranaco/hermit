@@ -103,7 +103,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </span>
                 {sidebarOpen ? (
                   <span className="truncate text-sm font-semibold text-foreground">
-                    Hermes
+                    Hermit
                   </span>
                 ) : null}
               </Link>

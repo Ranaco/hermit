@@ -1,6 +1,6 @@
 {
-  "name": "@hermes/web",
-  "description": "Hermes KMS Dashboard",
+  "name": "@hermit/web",
+  "description": "Hermit KMS Dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {

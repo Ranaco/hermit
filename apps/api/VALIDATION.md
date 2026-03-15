@@ -1,6 +1,6 @@
 # 🛡️ Request Validation Schemas
 
-Comprehensive Zod validation schemas for all Hermes KMS API endpoints.
+Comprehensive Zod validation schemas for all Hermit KMS API endpoints.
 
 ## 📚 Table of Contents
 

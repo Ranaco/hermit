@@ -114,7 +114,7 @@ async function findAccessibleSecretMatches(
 
 function abortForAmbiguousSecret(secretName: string, matches: SecretMatch[]): never {
   abort(`Multiple accessible secrets named "${secretName}" matched the current selection.`, {
-    suggestions: ["Use `hermes run --inject <folder/path/secret> -- <command>` to target one secret."],
+    suggestions: ["Use `hermit run --inject <folder/path/secret> -- <command>` to target one secret."],
     details: {
       matches: matches.map((match) => match.path),
     },
@@ -225,7 +225,7 @@ function buildInjectedEnvVars(
 
   if (collisions.size > 0) {
     abort("Injected environment variable names collided.", {
-      suggestions: ["Use `.hermes.yml` `map` entries to assign unique environment variable names."],
+      suggestions: ["Use `.hermit.yml` `map` entries to assign unique environment variable names."],
       details: {
         collisions: Array.from(collisions.entries()).map(([envName, names]) => ({
           envName,
@@ -239,15 +239,15 @@ function buildInjectedEnvVars(
 }
 
 export const runCommand = new Command("run")
-  .description("Run a command with real-time Hermes secrets injected into the child process environment")
+  .description("Run a command with real-time Hermit secrets injected into the child process environment")
   .option("--vault <query>", "Vault name or id")
   .option("--org <query>", "Organization name or id")
   .option("--group <query>", "Group id or name")
   .option("--path <path>", "Group path like prod/api")
   .option("--secret <name>", "Inject only one secret by name")
   .option("-i, --inject <target>", "Inject a folder path or a full folder/secret path")
-  .option("--env <name>", "Environment from .hermes.yml")
-  .option("--config <path>", "Path to .hermes.yml")
+  .option("--env <name>", "Environment from .hermit.yml")
+  .option("--config <path>", "Path to .hermit.yml")
   .option("--password <password>", "Secret-level password used for protected secrets")
   .option("--vault-password <password>", "Vault password used for protected vaults")
   .argument("[command...]", "Command to run")
@@ -266,7 +266,7 @@ export const runCommand = new Command("run")
       const finalArgs = commandArgs.length > 0 ? commandArgs : dashDash >= 0 ? process.argv.slice(dashDash + 1) : [];
       if (finalArgs.length === 0) {
         abort("No command specified.", {
-          suggestions: ["Usage: hermes run --inject prod/api -- npm run dev"],
+          suggestions: ["Usage: hermit run --inject prod/api -- npm run dev"],
         });
       }
 

@@ -21,7 +21,7 @@ export const authCommand = new Command("auth").description("Manage authenticatio
 
 authCommand
   .command("login")
-  .description("Log in to Hermes")
+  .description("Log in to Hermit")
   .option("-s, --server <url>", "Server URL")
   .option("-e, --email <email>", "Account email")
   .option("-p, --password <password>", "Account password")
@@ -102,7 +102,7 @@ authCommand
 
 authCommand
   .command("logout")
-  .description("Log out of Hermes")
+  .description("Log out of Hermit")
   .action(() =>
     runCommand(async () => {
       requireAuth();
@@ -139,7 +139,7 @@ authCommand
 
       if (!authenticated) {
         ui.warn("Not logged in");
-        ui.info("Run: hermes auth login");
+        ui.info("Run: hermit auth login");
         ui.newline();
         return;
       }
@@ -170,7 +170,7 @@ mfaCommand
         ui.kv("Secret", ui.formatSecretValue(result.secret, "plain"), { overflow: "wrap" }),
         ui.kv("QR", ui.colors.primary("QR code available in JSON output"), { overflow: "wrap" }),
       ]);
-      ui.info("Run: hermes auth mfa enable");
+      ui.info("Run: hermit auth mfa enable");
       ui.newline();
     }),
   );
@@ -228,7 +228,7 @@ authCommand.addCommand(
       renderData({ success: true, ...result });
       ui.panel("MFA Setup", [
         ui.kv("Secret", ui.formatSecretValue(result.secret, "plain"), { overflow: "wrap" }),
-        ui.kv("Next", ui.colors.primary("Run `hermes auth mfa enable`"), { overflow: "wrap" }),
+        ui.kv("Next", ui.colors.primary("Run `hermit auth mfa enable`"), { overflow: "wrap" }),
       ]);
       ui.newline();
     }),

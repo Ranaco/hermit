@@ -1,12 +1,12 @@
-# 🎉 Hermes KMS - Frontend Complete!
+# 🎉 Hermit KMS - Frontend Complete!
 
 ## ✅ What Was Built
 
-A **complete, industrial-grade Next.js frontend** for your Hermes KMS API system has been successfully created!
+A **complete, industrial-grade Next.js frontend** for your Hermit KMS API system has been successfully created!
 
 ### Location
 ```
-/home/astar/Code/web/hermes/apps/web/
+/home/astar/Code/web/hermit/apps/web/
 ```
 
 ## 🚀 Quick Start
@@ -276,7 +276,7 @@ npm run start
 
 ## 🎉 You're All Set!
 
-Your Hermes KMS frontend is:
+Your Hermit KMS frontend is:
 - ✅ **Production-ready**
 - ✅ **Fully functional**
 - ✅ **Beautifully designed** with your custom theme

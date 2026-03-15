@@ -3,8 +3,8 @@ import {
   ErrorCode,
   NotFoundError,
   ValidationError,
-} from "@hermes/error-handling";
-import type { Prisma } from "@hermes/prisma";
+} from "@hermit/error-handling";
+import type { Prisma } from "@hermit/prisma";
 import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 import { evaluateAccess } from "../services/policy-engine";

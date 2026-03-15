@@ -3,7 +3,7 @@
  * Wraps Vault Transit Engine for encryption operations
  */
 
-import { createVaultService } from "@hermes/vault-client";
+import { createVaultService } from "@hermit/vault-client";
 import config from "../config";
 
 // Initialize Vault service using factory exported by the vault-client package
