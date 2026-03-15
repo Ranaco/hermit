@@ -47,22 +47,18 @@ jobs:
     name: Build Binary (${{ matrix.binary }})
     needs: release
     if: needs.release.outputs.published == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            pkg_target: node18-linux-x64
+          - pkg_target: node18-linux-x64
             binary: hermit-linux-x64
-          - os: macos-13
-            pkg_target: node18-macos-x64
+          - pkg_target: node18-macos-x64
             binary: hermit-macos-x64
-          - os: macos-latest
-            pkg_target: node18-macos-arm64
+          - pkg_target: node18-macos-arm64
             binary: hermit-macos-arm64
-          - os: windows-latest
-            pkg_target: node18-win-x64
+          - pkg_target: node18-win-x64
             binary: hermit-win-x64.exe
     steps:
       - uses: actions/checkout@v4

@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.2.3
+
+### Patch Changes
+
+- Fix CI: use ubuntu-latest for all binary builds (pkg cross-compiles for all platforms; macos-13 runner deprecated).
+
 ## 0.2.2
 
 ### Patch Changes
