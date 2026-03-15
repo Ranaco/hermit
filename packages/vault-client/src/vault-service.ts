@@ -417,6 +417,15 @@ export class VaultService {
         log.warn("403 Forbidden when enabling transit engine. Assuming it is already enabled by admin.", { mount: this.transitMount });
         return;
       }
+      if (
+        error?.response?.statusCode === 400 &&
+        error?.response?.body?.errors?.some((e: string) =>
+          e.includes("already in use")
+        )
+      ) {
+        log.info("Transit engine already enabled", { mount: this.transitMount });
+        return;
+      }
       log.error("Failed to enable transit engine", { error });
       throw this.handleVaultError(error as VaultError);
     }
