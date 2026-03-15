@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.2.4
+
+### Patch Changes
+
+- Fix binary CI: pin into-stream to CJS-compatible v6 as a workflow step to work around @yao-pkg/pkg ESM dependency issue.
+
 ## 0.2.3
 
 ### Patch Changes
