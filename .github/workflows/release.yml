@@ -71,8 +71,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Pin into-stream to CJS-compatible version for pkg
-        run: npm install into-stream@6.0.0 --no-save
+      - name: Fix into-stream for @yao-pkg/pkg (remove nested ESM copy)
+        run: |
+          npm install into-stream@6.0.0 --no-save
+          rm -rf node_modules/@yao-pkg/pkg/node_modules/into-stream
 
       - name: Build CLI (ESM + CJS)
         run: npm run build -w @hermit-kms/cli

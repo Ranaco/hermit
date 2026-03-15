@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.2.6
+
+### Patch Changes
+
+- Fix binary builds: remove @yao-pkg/pkg nested into-stream (ESM v9) so it falls back to the root CJS v6 install.
+
 ## 0.2.5
 
 ### Patch Changes
