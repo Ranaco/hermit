@@ -34,7 +34,7 @@ if [ ! -f .env.production ]; then
   # Generate secrets automatically
   JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
   JWT_REFRESH_SECRET=$(openssl rand -base64 64 | tr -d '\n')
-  PG_PASSWORD=$(openssl rand -base64 32 | tr -d '\n')
+  PG_PASSWORD=$(openssl rand -hex 32)
 
   sed -i "s|CHANGE_ME_generate_with_openssl|${JWT_SECRET}|" .env.production
   # Second occurrence for refresh secret

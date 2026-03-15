@@ -66,6 +66,9 @@ COPY --from=builder /app/package.json ./
 
 WORKDIR /app/apps/api
 
+# Symlink node_modules so Prisma client resolution works from API workdir
+RUN ln -s /app/node_modules ./node_modules
+
 EXPOSE 5001
 
 CMD ["node", "dist/index.cjs"]
