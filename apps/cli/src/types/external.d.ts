@@ -1,4 +1,5 @@
 declare module "conf" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   export interface ConfOptions<T extends object> {
     projectName: string;
     schema?: Record<string, unknown>;
