@@ -228,10 +228,4 @@ echo "  • Write: Use RoleID + unwrap SecretID, then login"
 echo "  • Credentials are scoped to secret/data/hermes_vault/* and dynamic engines"
 echo ""
 
-# Revoke root token to reduce long-lived privileged credentials (production only).
-# For development, we keep the root token active for easier debugging and testing.
-if [ "${ENV:-development}" == "production" ]; then
-  vault token revoke "$ROOT_TOKEN" >/dev/null 2>&1 || true
-else
-  echo -e "${GREEN}✓ Root token retained for development environment${NC}"
-fi
+echo -e "${GREEN}✓ Root token retained${NC}"
