@@ -1,6 +1,7 @@
 {
   "name": "@hermit/hcv-engine",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "scripts": {
     "build": "node -e \"require('fs').mkdirSync('dist', {recursive:true}); require('fs').writeFileSync('dist/build.txt', 'done')\"",

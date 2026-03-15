@@ -1,6 +1,7 @@
 {
   "name": "@hermit/prisma",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "types": "index.d.ts",
   "browser": "index-browser.js",
