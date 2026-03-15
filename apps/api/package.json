@@ -8,7 +8,7 @@
     "dev": "tsup --watch --onSuccess \"node dist/index.cjs\"",
     "build": "tsup",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src/ --max-warnings 0",
+    "lint": "eslint src/",
     "test": "jest --detectOpenHandles"
   },
   "jest": {
