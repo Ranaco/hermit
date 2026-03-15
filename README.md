@@ -1,7 +1,7 @@
 # Hermit KMS
 
 [![CI](https://github.com/Ranaco/hermit/actions/workflows/ci.yml/badge.svg)](https://github.com/Ranaco/hermit/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@hermit/cli)](https://www.npmjs.com/package/@hermit/cli)
+[![npm version](https://img.shields.io/npm/v/@hermit-kms/cli)](https://www.npmjs.com/package/@hermit-kms/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 A secure, enterprise-grade Key Management System (KMS) built with modern web technologies. Hermit KMS provides a RESTful API for managing encryption keys, storing secrets, and handling cryptographic operations with multi-tier security controls.
@@ -18,7 +18,7 @@ brew install hermit
 ### npm
 
 ```bash
-npm install -g @hermit/cli
+npm install -g @hermit-kms/cli
 ```
 
 ### Standalone binary

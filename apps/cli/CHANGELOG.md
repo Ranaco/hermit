@@ -1,4 +1,4 @@
-# @hermit/cli
+# @hermit-kms/cli
 
 ## 0.2.0
 

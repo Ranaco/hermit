@@ -31,7 +31,7 @@ body:
     attributes:
       label: Affected Component(s)
       options:
-        - label: CLI (`@hermit/cli`)
+        - label: CLI (`@hermit-kms/cli`)
         - label: API (`apps/api`)
         - label: vault-client (`packages/vault-client`)
         - label: Documentation

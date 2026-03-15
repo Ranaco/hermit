@@ -56,6 +56,6 @@ body:
     attributes:
       label: Environment
       description: OS, Node.js version, installation method
-      placeholder: "macOS 14, Node 20, npm install -g @hermit/cli"
+      placeholder: "macOS 14, Node 20, npm install -g @hermit-kms/cli"
     validations:
       required: false

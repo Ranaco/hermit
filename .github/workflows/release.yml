@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Build CLI
-        run: npm run build -w @hermit/cli
+        run: npm run build -w @hermit-kms/cli
 
       - name: Changesets — version or publish
         id: changesets
@@ -76,10 +76,10 @@ jobs:
         run: npm ci
 
       - name: Build CLI (ESM + CJS)
-        run: npm run build -w @hermit/cli
+        run: npm run build -w @hermit-kms/cli
 
       - name: Build standalone binary
-        run: npm run build:binaries -w @hermit/cli
+        run: npm run build:binaries -w @hermit-kms/cli
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
