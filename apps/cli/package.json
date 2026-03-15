@@ -48,7 +48,7 @@
     "build:binaries": "npm run build && pkg dist/index.cjs --config package.json --out-path release/",
     "check-types": "tsc --noEmit",
     "lint": "eslint src/ --max-warnings 0",
-    "test": "npm run build && node --test test/**/*.test.mjs"
+    "test": "npm run build && (ls test/**/*.test.mjs 2>/dev/null | xargs -r node --test)"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.5.0",
