@@ -42,9 +42,7 @@ if [ ! -f .env.production ]; then
   sed -i "s|CHANGE_ME_strong_random_password|${PG_PASSWORD}|" .env.production
 
   echo "Generated .env.production with random secrets."
-  echo "Review it before continuing: nano .env.production"
-  echo ""
-  read -p "Press Enter to continue after reviewing .env.production..."
+  echo "Generated .env.production — review with: nano .env.production"
 fi
 
 # Source env for variable substitution
