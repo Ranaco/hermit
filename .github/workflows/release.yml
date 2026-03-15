@@ -78,7 +78,7 @@ jobs:
         run: npm run build -w @hermit-kms/cli
 
       - name: Build standalone binary
-        run: npx pkg apps/cli/dist/index.cjs --target ${{ matrix.pkg_target }} --output apps/cli/release/${{ matrix.binary }}
+        run: ./node_modules/.bin/pkg apps/cli/dist/index.cjs --target ${{ matrix.pkg_target }} --output apps/cli/release/${{ matrix.binary }} --no-bytecode --public-packages "*" --public
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

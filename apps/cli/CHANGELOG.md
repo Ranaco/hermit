@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.2.5
+
+### Patch Changes
+
+- Fix binary builds: use local ./node_modules/.bin/pkg instead of npx pkg (npx resolves the abandoned vercel/pkg from the registry). Add --no-bytecode --public flags for ESM dependency compatibility.
+
 ## 0.2.4
 
 ### Patch Changes
