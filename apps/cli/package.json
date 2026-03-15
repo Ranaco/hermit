@@ -31,29 +31,41 @@
   "publishConfig": {
     "access": "public"
   },
+  "pkg": {
+    "assets": [],
+    "targets": [
+      "node18-linux-x64",
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-win-x64"
+    ],
+    "outputPath": "release/"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsup --watch",
     "build": "tsup",
+    "build:binaries": "npm run build && pkg dist/index.cjs --config package.json --out-path release/",
     "check-types": "tsc --noEmit",
     "lint": "eslint src/ --max-warnings 0",
     "test": "npm run build && node --test test/**/*.test.mjs"
   },
   "dependencies": {
-    "commander": "^13.1.0",
-    "chalk": "^5.4.1",
-    "conf": "^13.1.0",
-    "ora": "^8.2.0",
-    "figlet": "^1.8.0",
     "@inquirer/prompts": "^7.5.0",
-    "yaml": "^2.7.1",
-    "clipboardy": "^4.0.0"
+    "chalk": "^5.4.1",
+    "clipboardy": "^4.0.0",
+    "commander": "^13.1.0",
+    "conf": "^13.1.0",
+    "figlet": "^1.8.0",
+    "ora": "^8.2.0",
+    "yaml": "^2.7.1"
   },
   "devDependencies": {
-    "@hermit/typescript-config": "*",
     "@hermit/eslint-config": "*",
+    "@hermit/typescript-config": "*",
     "@types/figlet": "^1.7.0",
     "@types/node": "^22.15.3",
+    "@yao-pkg/pkg": "^6.14.1",
     "eslint": "^9.39.3",
     "tsup": "^8.5.0",
     "typescript": "5.8.2"

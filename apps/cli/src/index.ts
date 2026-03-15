@@ -23,7 +23,7 @@ const program = new Command();
 program
   .name("hermit")
   .description("Hermit KMS - Secure secret management from your terminal")
-  .version("0.1.0")
+  .version(__VERSION__)
   .option("--json", "Emit machine-readable JSON output")
   .option("--non-interactive", "Disable prompts and animated output")
   .option("--no-color", "Disable terminal colors");

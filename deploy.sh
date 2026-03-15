@@ -6,27 +6,55 @@ set -euo pipefail
 # ============================================
 #
 # Prerequisites (run once on VPS):
-#   apt update && apt install -y docker.io docker-compose-plugin git
+#   apt update && apt install -y docker.io docker-compose-plugin git gettext-base
 #   systemctl enable --now docker
 #
-# DNS (Namecheap):
-#   Add A record: Host=hermit  Value=<VPS IP>  TTL=Automatic
+# DNS:
+#   Add A record: Host=<subdomain>  Value=<VPS IP>  TTL=Automatic
 #
 # Usage:
-#   1. SSH into VPS:  ssh root@ssh.ranax.co
-#   2. Clone repo:    git clone https://github.com/Ranaco/hermit.git /opt/hermit && cd /opt/hermit
-#   3. Run:           bash deploy.sh
+#   DOMAIN=kms.example.com EMAIL=admin@example.com bash deploy.sh
+#   -- or --
+#   bash deploy.sh --domain kms.example.com --email admin@example.com
+#   -- or --
+#   bash deploy.sh   (interactive prompts)
 #
 # ============================================
 
-DOMAIN="hermit.ranax.co"
-EMAIL="admin@ranax.co"          # change to your email for Certbot
 APP_DIR="/opt/hermit"
 COMPOSE_FILE="docker-compose.prod.yml"
 
+# ── Parse CLI args ────────────────────────────
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --domain) DOMAIN="$2"; shift 2 ;;
+    --email)  EMAIL="$2";  shift 2 ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+# ── Prompt if not provided ────────────────────
+if [[ -z "${DOMAIN:-}" ]]; then
+  read -rp "Enter domain (e.g. kms.example.com): " DOMAIN
+fi
+if [[ -z "${EMAIL:-}" ]]; then
+  read -rp "Enter email for SSL certificate (Let's Encrypt): " EMAIL
+fi
+
+if [[ -z "$DOMAIN" || -z "$EMAIL" ]]; then
+  echo "Error: DOMAIN and EMAIL are required." >&2
+  exit 1
+fi
+
+export DOMAIN EMAIL
+
 cd "$APP_DIR"
 
-# ── 1. Environment file ──────────────────────
+# ── 1. Generate nginx config from template ───
+echo "Generating nginx config for $DOMAIN..."
+envsubst '${DOMAIN}' < nginx/conf.d/hermit.conf.template > nginx/conf.d/hermit.conf
+
+# ── 2. Environment file ───────────────────────
 if [ ! -f .env.production ]; then
   echo "Creating .env.production from template..."
   cp .env.production.example .env.production
@@ -37,7 +65,6 @@ if [ ! -f .env.production ]; then
   PG_PASSWORD=$(openssl rand -hex 32)
 
   sed -i "s|CHANGE_ME_generate_with_openssl|${JWT_SECRET}|" .env.production
-  # Second occurrence for refresh secret
   sed -i "0,/JWT_REFRESH_SECRET=.*/s|JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}|" .env.production
   sed -i "s|CHANGE_ME_strong_random_password|${PG_PASSWORD}|" .env.production
 
@@ -50,19 +77,18 @@ set -a
 source .env.production
 set +a
 
-# ── 2. Create directories ────────────────────
+# ── 3. Create directories ─────────────────────
 mkdir -p nginx/conf.d
 
-# ── 3. SSL certificate (first time) ──────────
+# ── 4. SSL certificate (first time) ──────────
 if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
   echo "Obtaining SSL certificate for $DOMAIN..."
 
   # Start nginx temporarily for ACME challenge
-  # Use a minimal nginx config that only serves HTTP
-  cat > nginx/conf.d/hermit-temp.conf <<'NGINX'
+  cat > nginx/conf.d/hermit-temp.conf <<NGINX
 server {
     listen 80;
-    server_name hermit.ranax.co;
+    server_name $DOMAIN;
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
@@ -89,23 +115,23 @@ NGINX
   docker compose -f "$COMPOSE_FILE" down
 fi
 
-# ── 4. Build and start all services ──────────
+# ── 5. Build and start all services ──────────
 echo "Building and starting all services..."
 docker compose -f "$COMPOSE_FILE" --env-file .env.production build
 docker compose -f "$COMPOSE_FILE" --env-file .env.production up -d
 
-# ── 5. Wait for database ─────────────────────
+# ── 6. Wait for database ─────────────────────
 echo "Waiting for database to be ready..."
 until docker compose -f "$COMPOSE_FILE" exec db pg_isready -U "$POSTGRES_USER" 2>/dev/null; do
   sleep 2
 done
 
-# ── 6. Run Prisma migrations ─────────────────
+# ── 7. Run Prisma migrations ─────────────────
 echo "Running database migrations..."
 docker compose -f "$COMPOSE_FILE" exec api \
   npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
 
-# ── 7. Health check ──────────────────────────
+# ── 8. Health check ───────────────────────────
 echo ""
 echo "Waiting for services to start..."
 sleep 5

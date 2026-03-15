@@ -1,5 +1,0 @@
-(node:68785) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/astar/Code/web/hermit/decrypt_payload.js is not specified and it doesn't parse as CommonJS.
-Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to /home/astar/Code/web/hermit/package.json.
-(Use `node --trace-warnings ...` to show where the warning was created)
-Usage: node decrypt_payload.js <password>

@@ -1,6 +1,42 @@
 # Hermit KMS
 
+[![CI](https://github.com/Ranaco/hermit/actions/workflows/ci.yml/badge.svg)](https://github.com/Ranaco/hermit/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@hermit/cli)](https://www.npmjs.com/package/@hermit/cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 A secure, enterprise-grade Key Management System (KMS) built with modern web technologies. Hermit KMS provides a RESTful API for managing encryption keys, storing secrets, and handling cryptographic operations with multi-tier security controls.
+
+## Installation
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew tap Ranaco/homebrew-hermit
+brew install hermit
+```
+
+### npm
+
+```bash
+npm install -g @hermit/cli
+```
+
+### Standalone binary
+
+Download the pre-built binary for your platform from [GitHub Releases](https://github.com/Ranaco/hermit/releases):
+
+| Platform | Binary |
+|----------|--------|
+| Linux x64 | `hermit-linux-x64` |
+| macOS Intel | `hermit-macos-x64` |
+| macOS Apple Silicon | `hermit-macos-arm64` |
+| Windows x64 | `hermit-win-x64.exe` |
+
+```bash
+# Linux / macOS — make executable and move to PATH
+chmod +x hermit-linux-x64
+sudo mv hermit-linux-x64 /usr/local/bin/hermit
+```
 
 ## Features
 
@@ -235,32 +271,17 @@ For production deployment:
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
-### Code Style
-
-- Use TypeScript for all new code
-- Follow ESLint rules
-- Format code with Prettier
-- Write meaningful commit messages
-- Add JSDoc comments for public APIs
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, commit conventions, the PR process, and changeset requirements.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT — see [LICENSE](./LICENSE).
 
 ## Support
 
-For questions or issues:
-
-- Check the [QUICKSTART.md](./QUICKSTART.md) for common setup issues
-- Review the API documentation in the code
-- Open an issue on GitHub
+- Setup issues: [docs/quickstart.md](./docs/quickstart.md)
+- Bugs: [open an issue](https://github.com/Ranaco/hermit/issues)
+- Security vulnerabilities: see [SECURITY.md](./SECURITY.md)
 
 ## Roadmap
 

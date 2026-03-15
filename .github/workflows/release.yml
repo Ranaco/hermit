@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      published_packages: ${{ steps.changesets.outputs.publishedPackages }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Changesets — version or publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: npm run release
+          title: "chore: version packages"
+          commit: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build-binaries:
+    name: Build Binary (${{ matrix.binary }})
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-latest
+            binary: hermit-linux-x64
+          - target: macos-x64
+            os: macos-13
+            binary: hermit-macos-x64
+          - target: macos-arm64
+            os: macos-latest
+            binary: hermit-macos-arm64
+          - target: win-x64
+            os: windows-latest
+            binary: hermit-win-x64.exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI (ESM + CJS)
+        run: npm run build -w @hermit/cli
+
+      - name: Build standalone binary
+        run: npm run build:binaries -w @hermit/cli
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}
+          path: apps/cli/release/${{ matrix.binary }}
+          if-no-files-found: error
+
+  create-github-release:
+    name: Create GitHub Release
+    needs: [release, build-binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./binaries
+          merge-multiple: true
+
+      - name: Get released version
+        id: version
+        run: |
+          echo "tag=v$(echo '${{ needs.release.outputs.published_packages }}' | jq -r '.[0].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release with binaries
+        id: gh_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: ./binaries/*
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: [release, create-github-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get released version
+        id: version
+        run: |
+          echo "version=$(echo '${{ needs.release.outputs.published_packages }}' | jq -r '.[0].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Compute binary sha256 hashes
+        id: sha
+        run: |
+          BASE="https://github.com/Ranaco/hermit/releases/download/v${{ steps.version.outputs.version }}"
+          sha_linux=$(curl -sL "$BASE/hermit-linux-x64"    | sha256sum | awk '{print $1}')
+          sha_x64=$(curl   -sL "$BASE/hermit-macos-x64"   | sha256sum | awk '{print $1}')
+          sha_arm64=$(curl -sL "$BASE/hermit-macos-arm64" | sha256sum | awk '{print $1}')
+          echo "linux=$sha_linux"     >> "$GITHUB_OUTPUT"
+          echo "macos_x64=$sha_x64"  >> "$GITHUB_OUTPUT"
+          echo "macos_arm64=$sha_arm64" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: Ranaco/homebrew-hermit
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-hermit
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA_LINUX="${{ steps.sha.outputs.linux }}"
+          SHA_X64="${{ steps.sha.outputs.macos_x64 }}"
+          SHA_ARM64="${{ steps.sha.outputs.macos_arm64 }}"
+
+          sed -i "s|version \".*\"|version \"$VERSION\"|" homebrew-hermit/Formula/hermit.rb
+          sed -i "/hermit-macos-arm64/{n;s|sha256 \".*\"|sha256 \"$SHA_ARM64\"|}" homebrew-hermit/Formula/hermit.rb
+          sed -i "/hermit-macos-x64/{n;s|sha256 \".*\"|sha256 \"$SHA_X64\"|}"   homebrew-hermit/Formula/hermit.rb
+          sed -i "/hermit-linux-x64/{n;s|sha256 \".*\"|sha256 \"$SHA_LINUX\"|}" homebrew-hermit/Formula/hermit.rb
+
+      - name: Commit and push formula update
+        run: |
+          cd homebrew-hermit
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/hermit.rb
+          git commit -m "chore: update hermit to v${{ steps.version.outputs.version }}"
+          git push

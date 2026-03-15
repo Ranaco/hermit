@@ -19,3 +19,24 @@ packages/*/dist/
 apps/*/dist/
 apps/*/build/
 packages/prisma/runtime/
+
+# Temporary / one-off scripts
+fix_*.cjs
+update_*.cjs
+decrypt_*.js
+
+# Credential / key files
+*.der
+*_decrypted*.json
+*_encrypted*.json
+vault_credentials*.json
+
+# Temp dirs
+tmp/
+temp/
+
+# CLI binary release artifacts
+apps/cli/release/
+
+# Generated nginx config (built from template by deploy.sh)
+nginx/conf.d/hermit.conf
