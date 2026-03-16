@@ -36,7 +36,11 @@ function buildHeaders(skipAuth?: boolean): Record<string, string> {
 }
 
 function resolveBaseUrl(): string {
-  return getRuntimeState().serverUrlOverride || getServerUrl();
+  return (
+    getRuntimeState().serverUrlOverride ||
+    process.env.HERMIT_SERVER_URL ||
+    getServerUrl()
+  );
 }
 
 async function parseJson(response: Response): Promise<ApiResponse> {
@@ -72,11 +76,21 @@ async function request<T>(
   const url = `${resolveBaseUrl()}${path}`;
   const headers = buildHeaders(opts.skipAuth);
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (cause) {
+    const baseUrl = resolveBaseUrl();
+    throw new ApiError(
+      0,
+      `Could not reach server at ${baseUrl}. Use --server <url> or set HERMIT_SERVER_URL.`,
+      cause,
+    );
+  }
 
   if (response.status === 401 && !opts.skipAuth && !opts.retried) {
     const refreshed = await refreshToken();
