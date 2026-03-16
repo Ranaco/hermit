@@ -16,17 +16,17 @@ type AuthMode = "signin" | "signup";
 
 const modeCopy = {
   signin: {
-    eyebrow: "Secure Access",
+    eyebrow: "Sign In",
     title: "Sign in to Hermit",
     description: "Return to your workspace.",
-    asideTitle: "Direct access for operators.",
-    asideDescription: "Identity, policy, and reveal flow stay aligned.",
-    submitLabel: "Enter workspace",
+    asideTitle: "Welcome back.",
+    asideDescription: "Pick up where you left off.",
+    submitLabel: "Sign in",
     pendingLabel: "Signing in...",
-    switchLead: "New to Hermit?",
+    switchLead: "New here?",
     switchAction: "Create account",
-    formNote: "Secret and vault prompts happen at reveal time.",
-    introTitle: "Returning operator",
+    formNote: "Vault prompts happen at reveal time.",
+    introTitle: "Sign in",
     introBody: "Use your workspace credentials.",
     checklist: [
       "Restores workspace context.",
@@ -35,17 +35,17 @@ const modeCopy = {
     ],
   },
   signup: {
-    eyebrow: "Create Workspace Access",
-    title: "Create your operator account",
-    description: "Create an identity, then create your workspace.",
-    asideTitle: "Start clean.",
+    eyebrow: "Sign Up",
+    title: "Create your account",
+    description: "Account first, then your workspace.",
+    asideTitle: "Start here.",
     asideDescription: "Account first. Organization next.",
     submitLabel: "Create account",
     pendingLabel: "Creating account...",
-    switchLead: "Already have credentials?",
-    switchAction: "Sign in instead",
-    formNote: "After sign-up, you go straight to organization setup.",
-    introTitle: "First-time setup",
+    switchLead: "Have an account?",
+    switchAction: "Sign in",
+    formNote: "Next step: organization setup.",
+    introTitle: "New account",
     introBody: "This identity owns or joins workspaces.",
     checklist: [
       "Create your identity.",
@@ -167,7 +167,7 @@ function LoginContent() {
 
         {returnUrl ? (
           <div className="rounded-[22px] border border-primary/15 bg-primary/8 px-4 py-3 text-sm leading-6 text-primary">
-            You&apos;ll return to the protected flow after sign-in.
+            You&apos;ll return to your previous page after sign-in.
           </div>
         ) : null}
 
@@ -228,7 +228,7 @@ function LoginContent() {
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="password">Password</Label>
               <span className="text-xs font-medium text-muted-foreground">
-                {isLogin ? "Prompts come later." : "Use 8+ characters."}
+                {isLogin ? "" : "Min 8 characters"}
               </span>
             </div>
             <Input
@@ -277,7 +277,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
-          Loading authentication flow...
+          Loading...
         </div>
       }
     >

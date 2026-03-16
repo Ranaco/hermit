@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -10,11 +11,14 @@ import {
   Eye,
   KeyRound,
   Loader2,
+  Lock,
   Shield,
   Unlock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/ui/logo";
 import { useConsumeShare } from "@/hooks/use-shares";
 import {
   shareService,
@@ -108,218 +112,347 @@ export default function ConsumeSharePage() {
 
   if (metadataLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0f19] text-white">
-        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-white/72 backdrop-blur-xl">
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Preparing secure share...
+          Loading share...
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0a0f19] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(39,129,255,0.24),transparent_30%),radial-gradient(circle_at_85%_15%,rgba(94,92,230,0.22),transparent_22%),radial-gradient(circle_at_bottom_right,rgba(48,209,88,0.14),transparent_26%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:38px_38px] opacity-25" />
+  const asideEyebrow = isRevealed ? "Delivered" : isUnavailable ? "Unavailable" : "Secure Share";
+  const asideTitle = isRevealed
+    ? "Delivered."
+    : isUnavailable
+      ? "Link expired."
+      : "One-time share.";
+  const asideDescription = isRevealed
+    ? "Copy the value now. This link is destroyed."
+    : isUnavailable
+      ? "Ask the sender for a new link."
+      : "This link works once, then self-destructs.";
 
-      <main className="relative mx-auto flex min-h-screen w-full max-w-[1180px] items-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid w-full gap-8 lg:grid-cols-[0.92fr_minmax(0,1.08fr)] lg:gap-10">
-          <section className="hidden min-h-[620px] flex-col justify-between rounded-[32px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-2xl lg:flex">
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1120px] items-center px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid w-full gap-8 lg:grid-cols-[0.95fr_minmax(0,0.85fr)]">
+          {/* Aside — matches AuthShell */}
+          <section className="hidden border-r border-border pr-10 lg:flex lg:flex-col lg:justify-between">
             <div className="space-y-8">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-                  <Shield className="h-6 w-6" />
+              <div className="flex items-center justify-between gap-4 pt-2">
+                <Link href="/" className="inline-flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card">
+                    <Logo className="h-4 w-4 text-foreground" />
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="text-sm font-semibold text-foreground">Hermit</span>
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      Control Plane
+                    </span>
+                  </span>
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <Shield className="h-3.5 w-3.5" />
+                  {asideEyebrow}
                 </div>
-                <div>
-                  <p className="text-xl font-black tracking-tight text-white">Hermit Secure Share</p>
-                  <p className="text-[11px] uppercase tracking-[0.26em] text-white/42">
-                    One-time delivery flow
+                <div className="space-y-2">
+                  <h1 className="max-w-[16ch] text-[clamp(2.4rem,4vw,3.75rem)] font-semibold leading-[1.02] tracking-tight text-foreground">
+                    {asideTitle}
+                  </h1>
+                  <p className="max-w-[46ch] text-sm leading-6 text-muted-foreground">
+                    {asideDescription}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
-                  Secret handoff
-                </div>
-                <h1 className="max-w-[11ch] text-5xl font-black tracking-tight text-white">
-                  Send a secret once. Destroy access after reveal.
-                </h1>
-                <p className="max-w-[46ch] text-lg leading-8 text-white/62">
-                  Hermit keeps shared payloads encrypted at rest, supports passphrase protection, and wipes the underlying value immediately after successful consumption.
+              <div className="space-y-3">
+                {[
+                  {
+                    icon: <Lock className="h-4 w-4" />,
+                    title: "Encrypted at rest",
+                    detail: "Sealed until redeemed.",
+                  },
+                  {
+                    icon: <KeyRound className="h-4 w-4" />,
+                    title: "Passphrase protected",
+                    detail: "Optional second layer before reveal.",
+                  },
+                  {
+                    icon: <Shield className="h-4 w-4" />,
+                    title: "Single-use",
+                    detail: "Cannot be replayed after consumption.",
+                  },
+                ].map((feature) => (
+                  <div key={feature.title} className="flex items-start gap-4">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-muted text-muted-foreground">
+                      {feature.icon}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold tracking-tight text-foreground">
+                        {feature.title}
+                      </p>
+                      <p className="mt-0.5 text-sm leading-6 text-muted-foreground">
+                        {feature.detail}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-2 flex items-center justify-between gap-4 border-t border-border pt-6">
+              <div>
+                <p className="text-sm font-medium text-foreground">Hermit</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Secure share.
                 </p>
               </div>
             </div>
+          </section>
 
-            <div className="space-y-4 rounded-[26px] border border-white/10 bg-slate-950/28 p-5">
-              {[
-                "Encrypted payload stays sealed until the link is redeemed.",
-                "Passphrase-protected shares resist casual interception.",
-                "Expired or consumed links cannot be replayed.",
-              ].map((item) => (
-                <div key={item} className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                  <p className="text-sm leading-6 text-white/64">{item}</p>
+          {/* Main content */}
+          <section className="flex items-center justify-center">
+            <div className="w-full max-w-[540px]">
+              {/* Mobile header */}
+              <div className="border-b border-border pb-6 lg:hidden">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <Link href="/" className="inline-flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card">
+                      <Logo className="h-4 w-4 text-foreground" />
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">Hermit</span>
+                  </Link>
                 </div>
-              ))}
+              </div>
+
+              <div className="pt-6 lg:pt-0">
+                {isUnavailable ? (
+                  <ShareUnavailable errorStatus={errorStatus} />
+                ) : isRevealed ? (
+                  <ShareRevealed
+                    revealedValue={revealedValue!}
+                    copied={copied}
+                    onCopy={() => void handleCopy()}
+                  />
+                ) : (
+                  <ShareRevealForm
+                    shareData={shareData}
+                    passphrase={passphrase}
+                    setPassphrase={setPassphrase}
+                    errorStatus={errorStatus}
+                    isConsuming={isConsuming}
+                    onSubmit={handleConsume}
+                  />
+                )}
+              </div>
             </div>
           </section>
-
-          <section className="w-full rounded-[32px] border border-white/10 bg-white/[0.05] p-6 shadow-[0_30px_80px_-28px_rgba(2,6,23,0.85)] backdrop-blur-2xl sm:p-8">
-            {isUnavailable ? (
-              <div className="space-y-6 text-center">
-                <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-full bg-rose-500/12 text-rose-300">
-                  <AlertTriangle className="h-10 w-10" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-black tracking-tight text-white">
-                    {errorStatus === "expired" ? "Link expired" : "Secret unavailable"}
-                  </h2>
-                  <p className="mx-auto max-w-[44ch] text-sm leading-7 text-white/62">
-                    {errorStatus === "expired"
-                      ? "This one-time share has passed its expiration window and the encrypted payload is no longer available."
-                      : "This share has already been consumed, or the token no longer points to an active payload."}
-                  </p>
-                </div>
-                <div className="rounded-[24px] border border-white/10 bg-slate-950/26 px-5 py-4 text-sm leading-6 text-white/60">
-                  Ask the sender to create a new share if the secret still needs to be delivered.
-                </div>
-              </div>
-            ) : isRevealed ? (
-              <div className="space-y-6">
-                <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="space-y-2">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                      <Unlock className="h-3.5 w-3.5" />
-                      Secret revealed
-                    </div>
-                    <h2 className="text-3xl font-black tracking-tight text-white">
-                      One-time payload delivered
-                    </h2>
-                    <p className="text-sm leading-6 text-white/62">
-                      The underlying link has now been consumed and cannot be used again.
-                    </p>
-                  </div>
-                  <div className="rounded-full border border-rose-400/15 bg-rose-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
-                    Link destroyed
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-white/10 bg-slate-950/38 p-5">
-                  <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap break-all text-sm leading-7 text-emerald-200">
-                    {revealedValue}
-                  </pre>
-                </div>
-
-                <Button
-                  onClick={() => void handleCopy()}
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.08] text-base font-semibold text-white transition-colors hover:bg-white/[0.12]"
-                >
-                  {copied ? (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-300" />
-                      Copied securely
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy to clipboard
-                    </>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/72">
-                    <Eye className="h-3.5 w-3.5 text-primary" />
-                    One-time reveal
-                  </div>
-                  <h2 className="text-3xl font-black tracking-tight text-white">
-                    Open this secure payload
-                  </h2>
-                  <p className="max-w-[46ch] text-sm leading-7 text-white/62">
-                    Once revealed, the secret is removed from future access. If the sender added a note or passphrase requirement, you&apos;ll see it below.
-                  </p>
-                </div>
-
-                {shareData?.metadata?.note ? (
-                  <div className="rounded-[24px] border border-primary/18 bg-primary/10 px-5 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                      Sender note
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-white/78">
-                      {shareData.metadata.note}
-                    </p>
-                  </div>
-                ) : null}
-
-                <form onSubmit={handleConsume} className="space-y-5">
-                  {shareData?.metadata?.requirePassphrase ? (
-                    <div className="space-y-3 rounded-[24px] border border-white/10 bg-slate-950/26 p-5">
-                      <div className="flex items-center gap-2 text-white">
-                        <KeyRound className="h-4 w-4 text-amber-300" />
-                        <LabelText title="Passphrase required" detail="Enter the passphrase supplied by the sender to decrypt this payload." />
-                      </div>
-                      <Input
-                        type="password"
-                        required
-                        value={passphrase}
-                        onChange={(e) => setPassphrase(e.target.value)}
-                        placeholder="Enter passphrase"
-                        className={`h-12 border-white/10 bg-black/35 text-white placeholder:text-white/30 ${
-                          errorStatus === "invalid_passphrase"
-                            ? "border-rose-400/50 focus-visible:ring-rose-400/40"
-                            : ""
-                        }`}
-                      />
-                      {errorStatus === "invalid_passphrase" ? (
-                        <p className="text-sm leading-6 text-rose-300">
-                          The passphrase was rejected. Confirm it with the sender and try again.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="rounded-[24px] border border-white/10 bg-slate-950/26 px-5 py-4 text-sm leading-6 text-white/62">
-                      No passphrase is required for this share. Revealing it will immediately consume the link.
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={
-                      isConsuming ||
-                      (shareData?.metadata?.requirePassphrase && !passphrase)
-                    }
-                    className="h-13 w-full rounded-2xl text-base font-semibold shadow-[0_14px_44px_-18px_rgba(10,132,255,0.72)]"
-                  >
-                    {isConsuming ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Revealing secret...
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Reveal Secret
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </div>
-            )}
-          </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
 
-function LabelText({ title, detail }: { title: string; detail: string }) {
+function ShareUnavailable({ errorStatus }: { errorStatus: ShareStatus }) {
   return (
-    <div>
-      <p className="text-sm font-semibold tracking-tight text-white">{title}</p>
-      <p className="text-sm leading-6 text-white/56">{detail}</p>
+    <div className="space-y-7">
+      <div>
+        <div className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          Unavailable
+        </div>
+        <h2 className="mt-4 text-[clamp(2rem,3vw,2.75rem)] font-semibold tracking-tight text-foreground">
+          {errorStatus === "expired" ? "Link expired" : "Unavailable"}
+        </h2>
+        <p className="mt-3 max-w-[46ch] text-[15px] leading-7 text-muted-foreground">
+          {errorStatus === "expired"
+            ? "This share has expired and is no longer available."
+            : "This share has been consumed or is no longer active."}
+        </p>
+      </div>
+
+      <div className="flex items-start gap-4 rounded-[18px] border border-border bg-muted/30 px-5 py-4">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <p className="text-sm leading-6 text-muted-foreground">
+          Ask the sender for a new link.
+        </p>
+      </div>
+
+      <div className="border-t border-border pt-4 text-sm leading-6 text-muted-foreground">
+        Consumed links cannot be replayed.
+      </div>
+    </div>
+  );
+}
+
+function ShareRevealed({
+  revealedValue,
+  copied,
+  onCopy,
+}: {
+  revealedValue: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="space-y-7">
+      <div>
+        <div className="inline-flex items-center gap-2 rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          <Unlock className="h-3.5 w-3.5" />
+          Revealed
+        </div>
+        <h2 className="mt-4 text-[clamp(2rem,3vw,2.75rem)] font-semibold tracking-tight text-foreground">
+          Delivered
+        </h2>
+        <p className="mt-3 max-w-[46ch] text-[15px] leading-7 text-muted-foreground">
+          This link is now destroyed. Copy the value below.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground">Payload</Label>
+          <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            Link destroyed
+          </span>
+        </div>
+        <div className="rounded-[18px] border border-border bg-muted/30 p-4">
+          <pre className="max-h-[320px] overflow-y-auto whitespace-pre-wrap break-all font-mono text-[13px] leading-7 text-foreground">
+            {revealedValue}
+          </pre>
+        </div>
+      </div>
+
+      <Button
+        onClick={onCopy}
+        className="h-12 w-full rounded-2xl text-base font-medium shadow-none"
+      >
+        {copied ? (
+          <>
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Copied
+          </>
+        ) : (
+          <>
+            <Copy className="mr-2 h-4 w-4" />
+            Copy to clipboard
+          </>
+        )}
+      </Button>
+
+      <div className="border-t border-border pt-4 text-sm leading-6 text-muted-foreground">
+        This value will not be available again.
+      </div>
+    </div>
+  );
+}
+
+function ShareRevealForm({
+  shareData,
+  passphrase,
+  setPassphrase,
+  errorStatus,
+  isConsuming,
+  onSubmit,
+}: {
+  shareData: ShareMetadataResponse | undefined;
+  passphrase: string;
+  setPassphrase: (value: string) => void;
+  errorStatus: ShareStatus;
+  isConsuming: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <div className="space-y-7">
+      <div>
+        <div className="inline-flex items-center gap-2 rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          <Eye className="h-3.5 w-3.5" />
+          One-time reveal
+        </div>
+        <h2 className="mt-4 text-[clamp(2rem,3vw,2.75rem)] font-semibold tracking-tight text-foreground">
+          Reveal secret
+        </h2>
+        <p className="mt-3 max-w-[46ch] text-[15px] leading-7 text-muted-foreground">
+          This link works once, then self-destructs.
+        </p>
+      </div>
+
+      {shareData?.metadata?.note ? (
+        <div className="flex items-start gap-4 rounded-[18px] border border-border bg-muted/30 px-5 py-4">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Sender note
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-foreground">
+              {shareData.metadata.note}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <form onSubmit={onSubmit} className="space-y-5">
+        {shareData?.metadata?.requirePassphrase ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="passphrase">Passphrase</Label>
+              <span className="text-xs font-medium text-muted-foreground">Required</span>
+            </div>
+            <Input
+              id="passphrase"
+              type="password"
+              required
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              placeholder="Enter passphrase"
+              className={`h-11 rounded-2xl border-black/8 bg-background/70 shadow-none dark:border-white/10 dark:bg-white/[0.03] ${
+                errorStatus === "invalid_passphrase"
+                  ? "border-destructive/50 focus-visible:ring-destructive/40"
+                  : ""
+              }`}
+            />
+            {errorStatus === "invalid_passphrase" ? (
+              <p className="text-sm text-destructive">
+                Incorrect passphrase. Try again.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex items-start gap-4 rounded-[18px] border border-border bg-muted/30 px-5 py-4">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="text-sm leading-6 text-muted-foreground">
+              No passphrase required. Revealing consumes this link.
+            </p>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          disabled={
+            isConsuming ||
+            (shareData?.metadata?.requirePassphrase && !passphrase)
+          }
+          className="h-12 w-full rounded-2xl text-base font-medium shadow-none"
+        >
+          {isConsuming ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Revealing...
+            </>
+          ) : (
+            <>
+              <Eye className="mr-2 h-4 w-4" />
+              Reveal secret
+            </>
+          )}
+        </Button>
+      </form>
+
+      <div className="border-t border-border pt-4 text-sm leading-6 text-muted-foreground">
+        Single-use link. Self-destructs after reveal.
+      </div>
     </div>
   );
 }

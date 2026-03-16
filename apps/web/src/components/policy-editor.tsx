@@ -759,7 +759,7 @@ function BuilderRuleCard({
   const supportsVault = group.supportedScopes.includes("vault");
 
   return (
-    <section className="rounded-[16px] border border-border bg-card">
+    <section className="rounded-[18px] border border-border bg-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
         <div className="grid min-w-[180px] gap-2">
           <Label className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Resource Type</Label>

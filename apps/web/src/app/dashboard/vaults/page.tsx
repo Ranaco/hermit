@@ -176,7 +176,7 @@ export default function VaultsPage() {
                   minLength={8}
                 />
                 <p className="text-xs text-muted-foreground">
-                  If set, secrets in this vault require the vault password unless a secret-level password overrides it.
+                  Required to reveal secrets unless overridden at secret level.
                 </p>
               </div>
               <div className="space-y-2">
@@ -295,8 +295,8 @@ export default function VaultsPage() {
               {searchQuery
                 ? "No vaults match your search."
                 : permissions.canCreateVault
-                  ? "No vaults yet. Create the first vault for this organization."
-                  : "No vaults available in this organization."}
+                  ? "No vaults yet."
+                  : "No vaults in this organization."}
             </div>
           )}
         </section>

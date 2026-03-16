@@ -301,9 +301,9 @@ export default function PoliciesPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <MetricCard label="Roles" value={roles.length} detail="Managed and custom role sets." />
-          <MetricCard label="Policies" value={policies.length} detail="Compact list with modal detail." />
-          <MetricCard label="Baseline" value={managedRoleCount} detail="Managed defaults already attached." />
+          <MetricCard label="Roles" value={roles.length} detail="Managed and custom." />
+          <MetricCard label="Policies" value={policies.length} detail="All policy rules." />
+          <MetricCard label="Baseline" value={managedRoleCount} detail="Managed defaults." />
         </section>
 
         <Card>
@@ -311,7 +311,7 @@ export default function PoliciesPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-xl font-semibold tracking-tight">Roles</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">Policy bundles assigned to members and teams.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Assigned to members and teams.</p>
               </div>
               {permissions.canManageRoles ? (
                 <Dialog
@@ -784,7 +784,7 @@ function MetricCard({
   detail: string;
 }) {
   return (
-    <article className="border border-border bg-card px-5 py-4">
+    <article className="rounded-[18px] border border-border bg-card px-5 py-4">
       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{detail}</p>

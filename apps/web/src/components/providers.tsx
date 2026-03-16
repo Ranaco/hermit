@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { AuthGuard } from "@/components/auth-guard";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -27,7 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <AuthGuard>{children}</AuthGuard>
         <Toaster position="top-right" richColors />
         <ReactQueryDevtools initialIsOpen={false} />
       </ThemeProvider>

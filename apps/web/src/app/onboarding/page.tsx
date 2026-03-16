@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Loader2 } from "lucide-react";
+import { Building2, KeyRound, Loader2, Lock, Vault } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,52 +37,69 @@ export default function OnboardingPage() {
 
   return (
     <AuthShell
-      eyebrow="Workspace Setup"
-      title="Create your first organization"
-      description="Start with your workspace boundary."
-      asideTitle="Start with the boundary."
-      asideDescription="Organizations scope ownership, invites, and policy."
-      features={[]}
-      footerNote="This boundary anchors access and audit."
+      eyebrow="Setup"
+      title="Create your organization"
+      description="Everything starts here — vaults, keys, and team."
+      asideTitle="Start here."
+      asideDescription="Organizations own vaults, keys, and access policy."
+      features={[
+        {
+          icon: <Vault className="h-4 w-4" />,
+          title: "Default vault",
+          detail: "Created automatically with your organization.",
+        },
+        {
+          icon: <KeyRound className="h-4 w-4" />,
+          title: "Transit encryption",
+          detail: "Keys managed through HashiCorp Vault transit.",
+        },
+        {
+          icon: <Lock className="h-4 w-4" />,
+          title: "Role-based access",
+          detail: "Scoped to your organization from the start.",
+        },
+      ]}
+      footerNote="Next step: your dashboard."
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-5 border-b border-border pb-6">
+      <form onSubmit={handleSubmit} className="space-y-7">
+        <div className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-[15px] font-semibold">
-              Organization name
-            </Label>
+            <Label htmlFor="name">Organization name</Label>
             <Input
               id="name"
               placeholder="Acme Security"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="h-11 rounded-2xl border-black/8 bg-background/70 shadow-none dark:border-white/10 dark:bg-white/[0.03]"
               required
               autoFocus
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-[15px] font-semibold">
-              Description
-            </Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="description">Description</Label>
+              <span className="text-xs font-medium text-muted-foreground">Optional</span>
+            </div>
             <Input
               id="description"
-              placeholder="Production secrets and access controls for the platform team"
+              placeholder="Production secrets and access controls"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="h-11 rounded-2xl border-black/8 bg-background/70 shadow-none dark:border-white/10 dark:bg-white/[0.03]"
             />
           </div>
         </div>
 
         <Button
           type="submit"
-          className="h-12 w-full text-base font-medium"
+          className="h-12 w-full rounded-2xl text-base font-medium shadow-none"
           disabled={isPending || !name.trim()}
         >
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating organization...
+              Creating...
             </>
           ) : (
             <>

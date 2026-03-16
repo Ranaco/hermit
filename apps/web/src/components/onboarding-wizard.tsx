@@ -8,17 +8,19 @@
 import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthShell } from "@/components/auth-shell";
 
-import { Building2, Vault, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Building2,
+  Vault,
+  CheckCircle2,
+  KeyRound,
+  Loader2,
+  Lock,
+  ArrowRight,
+} from "lucide-react";
 import {
   useCreateFirstOrganization,
   useCompleteOnboarding,
@@ -76,187 +78,160 @@ export function OnboardingWizard() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle className="text-2xl">Welcome to Hermit KMS</CardTitle>
-          <CardDescription>
-            Let&apos;s set up your secure key management system
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center mb-8 gap-4">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  step >= 1
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {step > 1 ? <CheckCircle2 className="h-5 w-5" /> : "1"}
+  if (step === 2) {
+    return (
+      <AuthShell
+        eyebrow="Complete"
+        title="Workspace ready"
+        description="Organization and vault are provisioned."
+        asideTitle="All set."
+        asideDescription="Start adding keys and secrets."
+        features={[
+          {
+            icon: <Building2 className="h-4 w-4" />,
+            title: orgName,
+            detail: orgDescription || "Your organization",
+          },
+          {
+            icon: <Vault className="h-4 w-4" />,
+            title: "Default Vault",
+            detail: "Ready for encryption keys.",
+          },
+        ]}
+        footerNote="Add vaults and invite teammates from the dashboard."
+      >
+        <div className="space-y-7">
+          <div className="rounded-[18px] border border-border bg-muted/30 p-5">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-foreground" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">All set</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Organization and vault are ready to use.
+                </p>
               </div>
-              <span className="text-sm font-medium">Organization</span>
-            </div>
-            <div className="w-16 h-0.5 bg-border" />
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  step >= 2
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {step > 2 ? <CheckCircle2 className="h-5 w-5" /> : "2"}
-              </div>
-              <span className="text-sm font-medium">Complete</span>
             </div>
           </div>
 
-          {/* Step 1: Create Organization */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <Building2 className="h-8 w-8 text-primary" />
-                <div>
-                  <h3 className="font-semibold">Create Your Organization</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Organizations help you manage team access and resources
-                  </p>
+          <div className="space-y-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              Next steps
+            </p>
+            <div className="space-y-3">
+              {[
+                "Create encryption keys in your vault",
+                "Store secrets securely using your keys",
+                "Invite team members to collaborate",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3">
+                  <ArrowRight className="mt-0.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{item}</span>
                 </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="org-name">
-                    Organization Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="org-name"
-                    placeholder="e.g., Acme Corporation"
-                    value={orgName}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setOrgName(e.target.value)}
-                    disabled={createOrg.isPending}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="org-description">Description (Optional)</Label>
-                  <textarea
-                    id="org-description"
-                    placeholder="Describe your organization..."
-                    value={orgDescription}
-                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setOrgDescription(e.target.value)}
-                    disabled={createOrg.isPending}
-                    rows={3}
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleCreateOrganization}
-                  disabled={!orgName.trim() || createOrg.isPending}
-                  className="w-full"
-                  size="lg"
-                >
-                  {createOrg.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Building2 className="mr-2 h-4 w-4" />
-                      Create Organization
-                    </>
-                  )}
-                </Button>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* Step 2: Setup Complete */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 p-4 bg-green-500/10 border-2 border-green-500/20 rounded-lg">
-                <CheckCircle2 className="h-8 w-8 text-green-500" />
-                <div>
-                  <h3 className="font-semibold text-green-700 dark:text-green-400">
-                    All Set!
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Your organization and default vault are ready
-                  </p>
-                </div>
-              </div>
+          <Button
+            onClick={handleComplete}
+            disabled={completeOnboarding.isPending}
+            className="h-12 w-full rounded-2xl text-base font-medium shadow-none"
+          >
+            {completeOnboarding.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Finalizing...
+              </>
+            ) : (
+              "Go to Dashboard"
+            )}
+          </Button>
+        </div>
+      </AuthShell>
+    );
+  }
 
-              <div className="space-y-4">
-                <div className="p-4 border-2 border-border rounded-lg space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Building2 className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium">{orgName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {orgDescription || "Your organization"}
-                      </p>
-                    </div>
-                  </div>
+  return (
+    <AuthShell
+      eyebrow="Setup"
+      title="Create your organization"
+      description="Everything starts here — vaults, keys, and team."
+      asideTitle="Start here."
+      asideDescription="Organizations own vaults, keys, and access policy."
+      features={[
+        {
+          icon: <Vault className="h-4 w-4" />,
+          title: "Default vault",
+          detail: "Created automatically with your organization.",
+        },
+        {
+          icon: <KeyRound className="h-4 w-4" />,
+          title: "Transit encryption",
+          detail: "Keys managed through HashiCorp Vault transit.",
+        },
+        {
+          icon: <Lock className="h-4 w-4" />,
+          title: "Role-based access",
+          detail: "Scoped to your organization from the start.",
+        },
+      ]}
+      footerNote="Next step: your dashboard."
+    >
+      <div className="space-y-7">
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="org-name">
+              Organization name
+            </Label>
+            <Input
+              id="org-name"
+              placeholder="Acme Corporation"
+              value={orgName}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setOrgName(e.target.value)
+              }
+              disabled={createOrg.isPending}
+              className="h-11 rounded-2xl border-black/8 bg-background/70 shadow-none dark:border-white/10 dark:bg-white/[0.03]"
+            />
+          </div>
 
-                  <div className="flex items-start gap-3 pt-3 border-t">
-                    <Vault className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium">Default Vault</p>
-                      <p className="text-sm text-muted-foreground">
-                        Your default secure vault for storing encryption keys
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-blue-500/10 border-2 border-blue-500/20 rounded-lg">
-                  <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
-                    What&apos;s Next?
-                  </h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
-                      <span>Create encryption keys in your vault</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
-                      <span>Store secrets securely using your keys</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
-                      <span>Invite team members to collaborate</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <Button
-                  onClick={handleComplete}
-                  disabled={completeOnboarding.isPending}
-                  className="w-full"
-                  size="lg"
-                >
-                  {completeOnboarding.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Finalizing...
-                    </>
-                  ) : (
-                    <>
-                      Go to Dashboard
-                    </>
-                  )}
-                </Button>
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="org-description">Description</Label>
+              <span className="text-xs font-medium text-muted-foreground">
+                Optional
+              </span>
             </div>
+            <Input
+              id="org-description"
+              placeholder="Describe your organization"
+              value={orgDescription}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setOrgDescription(e.target.value)
+              }
+              disabled={createOrg.isPending}
+              className="h-11 rounded-2xl border-black/8 bg-background/70 shadow-none dark:border-white/10 dark:bg-white/[0.03]"
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={handleCreateOrganization}
+          disabled={!orgName.trim() || createOrg.isPending}
+          className="h-12 w-full rounded-2xl text-base font-medium shadow-none"
+        >
+          {createOrg.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            <>
+              <Building2 className="mr-2 h-4 w-4" />
+              Create Organization
+            </>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </Button>
+      </div>
+    </AuthShell>
   );
 }

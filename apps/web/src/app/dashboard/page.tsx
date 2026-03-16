@@ -44,7 +44,7 @@ function EmptyWorkspace({
   linkLabel: string;
 }) {
   return (
-    <section className="flex min-h-[360px] flex-col items-start justify-center gap-4 border border-border bg-card px-8 py-10">
+    <section className="flex min-h-[360px] flex-col items-start justify-center gap-4 rounded-[18px] border border-border bg-card px-8 py-10">
       <p className="app-eyebrow">Workspace</p>
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
@@ -89,7 +89,7 @@ export default function DashboardPage() {
       <DashboardLayout>
         <EmptyWorkspace
           title="Select a workspace"
-          detail="Choose an organization to load keys, secrets, activity, and invitations."
+          detail="Choose an organization to get started."
           linkHref="/dashboard/organizations"
           linkLabel="Open organizations"
         />
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 : []),
               { label: "For me", value: myInvitations?.length ?? 0 },
             ].map((item) => (
-              <div key={item.label} className="border border-border bg-card px-5 py-4">
+              <div key={item.label} className="rounded-[18px] border border-border bg-card px-5 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
                 <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
                   {vaultsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : item.value}
@@ -134,7 +134,7 @@ export default function DashboardPage() {
 
           <EmptyWorkspace
             title="No vault selected"
-            detail="Select a vault from the sidebar to see recent activity, keys, and secrets."
+            detail="Select a vault from the sidebar."
             linkHref="/dashboard/vaults"
             linkLabel="Open vaults"
           />
@@ -201,7 +201,7 @@ export default function DashboardPage() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="border border-border bg-card px-5 py-4 transition-colors hover:bg-muted/30"
+                className="rounded-[18px] border border-border bg-card px-5 py-4 transition-colors hover:bg-muted/30"
               >
                 <div className="flex items-center justify-between">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
-            <section className="border border-border bg-card">
+            <section className="rounded-[18px] border border-border bg-card">
               <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <div>
                   <h2 className="text-base font-semibold text-foreground">Recent activity</h2>
@@ -250,7 +250,7 @@ export default function DashboardPage() {
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2">
-              <section className="border border-border bg-card">
+              <section className="rounded-[18px] border border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <h2 className="text-base font-semibold text-foreground">Recent keys</h2>
                   <Link href="/dashboard/keys" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                 </div>
               </section>
 
-              <section className="border border-border bg-card">
+              <section className="rounded-[18px] border border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <h2 className="text-base font-semibold text-foreground">Recent secrets</h2>
                   <Link href="/dashboard/secrets" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -309,7 +309,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6">
-            <section className="border border-border bg-card">
+            <section className="rounded-[18px] border border-border bg-card">
               <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <h2 className="text-base font-semibold text-foreground">Pending for me</h2>
                 <Link href="/dashboard/organizations" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -335,7 +335,7 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            <section className="border border-border bg-card">
+            <section className="rounded-[18px] border border-border bg-card">
               <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <h2 className="text-base font-semibold text-foreground">Pending from this org</h2>
                 <Link href="/dashboard/organizations" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -352,15 +352,15 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {permissions.canReadInvitations && outboundInvitations.length === 0 && (
-                  <div className="px-5 py-8 text-sm text-muted-foreground">No pending outbound invitations.</div>
+                  <div className="px-5 py-8 text-sm text-muted-foreground">No pending invitations.</div>
                 )}
                 {!permissions.canReadInvitations && (
-                  <div className="px-5 py-8 text-sm text-muted-foreground">Invitation visibility requires admin access.</div>
+                  <div className="px-5 py-8 text-sm text-muted-foreground">Admin access required.</div>
                 )}
               </div>
             </section>
 
-            <section className="border border-border bg-card px-5 py-4">
+            <section className="rounded-[18px] border border-border bg-card px-5 py-4">
               <div className="flex items-center gap-3">
                 <Activity className="h-4 w-4 text-muted-foreground" />
                 <div>

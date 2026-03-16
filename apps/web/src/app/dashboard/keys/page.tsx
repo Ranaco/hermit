@@ -111,10 +111,10 @@ export default function KeysPage() {
           <div className="max-w-[58ch]">
             <p className="app-eyebrow">Keys</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
-              Transit-backed keys
+              Keys
             </h1>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-              Create and rotate keys.
+              Transit-backed encryption keys.
             </p>
           </div>
 
@@ -297,8 +297,8 @@ export default function KeysPage() {
               {searchQuery
                 ? "No keys match your search."
                 : permissions.canCreateKey
-                  ? "No keys yet. Create the first key for this vault."
-                  : "No keys available in this vault."}
+                  ? "No keys yet."
+                  : "No keys in this vault."}
             </div>
           )}
         </section>

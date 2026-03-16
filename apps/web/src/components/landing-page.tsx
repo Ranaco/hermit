@@ -18,45 +18,45 @@ import { ShaderAnimation } from "@/components/ui/shader-lines";
 const useCases = [
   {
     title: "Platform teams",
-    body: "Keep environment secrets, shared runtime credentials, and rotation policy inside one auditable control plane.",
+    body: "Secrets, credentials, and rotation policy in one auditable control plane.",
   },
   {
     title: "Security teams",
-    body: "Model access through custom IAM roles, explicit deny rules, and team-based assignments instead of static RBAC shortcuts.",
+    body: "Custom IAM roles, deny rules, and team assignments instead of static RBAC.",
   },
   {
     title: "Developers",
-    body: "Use the dashboard and CLI together so secrets flow into delivery workflows without ending up in source control or local files.",
+    body: "Dashboard and CLI keep secrets out of source control and local files.",
   },
 ];
 
 const features = [
   {
     icon: <Building2 className="h-5 w-5" />,
-    title: "Organization-first hierarchy",
-    body: "Every vault, key, and secret belongs to a tenant boundary that operators can switch, audit, and reason about.",
+    title: "Organization hierarchy",
+    body: "Vaults, keys, and secrets scoped to tenant boundaries you can audit and switch.",
   },
   {
     icon: <KeyRound className="h-5 w-5" />,
-    title: "Vault transit-backed crypto",
-    body: "Hermit stores metadata in Postgres while HashiCorp Vault transit performs encryption, decryption, and key rotation.",
+    title: "Transit-backed crypto",
+    body: "HashiCorp Vault transit handles encryption, decryption, and key rotation.",
   },
   {
     icon: <Lock className="h-5 w-5" />,
-    title: "Three-tier secret protection",
-    body: "Authentication, vault passwords, and secret passwords each have a clear purpose, and reveal flows preserve that distinction.",
+    title: "Three-tier protection",
+    body: "Auth, vault passwords, and secret passwords — each with a distinct purpose.",
   },
   {
     icon: <Fingerprint className="h-5 w-5" />,
-    title: "Runtime-evaluated IAM",
-    body: "Policies are checked against resource URNs in real time so permissions stay precise instead of collapsing into coarse roles.",
+    title: "Runtime IAM",
+    body: "Policies checked against resource URNs in real time. No coarse role collapse.",
   },
 ];
 
 const principles = [
-  "Keep hierarchy explicit. Organizations, vaults, keys, and secrets should be visible in the interface and reflected in every creation flow.",
-  "Make access feel deliberate. Permissions, reveal challenges, and share flows should explain themselves without adding operator friction.",
-  "Design for trust. Operators need interfaces that feel controlled, legible, and production-ready under pressure.",
+  "Hierarchy is explicit. Organizations, vaults, keys, and secrets are visible at every level.",
+  "Access is deliberate. Permissions and reveal flows explain themselves without friction.",
+  "Built for trust. Controlled, legible, production-ready under pressure.",
 ];
 
 export function LandingPage() {
@@ -105,7 +105,7 @@ export function LandingPage() {
           <section className="flex flex-col items-center px-2 pb-16 pt-24 text-center">
             <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-foreground backdrop-blur-md">
               <Sparkles className="mr-2 h-4 w-4 text-primary" />
-              Multi-tenant KMS with policy-aware secret operations
+              Multi-tenant KMS with policy-aware operations
             </div>
 
             <h1 className="mt-8 max-w-5xl bg-gradient-to-b from-foreground via-foreground to-muted-foreground bg-clip-text text-5xl font-bold leading-[1.04] tracking-tight text-transparent md:text-7xl">
@@ -115,7 +115,7 @@ export function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-              Automate key rotation, enforce deliberate access policy, and protect operational secrets with a control plane that mirrors the real system underneath.
+              Key rotation, access policy, and secret protection — one control plane.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
@@ -177,25 +177,25 @@ export function LandingPage() {
                         icon: <Building2 className="h-5 w-5" />,
                         label: "Organization",
                         title: "Acme Security",
-                        detail: "Owner-scoped tenant with dedicated roles, teams, and invite flow.",
+                        detail: "Roles, teams, and invite flow.",
                       },
                       {
                         icon: <Vault className="h-5 w-5" />,
                         label: "Vault",
                         title: "Production Vault",
-                        detail: "Runtime credentials, payment secrets, and operational isolation in one partition.",
+                        detail: "Credentials and secrets, isolated by partition.",
                       },
                       {
                         icon: <KeyRound className="h-5 w-5" />,
                         label: "Key",
                         title: "payments-master-key",
-                        detail: "Transit key rotated under policy with auditable version history.",
+                        detail: "Transit-backed with auditable rotation.",
                       },
                       {
                         icon: <Lock className="h-5 w-5" />,
                         label: "Secret",
                         title: "STRIPE_API_KEY",
-                        detail: "Secret-level password challenge enabled with audit logging on reveal.",
+                        detail: "Password-protected with audit on reveal.",
                       },
                     ].map((item) => (
                       <div
@@ -258,9 +258,9 @@ export function LandingPage() {
                       </div>
                       <div className="mt-4 space-y-3">
                         {[
-                          "Secret reveal challenged with vault password",
-                          "Transit key rotated for production",
-                          "Invite accepted by platform operator",
+                          "Secret revealed with vault password",
+                          "Transit key rotated",
+                          "Invite accepted",
                         ].map((event) => (
                           <div key={event} className="flex gap-3">
                             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
@@ -283,10 +283,10 @@ export function LandingPage() {
                 Use Cases
               </p>
               <h2 className="mt-3 text-4xl font-black tracking-tight text-foreground">
-                Built for teams that need structure under pressure.
+                Structure under pressure.
               </h2>
               <p className="mt-4 text-lg leading-8 text-muted-foreground">
-                Hermit is most useful when secret handling has to stay explicit, reviewable, and resilient across fast-moving teams.
+                Explicit, reviewable secret handling for fast-moving teams.
               </p>
             </div>
 
@@ -310,10 +310,10 @@ export function LandingPage() {
                   Features
                 </p>
                 <h2 className="mt-3 text-4xl font-black tracking-tight text-foreground">
-                  Security posture designed into the workflow.
+                  Security in the workflow.
                 </h2>
                 <p className="mt-4 text-lg leading-8 text-muted-foreground">
-                  The product surface follows the system model directly, so operators can reason about what they are doing without UI shortcuts hiding the security model underneath.
+                  The interface follows the system model — no shortcuts hiding the security layer.
                 </p>
               </div>
 
@@ -345,7 +345,7 @@ export function LandingPage() {
                   About
                 </p>
                 <h2 className="mt-3 text-4xl font-black tracking-tight text-foreground">
-                  The interface should mirror the system, not obscure it.
+                  Mirror the system, not obscure it.
                 </h2>
               </div>
 
@@ -365,7 +365,7 @@ export function LandingPage() {
 
               <div className="mt-8 flex flex-col gap-4 border-t border-white/8 pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <p className="max-w-[44ch] text-sm leading-6 text-muted-foreground">
-                  Start with the dashboard, then use the CLI when secrets need to move through terminal-driven workflows.
+                  Dashboard first, CLI when you need it.
                 </p>
                 <Link
                   href="/login"

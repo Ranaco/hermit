@@ -319,10 +319,10 @@ export default function SecretsPage() {
             <div className="max-w-[58ch]">
               <p className="app-eyebrow">Secrets</p>
               <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
-                Secrets and folders
+                Secrets
               </h1>
               <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-                Organize credentials and versions.
+                Credentials and versioned values.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 lg:justify-end">

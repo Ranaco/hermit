@@ -316,10 +316,10 @@ export default function OrganizationsPage() {
           <div className="max-w-[60ch]">
             <p className="app-eyebrow">Organizations</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
-              Teams and organizations
+              Organizations
             </h1>
             <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-              Manage members, roles, and teams.
+              Members, roles, and teams.
             </p>
           </div>
           <Button onClick={() => setShowCreateForm((v) => !v)} size="lg">
@@ -383,7 +383,7 @@ export default function OrganizationsPage() {
               <button
                 key={org.id}
                 className={cn(
-                  "border border-border bg-card p-5 text-left transition-colors",
+                  "rounded-[18px] border border-border bg-card p-5 text-left transition-colors",
                   isActive ? "border-foreground" : "hover:bg-muted/30"
                 )}
                 onClick={() => {
@@ -655,7 +655,7 @@ export default function OrganizationsPage() {
                      <div className="app-empty">
                         <Users className="h-8 w-8 text-muted-foreground/50 mb-3" />
                         <p className="text-[15px] font-semibold text-foreground">No members yet</p>
-                        <p className="text-[13px] text-muted-foreground mt-1">Invite people to your organization to get started</p>
+                        <p className="text-[13px] text-muted-foreground mt-1">Invite people to get started.</p>
                      </div>
                   )}
                 </div>
@@ -667,7 +667,7 @@ export default function OrganizationsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-2xl font-semibold tracking-tight">Teams</CardTitle>
-                    <p className="text-[15px] text-muted-foreground mt-1.5">Configure access groups and policies.</p>
+                    <p className="text-[15px] text-muted-foreground mt-1.5">Access groups and policies.</p>
                   </div>
                   {permissions.canManageTeams ? (
                     <Button size="icon" variant="secondary" className="h-10 w-10 shadow-none border-transparent" onClick={() => setShowTeamForm((v) => !v)}>
@@ -805,7 +805,7 @@ export default function OrganizationsPage() {
                      <div className="app-empty">
                         <Layers className="h-10 w-10 text-muted-foreground/40 mb-4" />
                         <p className="text-[15px] font-semibold text-foreground">No Teams Built</p>
-                        <p className="text-[13px] text-muted-foreground mt-1 max-w-[200px]">Create a new team to manage scopes and group permissions.</p>
+                        <p className="text-[13px] text-muted-foreground mt-1 max-w-[200px]">Create a team to group permissions.</p>
                      </div>
                   )}
                 </div>
@@ -816,7 +816,7 @@ export default function OrganizationsPage() {
           <section className="app-empty min-h-[400px]">
              <Building2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
              <h2 className="text-xl font-bold tracking-tight text-foreground">No Organization Selected</h2>
-             <p className="text-[15px] text-muted-foreground mt-2 max-w-md">Select an organization from the list above to manage its members, teams, and configurations.</p>
+             <p className="text-[15px] text-muted-foreground mt-2 max-w-md">Select an organization above.</p>
           </section>
         )}
       </div>
