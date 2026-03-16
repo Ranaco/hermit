@@ -1,5 +1,15 @@
 # @hermit-kms/cli
 
+## 0.3.0
+
+### Minor Changes
+
+- 69f8b55: Update for server base url
+
+### Patch Changes
+
+- 83fb7e4: fix: support HERMIT_SERVER_URL env var and show actionable error on connection failure
+
 ## 0.2.6
 
 ### Patch Changes
