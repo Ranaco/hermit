@@ -117,8 +117,14 @@ export class VaultService {
       } else {
          log.error("Vault AppRole login failed", { error });
       }
-      // Cannot throw here easily if we want graceful degradation, 
-      // but without a token future calls will fail. The healthcheck middleware handles this safely.
+      // Schedule a retry so the client self-heals after transient failures
+      // (e.g. vault briefly unreachable during token renewal → re-login also fails → stuck with expired token)
+      if (this.tokenRenewalTimer) clearTimeout(this.tokenRenewalTimer);
+      this.tokenRenewalTimer = setTimeout(async () => {
+        log.info("Retrying Vault AppRole login after previous failure...");
+        await this.loginWithAppRole();
+      }, 30_000);
+      if (this.tokenRenewalTimer.unref) this.tokenRenewalTimer.unref();
     }
   }
 
