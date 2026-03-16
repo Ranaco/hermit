@@ -41,7 +41,8 @@
     "ENABLE_AUDIT_LOG",
     "SHARE_DEFAULT_EXPIRY",
     "SHARE_MAX_EXPIRY",
-    "SHARE_MAX_ATTEMPTS"
+    "SHARE_MAX_ATTEMPTS",
+    "HERMIT_SERVER_URL"
   ],
   "tasks": {
     "build": {
