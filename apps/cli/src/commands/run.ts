@@ -234,7 +234,7 @@ function buildInjectedEnvVars(
   const collisions = new Map<string, string[]>();
 
   for (const secret of revealedSecrets) {
-    if (secret.valueType.toUpperCase() === "MULTILINE" || secret.value.includes("\n")) {
+    if ((secret.valueType ?? "").toUpperCase() === "MULTILINE" || secret.value.includes("\n")) {
       const pairs = parseMultilineSecret(secret.value);
       if (pairs.length > 0) {
         for (const { key, value } of pairs) {

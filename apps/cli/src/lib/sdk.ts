@@ -118,7 +118,7 @@ export interface SecretRevealResult {
 }
 
 export interface BulkRevealResult {
-  secrets: Array<{ name: string; value: string; valueType: string }>;
+  secrets: Array<{ name: string; value: string; valueType?: string }>;
   skipped: Array<{ name: string; reason: string }>;
   count: number;
   error?: {
