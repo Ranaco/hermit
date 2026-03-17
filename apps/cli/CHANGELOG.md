@@ -1,5 +1,12 @@
 # @hermit-kms/cli
 
+## 0.3.1
+
+### Patch Changes
+
+- a1beb75: Add prepublishOnly script to ensure dist is built before publishing to npm
+- c04272f: Expand MULTILINE secrets as dotenv key-value pairs during `run` injection. Each `KEY=VALUE` line in a multiline secret is injected as a separate environment variable, with support for quoted values and comment lines. Non-dotenv multiline secrets (e.g. certificates) fall back to single-variable injection.
+
 ## 0.3.0
 
 ### Minor Changes
