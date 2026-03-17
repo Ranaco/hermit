@@ -226,7 +226,7 @@ function parseMultilineSecret(value: string): Array<{ key: string; value: string
 }
 
 function buildInjectedEnvVars(
-  revealedSecrets: Array<{ name: string; value: string; valueType: string }>,
+  revealedSecrets: Array<{ name: string; value: string; valueType?: string }>,
   configMap?: Record<string, string>,
 ): Record<string, string> {
   const envVars: Record<string, string> = {};

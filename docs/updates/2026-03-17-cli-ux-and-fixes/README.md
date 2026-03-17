@@ -71,7 +71,7 @@ Secrets whose value contains newlines are now parsed as `KEY=VALUE` pairs and in
 if (secret.valueType === "MULTILINE") {
 
 // After
-if (secret.valueType.toUpperCase() === "MULTILINE" || secret.value.includes("\n")) {
+if ((secret.valueType ?? "").toUpperCase() === "MULTILINE" || secret.value.includes("\n")) {
 ```
 
 ---
