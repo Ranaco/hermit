@@ -295,9 +295,14 @@ export const runCommand = new Command("run")
       requireAuth();
 
       // Positional path shorthand: `hermit run prod/api -- npm run dev`
-      // Only applied when explicit flags aren't set.
-      if (injectPathArg && !opts.inject && !opts.group && !opts.path && !opts.secret && !opts.env) {
-        opts.inject = injectPathArg;
+      // Only applied when no explicit injection flags are set.
+      // When flags ARE set, restore the positional as the first command word.
+      if (injectPathArg) {
+        if (!opts.inject && !opts.group && !opts.path && !opts.secret && !opts.env) {
+          opts.inject = injectPathArg;
+        } else {
+          commandArgs = [injectPathArg, ...commandArgs];
+        }
       }
 
       if (opts.inject && opts.group) {
