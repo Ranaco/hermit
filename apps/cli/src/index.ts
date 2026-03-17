@@ -245,7 +245,7 @@ program
         abort("No secrets found.");
       }
 
-      let secret = requireByIdOrName(secrets, name, "secret");
+      const secret = requireByIdOrName(secrets, name, "secret");
 
       interface RevealApiError {
         statusCode?: number;
