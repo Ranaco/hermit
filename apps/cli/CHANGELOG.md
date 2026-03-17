@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.3.5
+
+### Patch Changes
+
+- d912a77: Fix `hermit run` consuming the first command word as an inject path when explicit flags (--group, --path, etc.) are already set. `hermit run --group "team" npm run dev` now correctly runs `npm run dev` instead of `run dev`.
+
 ## 0.3.4
 
 ### Patch Changes
