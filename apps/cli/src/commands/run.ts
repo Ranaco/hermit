@@ -287,11 +287,18 @@ export const runCommand = new Command("run")
   .option("--config <path>", "Path to .hermit.yml")
   .option("--password <password>", "Secret-level password used for protected secrets")
   .option("--vault-password <password>", "Vault password used for protected vaults")
+  .argument("[injectPath]", "Group path to inject (e.g. prod/api) — shorthand for --inject")
   .argument("[command...]", "Command to run")
   .allowExcessArguments(true)
-  .action((commandArgs: string[], opts: RunOptions) =>
+  .action((injectPathArg: string | undefined, commandArgs: string[], opts: RunOptions) =>
     executeCommand(async () => {
       requireAuth();
+
+      // Positional path shorthand: `hermit run prod/api -- npm run dev`
+      // Only applied when explicit flags aren't set.
+      if (injectPathArg && !opts.inject && !opts.group && !opts.path && !opts.secret && !opts.env) {
+        opts.inject = injectPathArg;
+      }
 
       if (opts.inject && opts.group) {
         abort("`--inject` cannot be combined with `--group`.", {

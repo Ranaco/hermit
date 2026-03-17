@@ -39,7 +39,11 @@ export function runWithEnv(
   envVars: Record<string, string>
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    const child: ChildProcess = spawn(resolveCommand(command), args, {
+    // On Windows we use shell:true so cmd.exe handles PATH resolution —
+    // passing a resolved full path (e.g. "C:\Program Files\nodejs\npm.cmd")
+    // with spaces breaks cmd.exe. Pass the bare command name instead.
+    const resolvedCommand = process.platform === "win32" ? command : resolveCommand(command);
+    const child: ChildProcess = spawn(resolvedCommand, args, {
       stdio: "inherit",
       env: {
         ...process.env,
