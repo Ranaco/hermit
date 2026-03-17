@@ -207,7 +207,7 @@ export default function OrganizationsPage() {
           setInviteEmail("");
           setInviteRoleId("");
           setShowInviteForm(false);
-          
+
           if (data?.invitation?.token) {
             const inviteLink = `${window.location.origin}/invite?token=${data.invitation.token}`;
             toast.success("User invited successfully!", {
@@ -334,46 +334,46 @@ export default function OrganizationsPage() {
             showCreateForm ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
           )}
         >
-            <div className="min-h-0">
-              <form onSubmit={handleCreateOrg} className="grid gap-4 border-b border-border pb-6 md:grid-cols-3">
-                <div className="space-y-2 md:col-span-1">
-                  <Label htmlFor="new-org-name">Name</Label>
-                  <Input
-                    id="new-org-name"
-                    value={newOrgName}
-                    onChange={(e) => setNewOrgName(e.target.value)}
-                    placeholder="Acme Security"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-1">
-                  <Label htmlFor="new-org-description">Description</Label>
-                  <Input
-                    id="new-org-description"
-                    value={newOrgDescription}
-                    onChange={(e) => setNewOrgDescription(e.target.value)}
-                    placeholder="Production KMS tenant"
-                  />
-                </div>
-                <div className="flex items-end gap-3 md:col-span-1">
-                  <Button type="submit" disabled={isCreating || !newOrgName}>
-                    {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Create
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setShowCreateForm(false);
-                      setNewOrgName("");
-                      setNewOrgDescription("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </div>
+          <div className="min-h-0">
+            <form onSubmit={handleCreateOrg} className="grid gap-4 border-b border-border pb-6 md:grid-cols-3">
+              <div className="space-y-2 md:col-span-1">
+                <Label htmlFor="new-org-name">Name</Label>
+                <Input
+                  id="new-org-name"
+                  value={newOrgName}
+                  onChange={(e) => setNewOrgName(e.target.value)}
+                  placeholder="Acme Security"
+                  required
+                />
+              </div>
+              <div className="space-y-2 md:col-span-1">
+                <Label htmlFor="new-org-description">Description</Label>
+                <Input
+                  id="new-org-description"
+                  value={newOrgDescription}
+                  onChange={(e) => setNewOrgDescription(e.target.value)}
+                  placeholder="Production KMS tenant"
+                />
+              </div>
+              <div className="flex items-end gap-3 md:col-span-1">
+                <Button type="submit" disabled={isCreating || !newOrgName}>
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setNewOrgName("");
+                    setNewOrgDescription("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -635,7 +635,7 @@ export default function OrganizationsPage() {
                         ) : (
                           <Badge variant="secondary">{member.role?.name || "Member"}</Badge>
                         )}
-                        
+
                         {permissions.canRemoveMembers && (
                           <Button
                             size="icon"
@@ -650,13 +650,13 @@ export default function OrganizationsPage() {
                       </div>
                     </div>
                   ))}
-                  
+
                   {(!selectedOrg.members || selectedOrg.members.length === 0) && (
-                     <div className="app-empty">
-                        <Users className="h-8 w-8 text-muted-foreground/50 mb-3" />
-                        <p className="text-[15px] font-semibold text-foreground">No members yet</p>
-                        <p className="text-[13px] text-muted-foreground mt-1">Invite people to get started.</p>
-                     </div>
+                    <div className="app-empty">
+                      <Users className="h-8 w-8 text-muted-foreground/50 mb-3" />
+                      <p className="text-[15px] font-semibold text-foreground">No members yet</p>
+                      <p className="text-[13px] text-muted-foreground mt-1">Invite people to get started.</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -802,21 +802,20 @@ export default function OrganizationsPage() {
                   ))}
 
                   {(!teams || teams.length === 0) && !showTeamForm && (
-                     <div className="app-empty">
-                        <Layers className="h-10 w-10 text-muted-foreground/40 mb-4" />
-                        <p className="text-[15px] font-semibold text-foreground">No Teams Built</p>
-                        <p className="text-[13px] text-muted-foreground mt-1 max-w-[200px]">Create a team to group permissions.</p>
-                     </div>
+                    <div className="app-empty">
+                      <Layers className="h-10 w-10 text-muted-foreground/40 mb-4" />
+                      <p className="text-[15px] font-semibold text-foreground">No Teams Built</p>
+                      <p className="text-[13px] text-muted-foreground mt-1 max-w-[200px]">Create a team to group permissions.</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
             </Card>
           </section>
         ) : (
-          <section className="app-empty min-h-[400px]">
-             <Building2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
-             <h2 className="text-xl font-bold tracking-tight text-foreground">No Organization Selected</h2>
-             <p className="text-[15px] text-muted-foreground mt-2 max-w-md">Select an organization above.</p>
+          <section className="app-empty min-h-[400px] flex items-start justify-center flex-col">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">No Organization Selected</h2>
+            <p className="text-[15px] text-muted-foreground mt-2">Select an organization above.</p>
           </section>
         )}
       </div>

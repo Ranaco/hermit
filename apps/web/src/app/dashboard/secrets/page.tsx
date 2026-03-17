@@ -115,7 +115,6 @@ export default function SecretsPage() {
 
   const getSecretPreview = (key: string) => {
     if (!visibleSecrets.has(key)) {
-      return "********";
       return "••••••••";
     }
 
@@ -181,7 +180,7 @@ export default function SecretsPage() {
     setIsRevealing(secretId);
     try {
       const response = await secretService.reveal(secretId, { password: providedPassword });
-      
+
       if (response.requiresPassword) {
         setActivePrompt(secretId);
         if (providedPassword) {
@@ -223,11 +222,11 @@ export default function SecretsPage() {
 
     setIsRevealing(key);
     try {
-      const response = await secretService.reveal(secretId, { 
+      const response = await secretService.reveal(secretId, {
         password: providedPassword,
         versionNumber
       });
-      
+
       if (response.requiresPassword) {
         setActivePrompt(key);
         if (providedPassword) {
@@ -367,7 +366,7 @@ export default function SecretsPage() {
                     <p className="text-[13px] font-medium text-muted-foreground mt-0.5">Creates a new version.</p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="update-value-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Value Type</Label>
                   <div className="flex flex-wrap gap-2">
@@ -720,20 +719,20 @@ export default function SecretsPage() {
 
         {/* Breadcrumb Navigation */}
         <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-border pb-3 text-[14px] font-medium text-muted-foreground">
-          <button 
+          <button
             onClick={() => {
               setCurrentGroupId(undefined);
               setBreadcrumbs([]);
-            }} 
+            }}
             className="hover:text-foreground transition-colors flex items-center"
           >
             <Folder className="h-4 w-4 mr-2" />
             Root
           </button>
-          
+
           {breadcrumbs.map((crumb, idx) => (
             <div key={crumb.id} className="flex items-center">
-               <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+              <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
               <button
                 onClick={() => {
                   setCurrentGroupId(crumb.id);
@@ -755,12 +754,12 @@ export default function SecretsPage() {
           ) : (filteredSecrets && filteredSecrets.length > 0) || (filteredGroups && filteredGroups.length > 0) ? (
             <>
               {filteredGroups?.map((group) => (
-                <Card 
-                  key={group.id} 
+                <Card
+                  key={group.id}
                   className="cursor-pointer transition-colors group"
                 >
                   <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div 
+                    <div
                       className="flex min-w-0 flex-1 items-center gap-4"
                       onClick={() => {
                         setCurrentGroupId(group.id);
@@ -774,184 +773,184 @@ export default function SecretsPage() {
                       <div>
                         <p className="font-bold tracking-tight text-[16px] text-foreground group-hover:underline">{group.name}</p>
                         <p className="text-[13px] font-medium text-muted-foreground mt-0.5">
-                           {group._count?.children || 0} subfolders, {group._count?.secrets || 0} secrets
+                          {group._count?.children || 0} subfolders, {group._count?.secrets || 0} secrets
                         </p>
                       </div>
                     </div>
-                      <div className="flex shrink-0 self-start overflow-hidden rounded-md border border-border bg-background sm:self-center">
-                        {permissions.canDeleteSecret ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Delete folder "${group.name}"? It must be empty first.`)) {
-                                 deleteFolder({ vaultId: currentVault.id, groupId: group.id });
-                              }
-                            }}
-                            title="Delete folder"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        ) : null}
+                    <div className="flex shrink-0 self-start overflow-hidden rounded-md border border-border bg-background sm:self-center">
+                      {permissions.canDeleteSecret ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete folder "${group.name}"? It must be empty first.`)) {
+                              deleteFolder({ vaultId: currentVault.id, groupId: group.id });
+                            }
+                          }}
+                          title="Delete folder"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                     </div>
                   </CardContent>
                 </Card>
               ))}
 
               {filteredSecrets?.map((secret) => (
-              <Card key={secret.id}>
-                <CardContent className="p-5">
-                  <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="flex min-w-0 flex-1 items-start gap-4">
-                      <div className="rounded-md bg-muted p-3 text-muted-foreground">
-                        <Lock className="h-5 w-5" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <p className="min-w-0 break-words font-semibold tracking-tight text-[16px] text-foreground">{secret.name}</p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="secondary" className="h-5 px-2 text-[11px] uppercase">
-                              v{secret.currentVersion?.versionNumber || 1}
-                            </Badge>
-                            {secret.key ? (
-                              <Badge variant="outline" className="h-5 px-2 text-[11px] uppercase">
-                                <KeyRound className="mr-1 h-3 w-3" />
-                                {secret.key.name}
-                              </Badge>
-                            ) : null}
-                          </div>
+                <Card key={secret.id}>
+                  <CardContent className="p-5">
+                    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="flex min-w-0 flex-1 items-start gap-4">
+                        <div className="rounded-md bg-muted p-3 text-muted-foreground">
+                          <Lock className="h-5 w-5" />
                         </div>
-                        <p className="mt-1.5 text-[14px] font-medium text-muted-foreground">{secret.description || "No description provided."}</p>
 
-                        {activePrompt === secret.id ? (
-                          <div className="mt-4 flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-center">
-                            <Input
-                              type="password"
-                              placeholder="Enter secret password..."
-                              className="h-9 flex-1 bg-background text-[13px] shadow-sm"
-                              value={revealPassword}
-                              onChange={(e) => setRevealPassword(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  toggleSecretVisibility(secret.id, revealPassword);
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button
-                                size="sm"
-                                className="h-9 px-4"
-                                disabled={isRevealing === secret.id || !revealPassword}
-                                onClick={() => toggleSecretVisibility(secret.id, revealPassword)}
-                              >
-                                {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 px-4 text-muted-foreground"
-                                onClick={() => {
-                                  setActivePrompt(null);
-                                  setRevealPassword("");
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="mt-4 flex w-full min-w-0 flex-col gap-2 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-start">
-                            <code className="block max-h-48 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-background px-3 py-2 font-mono text-[13px] leading-6">
-                              {getSecretPreview(secret.id)}
-                            </code>
-                            <div className="flex shrink-0 justify-end gap-1">
-                               <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
-                                {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
-                              {visibleSecrets.has(secret.id) ? (
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground" onClick={() => copySecret(secret.id)}>
-                                  <Copy className="h-4 w-4" />
-                                </Button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <p className="min-w-0 break-words font-semibold tracking-tight text-[16px] text-foreground">{secret.name}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="secondary" className="h-5 px-2 text-[11px] uppercase">
+                                v{secret.currentVersion?.versionNumber || 1}
+                              </Badge>
+                              {secret.key ? (
+                                <Badge variant="outline" className="h-5 px-2 text-[11px] uppercase">
+                                  <KeyRound className="mr-1 h-3 w-3" />
+                                  {secret.key.name}
+                                </Badge>
                               ) : null}
                             </div>
                           </div>
-                        )}
+                          <p className="mt-1.5 text-[14px] font-medium text-muted-foreground">{secret.description || "No description provided."}</p>
 
-                        <p className="mt-4 text-[12px] font-bold tracking-wider uppercase text-muted-foreground/60">Updated {formatDateTime(secret.updatedAt)}</p>
+                          {activePrompt === secret.id ? (
+                            <div className="mt-4 flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-center">
+                              <Input
+                                type="password"
+                                placeholder="Enter secret password..."
+                                className="h-9 flex-1 bg-background text-[13px] shadow-sm"
+                                value={revealPassword}
+                                onChange={(e) => setRevealPassword(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    toggleSecretVisibility(secret.id, revealPassword);
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-9 px-4"
+                                  disabled={isRevealing === secret.id || !revealPassword}
+                                  onClick={() => toggleSecretVisibility(secret.id, revealPassword)}
+                                >
+                                  {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 px-4 text-muted-foreground"
+                                  onClick={() => {
+                                    setActivePrompt(null);
+                                    setRevealPassword("");
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-4 flex w-full min-w-0 flex-col gap-2 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-start">
+                              <code className="block max-h-48 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-background px-3 py-2 font-mono text-[13px] leading-6">
+                                {getSecretPreview(secret.id)}
+                              </code>
+                              <div className="flex shrink-0 justify-end gap-1">
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground" onClick={() => toggleSecretVisibility(secret.id)} disabled={isRevealing === secret.id}>
+                                  {isRevealing === secret.id ? <Loader2 className="h-4 w-4 animate-spin" /> : visibleSecrets.has(secret.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                                {visibleSecrets.has(secret.id) ? (
+                                  <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground" onClick={() => copySecret(secret.id)}>
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="mt-4 text-[12px] font-bold tracking-wider uppercase text-muted-foreground/60">Updated {formatDateTime(secret.updatedAt)}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex shrink-0 self-end overflow-hidden rounded-md border border-border bg-background xl:self-start">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-11 w-11 rounded-none border-r border-border transition-colors"
-                        asChild
-                        title="Open secret details"
-                      >
-                        <Link href={`/dashboard/secrets/${secret.id}`}>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </Link>
-                      </Button>
-                      {permissions.canEditSecret ? (
+                      <div className="flex shrink-0 self-end overflow-hidden rounded-md border border-border bg-background xl:self-start">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-11 w-11 rounded-none border-r border-border transition-colors"
+                          asChild
+                          title="Open secret details"
+                        >
+                          <Link href={`/dashboard/secrets/${secret.id}`}>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </Link>
+                        </Button>
+                        {permissions.canEditSecret ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11 rounded-none border-r border-border transition-colors"
+                            onClick={() => {
+                              if (activeSecretId === secret.id && showUpdateForm) {
+                                setShowUpdateForm(false);
+                                setActiveSecretId(null);
+                              } else {
+                                setActiveSecretId(secret.id);
+                                setShowUpdateForm(true);
+                                setShowCreateForm(false);
+                                setShowCreateFolderForm(false);
+                                setUpdateSecretData(prev => ({ ...prev, description: secret.description || "", valueType: secret.valueType }));
+                              }
+                            }}
+                            title="Rotate / Update Secret"
+                          >
+                            <RefreshCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-11 w-11 rounded-none border-r border-border transition-colors"
                           onClick={() => {
-                            if (activeSecretId === secret.id && showUpdateForm) {
-                              setShowUpdateForm(false);
-                              setActiveSecretId(null);
-                            } else {
-                              setActiveSecretId(secret.id);
-                              setShowUpdateForm(true);
-                              setShowCreateForm(false);
-                              setShowCreateFolderForm(false);
-                              setUpdateSecretData(prev => ({ ...prev, description: secret.description || "", valueType: secret.valueType }));
-                            }
+                            setActiveSecretId(secret.id);
+                            setShowVersionsModal(true);
                           }}
-                          title="Rotate / Update Secret"
+                          title="Version History"
                         >
-                          <RefreshCcw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <History className="h-4 w-4 text-indigo-500" />
                         </Button>
-                      ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-11 w-11 rounded-none border-r border-border transition-colors"
-                        onClick={() => {
-                          setActiveSecretId(secret.id);
-                          setShowVersionsModal(true);
-                        }}
-                        title="Version History"
-                      >
-                        <History className="h-4 w-4 text-indigo-500" />
-                      </Button>
 
-                      {permissions.canDeleteSecret ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-11 w-11 rounded-none hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                          onClick={() => {
-                            if (confirm(`Delete secret "${secret.name}"?`)) {
-                              deleteSecret(secret.id);
-                            }
-                          }}
-                          title="Delete secret"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : null}
+                        {permissions.canDeleteSecret ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11 rounded-none hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                            onClick={() => {
+                              if (confirm(`Delete secret "${secret.name}"?`)) {
+                                deleteSecret(secret.id);
+                              }
+                            }}
+                            title="Delete secret"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               ))}
             </>
           ) : (
@@ -969,7 +968,7 @@ export default function SecretsPage() {
 
         {/* Versions Modal */}
         <Dialog open={showVersionsModal} onOpenChange={(open: boolean) => {
-           setShowVersionsModal(open);
+          setShowVersionsModal(open);
           if (!open) setActiveSecretId(null);
         }}>
           <DialogContent className="border border-border bg-background p-0 sm:max-w-2xl">
@@ -988,14 +987,14 @@ export default function SecretsPage() {
                     return (
                       <section key={version.id} className="space-y-4 py-5 first:pt-0 last:pb-0">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <Badge variant="secondary">v{version.versionNumber}</Badge>
-                          {secretVersionsData.currentVersionId === version.id ? (
-                            <Badge variant="outline">Current</Badge>
-                          ) : null}
-                          <span className="text-sm text-muted-foreground">
-                            {formatDateTime(version.createdAt)}
-                          </span>
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <Badge variant="secondary">v{version.versionNumber}</Badge>
+                            {secretVersionsData.currentVersionId === version.id ? (
+                              <Badge variant="outline">Current</Badge>
+                            ) : null}
+                            <span className="text-sm text-muted-foreground">
+                              {formatDateTime(version.createdAt)}
+                            </span>
                           </div>
                           <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                             {version.createdBy?.firstName || version.createdBy?.email || "Unknown"}
@@ -1073,13 +1072,13 @@ export default function SecretsPage() {
                 </div>
               ) : (
                 <div className="app-empty p-12">
-                   <p className="text-[14px] font-semibold text-muted-foreground">No versions yet.</p>
+                  <p className="text-[14px] font-semibold text-muted-foreground">No versions yet.</p>
                 </div>
               )}
             </div>
           </DialogContent>
         </Dialog>
-        
+
         <CreateShareModal isOpen={showShareModal} onOpenChange={setShowShareModal} />
       </div>
     </DashboardLayout>

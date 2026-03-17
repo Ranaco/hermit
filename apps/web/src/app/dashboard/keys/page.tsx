@@ -27,7 +27,9 @@ import {
   Vault,
   Loader2,
   ShieldCheck,
+  ArrowUpRight,
 } from "lucide-react";
+import Link from 'next/link'
 import { cn, formatDateTime } from "@/lib/utils";
 
 const keyTypes = ["STRING", "JSON", "NUMBER", "BOOLEAN", "MULTILINE"] as const;
@@ -96,10 +98,20 @@ export default function KeysPage() {
   if (!currentVault) {
     return (
       <DashboardLayout>
-        <div className="app-empty">
-          <Vault className="mx-auto mb-3 h-8 w-8" />
-          Select a vault to manage keys.
-        </div>
+        <section className="flex min-h-[360px] flex-col items-start justify-center gap-4 rounded-[18px] border border-border bg-card px-8 py-10">
+          <p className="app-eyebrow">Workspace</p>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Keys</h1>
+            <p className="max-w-xl text-sm text-muted-foreground">Choose a vault to get started</p>
+          </div>
+          <Link
+            href={"/dashboard/vaults"}
+            className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-opacity hover:opacity-70"
+          >
+            Open vaults
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </section>
       </DashboardLayout>
     );
   }

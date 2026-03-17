@@ -24,6 +24,12 @@ apiClient.interceptors.request.use(
   }
 );
 
+const redirectToLogin = () => {
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login";
+  }
+};
+
 // Response interceptor to handle token refresh and errors
 apiClient.interceptors.response.use(
   (response) => response,
@@ -34,42 +40,35 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) {
+        localStorage.removeItem("auth_token");
+        redirectToLogin();
+        return Promise.reject(error);
+      }
+
       try {
         // Try to refresh the token
-        const refreshToken = localStorage.getItem("refresh_token");
-        if (refreshToken) {
-          const response = await axios.post(
-            `${API_BASE_URL}/auth/refresh`,
-            { refreshToken }
-          );
+        const response = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          { refreshToken }
+        );
 
-          const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens;
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens;
 
-          // Update tokens
-          localStorage.setItem("auth_token", accessToken);
-          localStorage.setItem("refresh_token", newRefreshToken);
+        // Update tokens
+        localStorage.setItem("auth_token", accessToken);
+        localStorage.setItem("refresh_token", newRefreshToken);
 
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return apiClient(originalRequest);
-        }
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return apiClient(originalRequest);
       } catch (refreshError) {
         // Refresh failed, clear tokens and redirect to login
         localStorage.removeItem("auth_token");
         localStorage.removeItem("refresh_token");
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
+        redirectToLogin();
         return Promise.reject(refreshError);
-      }
-    }
-
-    // For other 401 errors or if refresh failed, redirect to login
-    if (error.response?.status === 401) {
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("refresh_token");
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
       }
     }
 

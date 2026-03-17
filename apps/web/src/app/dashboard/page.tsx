@@ -151,13 +151,13 @@ export default function DashboardPage() {
     { label: "Vaults", value: vaults?.length ?? 0, href: "/dashboard/vaults", icon: Building2 },
     ...(permissions.canReadInvitations
       ? [
-          {
-            label: "Pending invites",
-            value: outboundInvitations.length,
-            href: "/dashboard/organizations",
-            icon: Mail,
-          },
-        ]
+        {
+          label: "Pending invites",
+          value: outboundInvitations.length,
+          href: "/dashboard/organizations",
+          icon: Mail,
+        },
+      ]
       : []),
   ];
 
