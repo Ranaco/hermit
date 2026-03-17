@@ -144,6 +144,9 @@ export interface VaultError extends Error {
   statusCode?: number;
   response?: {
     statusCode: number;
-    body: unknown;
+    body?: {
+      errors?: string[];
+      [key: string]: unknown;
+    };
   };
 }
