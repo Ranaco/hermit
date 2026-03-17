@@ -420,6 +420,11 @@ export class VaultService {
       log.info("Transit engine enabled", { mount: this.transitMount });
     } catch (error: any) {
       if (error?.response?.statusCode === 403) {
+        const errors: string[] = error?.response?.body?.errors || [];
+        const isInvalidToken = errors.some((e: string) => e.includes("invalid token"));
+        if (isInvalidToken) {
+          throw error; // Let it bubble up so handleVaultError can trigger re-login
+        }
         log.warn("403 Forbidden when enabling transit engine. Assuming it is already enabled by admin.", { mount: this.transitMount });
         return;
       }
@@ -777,6 +782,18 @@ export class VaultService {
   private handleVaultError(error: VaultError): Error {
     const statusCode = error.response?.statusCode || error.statusCode;
     const message = error.message || "Unknown Vault error";
+
+    // If the token is invalid/expired, trigger AppRole re-login so the next request succeeds
+    if (statusCode === 403 && this.config.appRole) {
+      const errors: string[] = error.response?.body?.errors || [];
+      const isInvalidToken = errors.some((e) => e.includes("invalid token"));
+      if (isInvalidToken) {
+        log.info("Invalid Vault token detected, triggering AppRole re-login...");
+        this.loginWithAppRole().catch((err) =>
+          log.error("AppRole re-login failed after invalid token", { error: err })
+        );
+      }
+    }
 
     const errorMessage = `Vault Error (${statusCode || "unknown"}): ${message}`;
 
