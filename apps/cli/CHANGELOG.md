@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 6254a77: Update for string manipulation and secret handling.
+
 ## 0.3.7
 
 ### Patch Changes
