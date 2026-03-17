@@ -59,15 +59,23 @@ async function collectAccessibleGroupTree(
 async function findExactSecretsInGroup(
   vaultId: string,
   groupId: string | undefined,
-  secretName: string,
+  query: string,
 ): Promise<sdk.SecretSummary[]> {
-  const secrets = await sdk.getSecrets(vaultId, {
+  const nameSearch = await sdk.getSecrets(vaultId, {
     secretGroupId: groupId,
-    search: secretName,
+    search: query,
     limit: SECRET_LOOKUP_LIMIT,
   });
 
-  return secrets.filter((secret) => secret.name.toLowerCase() === secretName.toLowerCase());
+  const exactName = nameSearch.filter((s) => s.name.toLowerCase() === query.toLowerCase());
+  if (exactName.length > 0) return exactName;
+
+  // No name match — try ID prefix lookup
+  const all = await sdk.getSecrets(vaultId, { secretGroupId: groupId, limit: SECRET_LOOKUP_LIMIT });
+  const exactId = all.filter((s) => s.id === query);
+  if (exactId.length > 0) return exactId;
+
+  return all.filter((s) => s.id.startsWith(query));
 }
 
 async function findAccessibleSecretMatches(
@@ -226,7 +234,7 @@ function buildInjectedEnvVars(
   const collisions = new Map<string, string[]>();
 
   for (const secret of revealedSecrets) {
-    if (secret.valueType === "MULTILINE") {
+    if (secret.valueType.toUpperCase() === "MULTILINE" || secret.value.includes("\n")) {
       const pairs = parseMultilineSecret(secret.value);
       if (pairs.length > 0) {
         for (const { key, value } of pairs) {
