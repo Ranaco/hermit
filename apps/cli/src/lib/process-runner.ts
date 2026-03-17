@@ -39,19 +39,21 @@ export function runWithEnv(
   envVars: Record<string, string>
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    // On Windows we use shell:true so cmd.exe handles PATH resolution —
-    // passing a resolved full path (e.g. "C:\Program Files\nodejs\npm.cmd")
-    // with spaces breaks cmd.exe. Pass the bare command name instead.
-    const resolvedCommand = process.platform === "win32" ? command : resolveCommand(command);
-    const child: ChildProcess = spawn(resolvedCommand, args, {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        ...envVars,
-      },
-      shell: process.platform === "win32",
-      windowsHide: true,
-    });
+    // On Windows we use shell:true so cmd.exe handles PATH resolution.
+    const isWindows = process.platform === "win32";
+    const resolvedCommand = isWindows ? command : resolveCommand(command);
+    const child: ChildProcess = isWindows
+      ? spawn([resolvedCommand, ...args].join(" "), [], {
+          stdio: "inherit",
+          env: { ...process.env, ...envVars },
+          shell: true,
+          windowsHide: true,
+        })
+      : spawn(resolvedCommand, args, {
+          stdio: "inherit",
+          env: { ...process.env, ...envVars },
+          windowsHide: true,
+        });
 
     const cleanupSignalHandlers = new Map<NodeJS.Signals, () => void>();
     const registeredSignals: NodeJS.Signals[] = ["SIGTERM", "SIGINT", "SIGHUP"];

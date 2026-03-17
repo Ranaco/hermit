@@ -239,9 +239,10 @@ function buildInjectedEnvVars(
       if (pairs.length > 0) {
         for (const { key, value } of pairs) {
           const envName = configMap?.[key] || key;
-          if (envVars[envName] !== undefined) {
+          const existingSource = assignedNames.get(envName);
+          if (existingSource && !existingSource.startsWith(`${secret.name}:`)) {
             const current = collisions.get(envName) || [];
-            if (current.length === 0) current.push(assignedNames.get(envName) || envName);
+            if (current.length === 0) current.push(existingSource);
             current.push(`${secret.name}:${key}`);
             collisions.set(envName, current);
             continue;
@@ -254,10 +255,11 @@ function buildInjectedEnvVars(
       // Fall through to single-var injection if no key=value pairs found (e.g. certificates, SSH keys)
     }
     const envName = configMap?.[secret.name] || secret.name;
-    if (envVars[envName] !== undefined) {
+    const existingSource = assignedNames.get(envName);
+    if (existingSource && existingSource !== secret.name) {
       const current = collisions.get(envName) || [];
       if (current.length === 0) {
-        current.push(assignedNames.get(envName) || envName);
+        current.push(existingSource);
       }
       current.push(secret.name);
       collisions.set(envName, current);
