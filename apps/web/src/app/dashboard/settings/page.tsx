@@ -1,14 +1,64 @@
 "use client";
 
-import { Fingerprint, KeyRound, Shield, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Fingerprint, KeyRound, Loader2, Shield, User } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuthStore } from "@/store/auth.store";
+import { useUpdateProfile, useChangePassword } from "@/hooks/use-user";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
+  const user = useAuthStore((s) => s.user);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const { mutate: updateProfile, isPending: isSavingProfile } = useUpdateProfile();
+  const { mutate: changePassword, isPending: isChangingPassword } = useChangePassword();
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+    }
+  }, [user]);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfile({ firstName: firstName || undefined, lastName: lastName || undefined });
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    changePassword(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        },
+      },
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -41,26 +91,50 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
-              <div className="space-y-4">
+              <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div>
                   <p className="app-section-title">Profile</p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Display name</Label>
-                    <Input id="name" placeholder="Jane Doe" />
+                    <Label htmlFor="firstName">First name</Label>
+                    <Input
+                      id="firstName"
+                      placeholder="Jane"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="jane@company.com" />
+                    <Label htmlFor="lastName">Last name</Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
                   </div>
                 </div>
 
-                <Button>Save profile</Button>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={user?.email || ""}
+                    disabled
+                    className="opacity-60"
+                  />
+                </div>
 
-              <div className="space-y-4 border-t border-border pt-8">
+                <Button type="submit" disabled={isSavingProfile}>
+                  {isSavingProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Save profile
+                </Button>
+              </form>
+
+              <form onSubmit={handleChangePassword} className="space-y-4 border-t border-border pt-8">
                 <div>
                   <p className="app-section-title">Password</p>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">Reveal prompts stay separate.</p>
@@ -68,25 +142,49 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="current-password">Current password</Label>
-                  <Input id="current-password" type="password" />
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                  />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="new-password">New password</Label>
-                    <Input id="new-password" type="password" />
+                    <Input
+                      id="new-password"
+                      type="password"
+                      minLength={8}
+                      placeholder="Min 8 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirm password</Label>
-                    <Input id="confirm-password" type="password" />
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
 
-                <Button variant="outline">
-                  <KeyRound className="mr-2 h-4 w-4" />
+                <Button type="submit" variant="outline" disabled={isChangingPassword}>
+                  {isChangingPassword ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <KeyRound className="mr-2 h-4 w-4" />
+                  )}
                   Update password
                 </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
 

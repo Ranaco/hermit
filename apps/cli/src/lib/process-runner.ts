@@ -45,7 +45,7 @@ export function runWithEnv(
         ...process.env,
         ...envVars,
       },
-      shell: false,
+      shell: process.platform === "win32",
       windowsHide: true,
     });
 

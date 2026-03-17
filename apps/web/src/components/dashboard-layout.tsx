@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { useAuthStore } from "@/store/auth.store";
 import { useLogout } from "@/hooks/use-auth";
@@ -32,6 +31,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { LucideIcon } from "lucide-react";
+import { CommandMenu } from "@/components/command-menu";
 
 type NavigationItem = {
   name: string;
@@ -254,17 +254,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="relative hidden md:block">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Search"
-                    className="h-9 w-52 pl-9 pr-10 text-sm"
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
+                  className="hidden h-9 w-52 items-center gap-2 rounded-[10px] border border-border bg-background px-3 text-sm text-muted-foreground transition-colors hover:bg-muted md:inline-flex"
+                >
+                  <Search className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left">Search</span>
+                  <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]">
                     Ctrl K
-                  </span>
-                </div>
+                  </kbd>
+                </button>
 
                 <Button
                   variant="ghost"
@@ -287,6 +287,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+
+      <CommandMenu />
     </div>
   );
 }

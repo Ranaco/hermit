@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuthStore } from "@/store/auth.store";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
 
@@ -24,7 +25,9 @@ apiClient.interceptors.request.use(
   }
 );
 
-const redirectToLogin = () => {
+const forceLogout = () => {
+  // Clear Zustand auth store (prevents AuthGuard redirect loop)
+  useAuthStore.getState().logout();
   if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
     window.location.href = "/login";
   }
@@ -42,8 +45,7 @@ apiClient.interceptors.response.use(
 
       const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        localStorage.removeItem("auth_token");
-        redirectToLogin();
+        forceLogout();
         return Promise.reject(error);
       }
 
@@ -64,10 +66,7 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("refresh_token");
-        redirectToLogin();
+        forceLogout();
         return Promise.reject(refreshError);
       }
     }

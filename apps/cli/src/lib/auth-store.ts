@@ -49,7 +49,7 @@ const store = new Conf<StoreSchema>({
     vault: { type: ["object", "null"] as never, default: null },
     serverUrl: {
       type: "string",
-      default: "http://localhost:5001/api/v1",
+      default: "https://hermit.ranax.co/api/v1",
     },
   },
   encryptionKey: "hermit-cli-encryption-key-v1",

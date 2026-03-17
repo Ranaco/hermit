@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
@@ -22,19 +22,30 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [hydrated, setHydrated] = useState(false);
 
+  // Track if the user was already authenticated when the guard first hydrated.
+  // This prevents the guard from hijacking the login page's own post-auth
+  // redirect (e.g. register → /onboarding) by only redirecting users who
+  // land on /login while *already* logged in.
+  const wasAuthOnHydrate = useRef<boolean | null>(null);
+
   useEffect(() => {
-    // Wait for Zustand persist to hydrate from localStorage
     const unsub = useAuthStore.persist.onFinishHydration(() => {
       setHydrated(true);
     });
 
-    // If already hydrated (e.g. store was cached), set immediately
     if (useAuthStore.persist.hasHydrated()) {
       setHydrated(true);
     }
 
     return unsub;
   }, []);
+
+  // Capture initial auth state once hydration completes
+  useEffect(() => {
+    if (hydrated && wasAuthOnHydrate.current === null) {
+      wasAuthOnHydrate.current = isAuthenticated;
+    }
+  }, [hydrated, isAuthenticated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -44,7 +55,9 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       router.replace(`/login?returnUrl=${returnUrl}`);
     }
 
-    if (isAuthenticated && isGuestOnly(pathname)) {
+    // Only redirect away from /login if the user was already authenticated
+    // when the page loaded — not if they just logged in/registered on this page.
+    if (isAuthenticated && isGuestOnly(pathname) && wasAuthOnHydrate.current) {
       router.replace("/dashboard");
     }
   }, [hydrated, isAuthenticated, pathname, router]);
@@ -67,8 +80,8 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  // Don't render login if authenticated (redirect is pending)
-  if (hydrated && isAuthenticated && isGuestOnly(pathname)) {
+  // Don't render login if authenticated and was already auth'd (redirect pending)
+  if (hydrated && isAuthenticated && isGuestOnly(pathname) && wasAuthOnHydrate.current) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

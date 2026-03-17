@@ -146,11 +146,11 @@ export default function KeysPage() {
 
         <section
           className={cn(
-            "overflow-hidden border-b border-border transition-all duration-200",
-            permissions.canCreateKey && showCreateForm ? "max-h-[480px] pb-6 opacity-100" : "max-h-0 pb-0 opacity-0",
+            "grid border-b border-border transition-[grid-template-rows,opacity] duration-200",
+            permissions.canCreateKey && showCreateForm ? "grid-rows-[1fr] pb-6 opacity-100" : "grid-rows-[0fr] pb-0 opacity-0",
           )}
         >
-          <form onSubmit={handleCreateKey} className="grid gap-4 pt-2 md:grid-cols-3">
+          <form onSubmit={handleCreateKey} className={cn("grid gap-4 pt-2 md:grid-cols-3", !showCreateForm && "overflow-hidden")}>
             <div className="space-y-2">
               <Label htmlFor="key-name">Name</Label>
               <Input
