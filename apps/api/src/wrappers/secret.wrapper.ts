@@ -1424,7 +1424,7 @@ export const secretWrapper = {
       },
     });
 
-    const revealed: Array<{ name: string; value: string }> = [];
+    const revealed: Array<{ name: string; value: string; valueType: string }> = [];
     const skipped: Array<{ name: string; reason: string }> = [];
 
     for (const secret of secrets) {
@@ -1473,7 +1473,7 @@ export const secretWrapper = {
           vaultKeyName,
           version.encryptedValue,
         );
-        revealed.push({ name: secret.name, value: decryptedValue });
+        revealed.push({ name: secret.name, value: decryptedValue, valueType: secret.valueType });
 
         // Update access metadata
         await prisma.secret.update({

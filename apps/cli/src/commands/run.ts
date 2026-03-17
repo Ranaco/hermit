@@ -199,8 +199,26 @@ async function resolveInjectSelection(vaultId: string, target: string): Promise<
   }
 }
 
+function parseMultilineSecret(value: string): Array<{ key: string; value: string }> {
+  const pairs: Array<{ key: string; value: string }> = [];
+  for (const line of value.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex <= 0) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    let val = trimmed.slice(eqIndex + 1);
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    pairs.push({ key, value: val });
+  }
+  return pairs;
+}
+
 function buildInjectedEnvVars(
-  revealedSecrets: Array<{ name: string; value: string }>,
+  revealedSecrets: Array<{ name: string; value: string; valueType: string }>,
   configMap?: Record<string, string>,
 ): Record<string, string> {
   const envVars: Record<string, string> = {};
@@ -208,6 +226,25 @@ function buildInjectedEnvVars(
   const collisions = new Map<string, string[]>();
 
   for (const secret of revealedSecrets) {
+    if (secret.valueType === "MULTILINE") {
+      const pairs = parseMultilineSecret(secret.value);
+      if (pairs.length > 0) {
+        for (const { key, value } of pairs) {
+          const envName = configMap?.[key] || key;
+          if (envVars[envName] !== undefined) {
+            const current = collisions.get(envName) || [];
+            if (current.length === 0) current.push(assignedNames.get(envName) || envName);
+            current.push(`${secret.name}:${key}`);
+            collisions.set(envName, current);
+            continue;
+          }
+          envVars[envName] = value;
+          assignedNames.set(envName, `${secret.name}:${key}`);
+        }
+        continue;
+      }
+      // Fall through to single-var injection if no key=value pairs found (e.g. certificates, SSH keys)
+    }
     const envName = configMap?.[secret.name] || secret.name;
     if (envVars[envName] !== undefined) {
       const current = collisions.get(envName) || [];
