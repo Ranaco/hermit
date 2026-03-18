@@ -1485,8 +1485,8 @@ export const secretWrapper = {
     const decryptedSecretIds: string[] = [];
 
     // Batch decrypt each group with a single network request to Vault
-    for (const [vaultKeyName, groupSecrets] of byVaultKey.entries()) {
-      const ciphertexts = groupSecrets.map(s => s.currentVersion!.encryptedValue);
+    for (const [vaultKeyName, groupSecrets] of Array.from(byVaultKey.entries())) {
+      const ciphertexts = groupSecrets.map((s: typeof secrets[number]) => s.currentVersion!.encryptedValue);
       try {
         const plaintexts = await encryptionService.batchDecrypt(vaultKeyName, ciphertexts);
         for (let i = 0; i < groupSecrets.length; i++) {
