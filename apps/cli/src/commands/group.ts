@@ -34,14 +34,19 @@ interface GroupTreeOptions {
   vault?: string;
 }
 
-async function renderGroupTree(vaultId: string, parentId?: string | null, prefix: string = ""): Promise<string[]> {
+async function renderGroupTree(vaultId: string, parentId?: string | null): Promise<ui.NestedTreeItem[]> {
   const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
-  const lines: string[] = [];
+  const nodes: ui.NestedTreeItem[] = [];
   for (const group of groups) {
-    lines.push(`${prefix}${group.name}`);
-    lines.push(...(await renderGroupTree(vaultId, group.id, `${prefix}  `)));
+    nodes.push({
+      id: group.id,
+      name: group.name,
+      isGroup: true,
+      meta: `${group._count?.secrets ?? 0} secrets · ${group._count?.children ?? 0} groups`,
+      children: await renderGroupTree(vaultId, group.id),
+    });
   }
-  return lines;
+  return nodes;
 }
 
 export const groupCommand = new Command("group").description("Manage secret groups");
@@ -62,17 +67,14 @@ groupCommand
         ui.newline();
         return;
       }
-      ui.cards(
-        groups.map((group) => ({
-          id: group.id,
-          name: group.name,
-          fields: [
-            ...(group.description ? [{ value: group.description, overflow: "wrap" as const }] : []),
-            { label: "Secrets", value: String(group._count?.secrets || 0), overflow: "truncate" },
-            { label: "Children", value: String(group._count?.children || 0), overflow: "truncate" },
-          ],
-        })),
-      );
+      const label = opts.parent ? `${vault.name} / ${opts.parent}` : vault.name;
+      const treeItems: ui.TreeListingItem[] = groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        isGroup: true,
+        meta: `${g._count?.secrets ?? 0} secrets · ${g._count?.children ?? 0} groups`,
+      }));
+      ui.treeListing(label, treeItems);
     }),
   );
 
@@ -179,15 +181,14 @@ groupCommand
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
-      const lines = await renderGroupTree(vault.id);
-      renderData({ vault, tree: lines });
-      if (lines.length === 0) {
+      const nodes = await renderGroupTree(vault.id);
+      renderData({ vault, tree: nodes });
+      if (nodes.length === 0) {
         ui.warn("No secret groups found");
         ui.newline();
         return;
       }
-      ui.listPanel(`Groups - ${vault.name}`, lines);
-      ui.newline();
+      ui.nestedTreeListing(`${vault.name}`, nodes);
     }),
   );
 

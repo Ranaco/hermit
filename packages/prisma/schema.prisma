@@ -177,19 +177,19 @@ model Organization {
 }
 
 model OrganizationInvitation {
-    id             String       @id @default(uuid())
+    id             String            @id @default(uuid())
     email          String
     organizationId String
     invitedById    String
     roleId         String?
-    token          String       @unique
+    token          String            @unique
     expiresAt      DateTime
     acceptedAt     DateTime?
     revokedAt      DateTime?
-    createdAt      DateTime     @default(now())
-    updatedAt      DateTime     @updatedAt
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    invitedBy      User         @relation("UserInvitations", fields: [invitedById], references: [id])
+    createdAt      DateTime          @default(now())
+    updatedAt      DateTime          @updatedAt
+    organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    invitedBy      User              @relation("UserInvitations", fields: [invitedById], references: [id])
     role           OrganizationRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
     @@index([token])
@@ -384,18 +384,18 @@ model TeamMember {
 }
 
 model AuditLog {
-    id           String       @id @default(uuid())
-    userId       String?
+    id             String       @id @default(uuid())
+    userId         String?
     organizationId String?
-    vaultId     String?
-    action       AuditAction
-    resourceType ResourceType
-    resourceId   String?
-    details      Json
-    ipAddress    String?
-    userAgent    String?
-    createdAt    DateTime     @default(now())
-    user         User?        @relation("UserActivity", fields: [userId], references: [id], onDelete: SetNull)
+    vaultId        String?
+    action         AuditAction
+    resourceType   ResourceType
+    resourceId     String?
+    details        Json
+    ipAddress      String?
+    userAgent      String?
+    createdAt      DateTime     @default(now())
+    user           User?        @relation("UserActivity", fields: [userId], references: [id], onDelete: SetNull)
 
     @@index([createdAt])
     @@index([userId])
@@ -506,6 +506,7 @@ model Secret {
     @@index([keyId])
     @@index([createdById])
     @@index([expiresAt])
+    @@index([vaultId, secretGroupId])
 }
 
 model SecretVersion {
@@ -528,15 +529,15 @@ model SecretVersion {
 }
 
 model OrganizationRole {
-    id                String                 @id @default(uuid())
+    id                String                   @id @default(uuid())
     organizationId    String
     name              String
     description       String?
-    permissions       Json                   @default("[]")
-    isDefault         Boolean                @default(false)
-    createdAt         DateTime               @default(now())
-    updatedAt         DateTime               @updatedAt
-    organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    permissions       Json                     @default("[]")
+    isDefault         Boolean                  @default(false)
+    createdAt         DateTime                 @default(now())
+    updatedAt         DateTime                 @updatedAt
+    organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     members           OrganizationMember[]
     invitations       OrganizationInvitation[]
     policyAttachments RolePolicyAttachment[]

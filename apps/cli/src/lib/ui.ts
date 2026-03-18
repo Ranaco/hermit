@@ -612,6 +612,82 @@ export function matchId(partial: string, fullId: string): boolean {
   return partial.length > 0 && fullId.toLowerCase().startsWith(partial.toLowerCase());
 }
 
+export interface TreeListingItem {
+  name: string;
+  id: string;
+  isGroup: boolean;
+  meta?: string;
+}
+
+export function treeListing(title: string, items: TreeListingItem[]): void {
+  if (isJsonMode()) return;
+  if (items.length === 0) return;
+
+  console.log();
+  console.log(`  ${colors.bright(title)}`);
+  console.log();
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const isLast = i === items.length - 1;
+    const connector = isLast ? "└──" : "├──";
+    const name = item.isGroup
+      ? colors.amber(item.name + "/")
+      : colors.primary(item.name);
+    const idStr = colors.dim(shortId(item.id));
+    const meta = item.meta ? `  ${colors.dim(item.meta)}` : "";
+
+    console.log(`  ${colors.dim(connector)} ${name}  ${idStr}${meta}`);
+  }
+
+  console.log();
+}
+
+export interface NestedTreeItem {
+  name: string;
+  id?: string;
+  isGroup: boolean;
+  meta?: string;
+  children?: NestedTreeItem[];
+}
+
+export function nestedTreeListing(title: string, items: NestedTreeItem[]): void {
+  if (isJsonMode()) return;
+  if (items.length === 0) return;
+
+  console.log();
+  console.log(`  ${colors.bright(title)}`);
+  console.log();
+
+  function renderNode(node: NestedTreeItem, prefix: string, isLast: boolean) {
+    const connector = isLast ? "└──" : "├──";
+    const name = node.isGroup
+      ? colors.amber(node.name + "/")
+      : colors.primary(node.name);
+    
+    const idAndMeta = [
+      node.id ? shortId(node.id) : "",
+      node.meta || "",
+    ].filter(Boolean).join("  ");
+    const suffix = idAndMeta ? `  ${colors.dim(idAndMeta)}` : "";
+
+    console.log(`  ${colors.dim(prefix + connector)} ${name}${suffix}`);
+
+    if (node.children && node.children.length > 0) {
+      const childPrefix = prefix + (isLast ? "    " : "│   ");
+      for (let i = 0; i < node.children.length; i++) {
+        renderNode(node.children[i], childPrefix, i === node.children.length - 1);
+      }
+    }
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    renderNode(items[i], "", i === items.length - 1);
+  }
+
+  console.log();
+}
+
 export { setRuntimeState };
 
 

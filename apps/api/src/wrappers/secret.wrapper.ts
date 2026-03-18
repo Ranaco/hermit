@@ -1427,6 +1427,9 @@ export const secretWrapper = {
     const revealed: Array<{ name: string; value: string; valueType: string }> = [];
     const skipped: Array<{ name: string; reason: string }> = [];
 
+    // Pre-filter and group ciphertexts by their transit key
+    const secretsToDecrypt: typeof secrets = [];
+
     for (const secret of secrets) {
       if (!canAccessSecretAction(accessContext, "secrets:use", {
         orgId: vault.organizationId,
@@ -1468,24 +1471,45 @@ export const secretWrapper = {
         continue;
       }
 
-      try {
-        const decryptedValue = await encryptionService.decrypt(
-          vaultKeyName,
-          version.encryptedValue,
-        );
-        revealed.push({ name: secret.name, value: decryptedValue, valueType: secret.valueType });
+      secretsToDecrypt.push(secret);
+    }
 
-        // Update access metadata
-        await prisma.secret.update({
-          where: { id: secret.id },
-          data: {
-            lastAccessedAt: new Date(),
-            accessCount: { increment: 1 },
-          },
-        });
-      } catch {
-        skipped.push({ name: secret.name, reason: "decrypt-error" });
+    // Group secrets by their HashiCorp Vault key name
+    const byVaultKey = new Map<string, typeof secrets>();
+    for (const secret of secretsToDecrypt) {
+      const vaultKeyName = secret.key.versions[0].encryptedValue;
+      if (!byVaultKey.has(vaultKeyName)) byVaultKey.set(vaultKeyName, []);
+      byVaultKey.get(vaultKeyName)!.push(secret);
+    }
+
+    const decryptedSecretIds: string[] = [];
+
+    // Batch decrypt each group with a single network request to Vault
+    for (const [vaultKeyName, groupSecrets] of byVaultKey.entries()) {
+      const ciphertexts = groupSecrets.map(s => s.currentVersion!.encryptedValue);
+      try {
+        const plaintexts = await encryptionService.batchDecrypt(vaultKeyName, ciphertexts);
+        for (let i = 0; i < groupSecrets.length; i++) {
+          const secret = groupSecrets[i];
+          revealed.push({ name: secret.name, value: plaintexts[i], valueType: secret.valueType });
+          decryptedSecretIds.push(secret.id);
+        }
+      } catch (error) {
+        for (const secret of groupSecrets) {
+          skipped.push({ name: secret.name, reason: "decrypt-error" });
+        }
       }
+    }
+
+    // Execute a single batched database update for all revealed secrets
+    if (decryptedSecretIds.length > 0) {
+      await prisma.secret.updateMany({
+        where: { id: { in: decryptedSecretIds } },
+        data: {
+          lastAccessedAt: new Date(),
+          accessCount: { increment: 1 },
+        },
+      });
     }
 
     // Single audit log for the bulk operation

@@ -70,8 +70,10 @@ async function findExactSecretsInGroup(
   const exactName = nameSearch.filter((s) => s.name.toLowerCase() === query.toLowerCase());
   if (exactName.length > 0) return exactName;
 
-  // No name match — try ID prefix lookup
-  const all = await sdk.getSecrets(vaultId, { secretGroupId: groupId, limit: SECRET_LOOKUP_LIMIT });
+  // No name match — try ID prefix lookup against the full list
+  const all = nameSearch.length > 0
+    ? nameSearch
+    : await sdk.getSecrets(vaultId, { secretGroupId: groupId, limit: SECRET_LOOKUP_LIMIT });
   const exactId = all.filter((s) => s.id === query);
   if (exactId.length > 0) return exactId;
 

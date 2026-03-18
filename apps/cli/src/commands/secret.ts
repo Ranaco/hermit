@@ -88,27 +88,38 @@ secretCommand
       const group = opts.path
         ? await resolveGroupByPath(vault.id, opts.path)
         : await resolveGroup(vault.id, opts.group);
+      const childGroups = opts.search
+        ? []
+        : await sdk.getSecretGroups(vault.id, group ? { parentId: group.id } : {});
       const secrets = await sdk.getSecrets(vault.id, {
         secretGroupId: group?.id,
         search: opts.search,
       });
-      renderData({ vault, group, secrets });
-      if (secrets.length === 0) {
-        ui.warn("No secrets found");
+      renderData({ vault, group, childGroups, secrets });
+      const label = group
+        ? `${vault.name} / ${group.name}`
+        : vault.name;
+      if (childGroups.length === 0 && secrets.length === 0) {
+        ui.info(label);
+        ui.warn("No secrets or groups found");
         ui.newline();
         return;
       }
-      ui.cards(
-        secrets.map((secret) => ({
+      const treeItems: ui.TreeListingItem[] = [
+        ...childGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          isGroup: true,
+          meta: `${g._count?.secrets ?? 0} secrets · ${g._count?.children ?? 0} groups`,
+        })),
+        ...secrets.map((secret) => ({
           id: secret.id,
           name: secret.name,
-          badge: secret.hasPassword ? ui.formatBadge("protected", "warning") : undefined,
-          fields: [
-            { label: "Type", value: secret.valueType || "STRING", overflow: "truncate" },
-            { label: "Version", value: `v${secret.currentVersion?.versionNumber || 1}`, overflow: "truncate" },
-          ],
+          isGroup: false,
+          meta: `${secret.valueType || "STRING"}  v${secret.currentVersion?.versionNumber || 1}`,
         })),
-      );
+      ];
+      ui.treeListing(label, treeItems);
     }),
   );
 
@@ -236,11 +247,15 @@ secretCommand
       const group = opts.path
         ? await resolveGroupByPath(vault.id, opts.path)
         : await resolveGroup(vault.id, opts.group);
-      const secrets = await sdk.getSecrets(vault.id, {
+      let secrets = await sdk.getSecrets(vault.id, {
         secretGroupId: group?.id,
         search: queryArg,
         limit: queryArg ? SECRET_LOOKUP_LIMIT : undefined,
       });
+      if (queryArg && secrets.length === 0) {
+        // Retry without search filter to allow ID-prefix matching
+        secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id, limit: SECRET_LOOKUP_LIMIT });
+      }
       if (secrets.length === 0) {
         abort("No secrets found.");
       }
@@ -326,11 +341,15 @@ secretCommand
       const group = opts.path
         ? await resolveGroupByPath(vault.id, opts.path)
         : await resolveGroup(vault.id, opts.group);
-      const secrets = await sdk.getSecrets(vault.id, {
+      let secrets = await sdk.getSecrets(vault.id, {
         secretGroupId: group?.id,
         search: queryArg,
         limit: queryArg ? SECRET_LOOKUP_LIMIT : undefined,
       });
+      if (queryArg && secrets.length === 0) {
+        // Retry without search filter to allow ID-prefix matching
+        secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id, limit: SECRET_LOOKUP_LIMIT });
+      }
       if (secrets.length === 0) {
         abort("No secrets found.");
       }

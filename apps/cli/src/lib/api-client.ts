@@ -22,7 +22,7 @@ export class ApiError extends Error {
 function buildHeaders(skipAuth?: boolean): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "hermit-cli/0.1.0",
+    "User-Agent": `hermit-cli/${__VERSION__}`,
   };
 
   if (!skipAuth) {

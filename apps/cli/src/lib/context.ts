@@ -157,7 +157,21 @@ export async function resolveGroupByPath(
 
   for (const segment of segments) {
     const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
+    // Try exact name match first
     current = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
+    // Fall back to exact ID match
+    if (!current) {
+      current = groups.find((group) => group.id === segment);
+    }
+    // Fall back to ID prefix match
+    if (!current) {
+      const prefixMatches = groups.filter((group) => matchId(segment, group.id));
+      if (prefixMatches.length === 1) {
+        current = prefixMatches[0];
+      } else if (prefixMatches.length > 1) {
+        throw new Error(`Multiple groups match ID prefix "${segment}". Use a longer prefix or the exact name.`);
+      }
+    }
     if (!current) {
       throw new Error(`No secret group path matches "${pathValue}".`);
     }
