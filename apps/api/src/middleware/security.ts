@@ -101,7 +101,7 @@ export const authRateLimiter = rateLimit({
  */
 export const sensitiveOperationsRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: 30,
   message: {
     error: 'Too many sensitive operation requests, please try again later.',
   },
@@ -114,7 +114,7 @@ export const sensitiveOperationsRateLimiter = rateLimit({
  */
 export const cryptoOperationsRateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 50,
+  max: 200,
   message: {
     error: 'Too many cryptographic operations, please slow down.',
   },
