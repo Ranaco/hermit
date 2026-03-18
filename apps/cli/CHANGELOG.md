@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- ca7e4bc: Update for commands, shorthands and connection issues
+
 ## 0.4.0
 
 ### Minor Changes
