@@ -119,3 +119,45 @@ export const assignTeamRole = asyncHandler(async (req: Request, res: Response) =
     message: "Team role assigned successfully",
   });
 });
+
+/**
+ * Get Roles attached to a Team
+ * GET /api/v1/organizations/:orgId/teams/:teamId/roles
+ */
+export const getTeamRoles = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  const result = await roleWrapper.getTeamRoles(
+    req.user.id,
+    req.params.orgId,
+    req.params.teamId,
+  );
+
+  res.json({
+    success: true,
+    data: result,
+  });
+});
+
+/**
+ * Remove a Role from a Team
+ * DELETE /api/v1/organizations/:orgId/teams/:teamId/roles/:roleId
+ */
+export const removeTeamRole = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  const result = await roleWrapper.removeTeamRole(
+    req.user.id,
+    req.params.orgId,
+    req.params.teamId,
+    req.params.roleId,
+    {
+      ipAddress: req.ip || "unknown",
+      userAgent: req.headers["user-agent"] || "unknown",
+    },
+  );
+
+  res.json({
+    success: true,
+    data: result,
+    message: "Team role removed successfully",
+  });
+});

@@ -19,8 +19,10 @@ import {
   useDeleteTeam,
   useAddTeamMember,
   useRemoveTeamMember,
+  useAssignTeamRole,
+  useRemoveTeamRole,
 } from "@/hooks/use-organizations";
-import type { InviteUserResponse, OrganizationInvitation } from "@/services/organization.service";
+import type { InviteUserResponse, OrganizationInvitation, Team } from "@/services/organization.service";
 import { useOrganizationStore } from "@/store/organization.store";
 import { useRBAC } from "@/hooks/use-rbac";
 import { useRoles } from "@/hooks/use-policies";
@@ -30,6 +32,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -49,6 +59,7 @@ import {
   Layers,
   Copy,
   X,
+  ChevronRight,
 } from "lucide-react";
 
 const roleOptions = ["MEMBER", "ADMIN", "OWNER"] as const;
@@ -93,11 +104,18 @@ export default function OrganizationsPage() {
   const permissions = useRBAC();
   const { currentOrganization, setCurrentOrganization } = useOrganizationStore();
   const { data: organizations, isLoading } = useOrganizations();
+  const shouldLoadRoles =
+    permissions.canCreateInvitations ||
+    permissions.canChangeRoles ||
+    permissions.canReadRoles ||
+    permissions.canAssignTeamRoles;
 
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
+  const [accessTeamId, setAccessTeamId] = useState<string | null>(null);
+  const [pendingTeamRoleId, setPendingTeamRoleId] = useState<string>("");
 
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgDescription, setNewOrgDescription] = useState("");
@@ -124,7 +142,7 @@ export default function OrganizationsPage() {
     selectedOrg?.id || currentOrganization?.id,
     permissions.canReadInvitations,
   );
-  const { data: orgRoles } = useRoles();
+  const { data: orgRoles } = useRoles(shouldLoadRoles);
 
   const { mutate: createOrg, isPending: isCreating } = useCreateOrganization();
   const { mutate: updateOrg, isPending: isUpdating } = useUpdateOrganization();
@@ -137,12 +155,18 @@ export default function OrganizationsPage() {
   const { mutate: deleteTeam, isPending: isDeletingTeam } = useDeleteTeam();
   const { mutate: addTeamMember, isPending: isAddingTeamMember } = useAddTeamMember();
   const { mutate: removeTeamMember, isPending: isRemovingTeamMember } = useRemoveTeamMember();
+  const { mutate: assignTeamRole, isPending: isAssigningTeamRole } = useAssignTeamRole();
+  const { mutate: removeTeamRole, isPending: isRemovingTeamRole } = useRemoveTeamRole();
 
   const roleItems = orgRoles?.map((role) => ({
     value: role.id,
     label: role.name,
     description: role.description || undefined,
   })) || [];
+  const accessTeam = teams?.find((team) => team.id === accessTeamId) || null;
+  const assignableRoleItems = roleItems.filter(
+    (role) => !accessTeam?.roleAssignments?.some((assignment) => assignment.roleId === role.value),
+  );
 
   const handleCreateOrg = (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,6 +323,27 @@ export default function OrganizationsPage() {
     removeTeamMember({ organizationId: selectedOrg.id, teamId, userId });
   };
 
+  const handleAssignTeamRole = () => {
+    if (!selectedOrg || !accessTeamId || !pendingTeamRoleId) return;
+    assignTeamRole(
+      {
+        organizationId: selectedOrg.id,
+        teamId: accessTeamId,
+        data: { roleId: pendingTeamRoleId },
+      },
+      {
+        onSuccess: () => {
+          setPendingTeamRoleId("");
+        },
+      },
+    );
+  };
+
+  const handleRemoveTeamRole = (teamId: string, roleId: string) => {
+    if (!selectedOrg) return;
+    removeTeamRole({ organizationId: selectedOrg.id, teamId, roleId });
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -308,6 +353,8 @@ export default function OrganizationsPage() {
       </DashboardLayout>
     );
   }
+
+  const teamAccessLabel = permissions.canAssignTeamRoles ? "Manage Access" : "View Access";
 
   return (
     <DashboardLayout>
@@ -761,6 +808,44 @@ export default function OrganizationsPage() {
                         ))}
                       </div>
 
+                      {permissions.canReadRoles ? (
+                        <div className="mt-5 rounded-[16px] border border-border bg-muted/20 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">Team access</p>
+                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                                Team roles add inherited access. They do not replace a member&apos;s organization role.
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 shrink-0 px-2 text-xs"
+                              onClick={() => {
+                                setAccessTeamId(team.id);
+                                setPendingTeamRoleId("");
+                              }}
+                            >
+                              {teamAccessLabel}
+                              <ChevronRight className="ml-1 h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {team.roleAssignments?.length ? (
+                              team.roleAssignments.map((assignment) => (
+                                <Badge key={assignment.id} variant="secondary" className="font-medium">
+                                  {assignment.role.name}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No inherited roles.</span>
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+
                       {permissions.canManageTeams ? (
                         <div className="mt-5 flex items-center gap-2">
                           <Combobox
@@ -818,6 +903,158 @@ export default function OrganizationsPage() {
             <p className="text-[15px] text-muted-foreground mt-2">Select an organization above.</p>
           </section>
         )}
+
+        <Dialog
+          open={!!accessTeam && permissions.canReadRoles}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAccessTeamId(null);
+              setPendingTeamRoleId("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl p-0">
+            <DialogHeader className="border-b border-border px-6 py-5">
+              <DialogTitle>Team access</DialogTitle>
+              <DialogDescription>
+                {accessTeam
+                  ? `${accessTeam.name} inherits access through attached roles.`
+                  : "Team roles add inherited access. They do not replace a member's organization role."}
+              </DialogDescription>
+            </DialogHeader>
+
+            {accessTeam ? (
+              <div className="space-y-6 px-6 py-5">
+                <div className="rounded-[16px] border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  Team roles add inherited access. They do not replace a member&apos;s organization role.
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">Assigned roles</h3>
+                    <span className="text-xs text-muted-foreground">
+                      {accessTeam.roleAssignments?.length || 0}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {accessTeam.roleAssignments?.length ? (
+                      accessTeam.roleAssignments.map((assignment) => (
+                        <div
+                          key={assignment.id}
+                          className="rounded-[16px] border border-border px-4 py-4"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-foreground">
+                                  {assignment.role.name}
+                                </p>
+                                {assignment.role.isDefault ? (
+                                  <Badge variant="secondary" className="text-[11px]">
+                                    Default
+                                  </Badge>
+                                ) : null}
+                              </div>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {assignment.role.description || "No role description provided."}
+                              </p>
+                            </div>
+
+                            {permissions.canAssignTeamRoles ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:bg-destructive/10"
+                                onClick={() => handleRemoveTeamRole(accessTeam.id, assignment.roleId)}
+                                disabled={isRemovingTeamRole}
+                              >
+                                Remove
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {assignment.role.policyAttachments.length ? (
+                              assignment.role.policyAttachments.map(({ policy }) => (
+                                <Badge key={policy.id} variant="outline" className="font-normal">
+                                  {policy.name}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No attached policies.</span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-[16px] border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                        No roles assigned to this team.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {permissions.canAssignTeamRoles ? (
+                  <div className="space-y-3 rounded-[16px] border border-border p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Add role</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Attach an existing role to grant this team inherited access.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Select value={pendingTeamRoleId} onValueChange={setPendingTeamRoleId}>
+                        <SelectTrigger className="sm:flex-1">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignableRoleItems.length ? (
+                            assignableRoleItems.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="__none__" disabled>
+                              No more roles available
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        type="button"
+                        onClick={handleAssignTeamRole}
+                        disabled={!pendingTeamRoleId || isAssigningTeamRole}
+                      >
+                        {isAssigningTeamRole ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        Attach Role
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <DialogFooter className="border-t border-border px-6 py-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setAccessTeamId(null);
+                  setPendingTeamRoleId("");
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

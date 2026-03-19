@@ -7,6 +7,7 @@ import {
   type UpdateMemberRoleData,
   type CreateTeamData,
   type UpdateTeamData,
+  type AssignTeamRoleData,
 } from "@/services/organization.service";
 import { toast } from "sonner";
 
@@ -292,6 +293,60 @@ export function useRemoveTeamMember() {
     },
     onError: () => {
       toast.error("Failed to remove team member");
+    },
+  });
+}
+
+export function useAssignTeamRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      teamId,
+      data,
+    }: {
+      organizationId: string;
+      teamId: string;
+      data: AssignTeamRoleData;
+    }) => organizationService.assignTeamRole(organizationId, teamId, data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organizations", variables.organizationId, "teams"] });
+      queryClient.invalidateQueries({
+        queryKey: ["organizations", variables.organizationId, "teams", variables.teamId, "roles"],
+      });
+      toast.success("Team role assigned");
+    },
+    onError: () => {
+      toast.error("Failed to assign team role");
+    },
+  });
+}
+
+export function useRemoveTeamRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      teamId,
+      roleId,
+    }: {
+      organizationId: string;
+      teamId: string;
+      roleId: string;
+    }) => organizationService.removeTeamRole(organizationId, teamId, roleId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organizations", variables.organizationId, "teams"] });
+      queryClient.invalidateQueries({
+        queryKey: ["organizations", variables.organizationId, "teams", variables.teamId, "roles"],
+      });
+      toast.success("Team role removed");
+    },
+    onError: () => {
+      toast.error("Failed to remove team role");
     },
   });
 }

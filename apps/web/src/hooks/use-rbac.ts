@@ -30,12 +30,14 @@ export interface RBACPermissions {
   canRevokeInvitations: boolean;
   canRemoveMembers: boolean;
   canChangeRoles: boolean;
+  canReadRoles: boolean;
   canManageRoles: boolean;
   canReadPolicies: boolean;
   canCreatePolicies: boolean;
   canEditPolicies: boolean;
   canDeletePolicies: boolean;
   canManageTeams: boolean;
+  canAssignTeamRoles: boolean;
 }
 
 export function useRBAC(): RBACPermissions {
@@ -69,12 +71,14 @@ export function useRBAC(): RBACPermissions {
       canRevokeInvitations: false,
       canRemoveMembers: false,
       canChangeRoles: false,
+      canReadRoles: false,
       canManageRoles: false,
       canReadPolicies: false,
       canCreatePolicies: false,
       canEditPolicies: false,
       canDeletePolicies: false,
       canManageTeams: false,
+      canAssignTeamRoles: false,
     };
   }
 
@@ -113,12 +117,14 @@ export function useRBAC(): RBACPermissions {
     canRevokeInvitations: canManageWorkspace,
     canRemoveMembers: canManageWorkspace,
     canChangeRoles: canManageWorkspace,
+    canReadRoles: canReadWorkspace,
     canManageRoles: isOwner,
     canReadPolicies: isOwner,
     canCreatePolicies: isOwner,
     canEditPolicies: isOwner,
     canDeletePolicies: isOwner,
     canManageTeams: canManageWorkspace,
+    canAssignTeamRoles: canManageWorkspace,
   };
 }
 

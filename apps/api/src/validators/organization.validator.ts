@@ -136,6 +136,10 @@ export const teamMemberIdParamSchema = z.object({
   userId: uuidSchema,
 });
 
+export const teamRoleParamSchema = z.object({
+  roleId: uuidSchema,
+});
+
 export const policyIdParamSchema = z.object({
   policyId: uuidSchema,
 });

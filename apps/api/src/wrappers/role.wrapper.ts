@@ -16,6 +16,21 @@ import {
   ensureOrganizationIamBootstrap,
 } from "../services/organization-iam.service";
 
+const roleSummaryInclude = {
+  policyAttachments: {
+    include: {
+      policy: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          isManaged: true,
+        },
+      },
+    },
+  },
+} as const;
+
 async function requireRoleAction(
   userId: string,
   organizationId: string,
@@ -75,15 +90,7 @@ export const roleWrapper = {
     const prisma = getPrismaClient();
     const roles = await prisma.organizationRole.findMany({
       where: { organizationId },
-      include: {
-        policyAttachments: {
-          include: {
-            policy: {
-              select: { id: true, name: true, description: true, isManaged: true },
-            },
-          },
-        },
-      },
+      include: roleSummaryInclude,
       orderBy: { createdAt: "desc" },
     });
 
@@ -335,7 +342,9 @@ export const roleWrapper = {
         roleId,
       },
       include: {
-        role: true,
+        role: {
+          include: roleSummaryInclude,
+        },
       },
     });
 
@@ -355,5 +364,116 @@ export const roleWrapper = {
     });
 
     return { assignment };
+  },
+
+  async getTeamRoles(userId: string, organizationId: string, teamId: string) {
+    await requireRoleAction(
+      userId,
+      organizationId,
+      "roles:read",
+      buildRoleUrn(organizationId, "*"),
+      "You do not have permission to view team roles",
+    );
+    await requireRoleAction(
+      userId,
+      organizationId,
+      "teams:read",
+      buildTeamUrn(organizationId, teamId),
+      "You do not have permission to view this team",
+    );
+
+    const prisma = getPrismaClient();
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { id: true, organizationId: true },
+    });
+
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team not found in this organization");
+    }
+
+    const assignments = await prisma.teamRoleAssignment.findMany({
+      where: { teamId },
+      include: {
+        role: {
+          include: roleSummaryInclude,
+        },
+      },
+      orderBy: {
+        role: {
+          createdAt: "desc",
+        },
+      },
+    });
+
+    return { assignments };
+  },
+
+  async removeTeamRole(
+    userId: string,
+    organizationId: string,
+    teamId: string,
+    roleId: string,
+    auditInfo: { ipAddress?: string; userAgent?: string },
+  ) {
+    await requireRoleAction(
+      userId,
+      organizationId,
+      "roles:assign",
+      buildTeamUrn(organizationId, teamId),
+      "You do not have permission to assign team roles",
+    );
+
+    const prisma = getPrismaClient();
+    const [team, role, assignment] = await Promise.all([
+      prisma.team.findUnique({ where: { id: teamId } }),
+      prisma.organizationRole.findUnique({ where: { id: roleId } }),
+      prisma.teamRoleAssignment.findUnique({
+        where: {
+          teamId_roleId: {
+            teamId,
+            roleId,
+          },
+        },
+      }),
+    ]);
+
+    if (!team || team.organizationId !== organizationId) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team not found in this organization");
+    }
+
+    if (!role || role.organizationId !== organizationId) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Role not found in this organization");
+    }
+
+    if (!assignment) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Team role assignment not found");
+    }
+
+    await prisma.teamRoleAssignment.delete({
+      where: {
+        teamId_roleId: {
+          teamId,
+          roleId,
+        },
+      },
+    });
+
+    await createAuditLog({
+      userId,
+      action: AuditAction.UPDATE,
+      resourceType: ResourceType.ORGANIZATION,
+      resourceId: roleId,
+      details: {
+        type: "team-role-unassignment",
+        organizationId,
+        teamId,
+        removedRoleId: roleId,
+      },
+      ipAddress: auditInfo.ipAddress || "unknown",
+      userAgent: auditInfo.userAgent || "unknown",
+    });
+
+    return { success: true };
   },
 };

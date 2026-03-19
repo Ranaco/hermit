@@ -33,6 +33,7 @@ import {
   createRoleSchema,
   updateRoleSchema,
   assignRoleSchema,
+  teamRoleParamSchema,
 } from "../validators/organization.validator";
 
 const router = Router();
@@ -191,6 +192,16 @@ router.put(
   "/:orgId/teams/:teamId/roles",
   validate({ params: orgScopedParamSchema.merge(orgTeamIdParamSchema), body: assignRoleSchema }),
   roleController.assignTeamRole,
+);
+router.get(
+  "/:orgId/teams/:teamId/roles",
+  validate({ params: orgScopedParamSchema.merge(orgTeamIdParamSchema) }),
+  roleController.getTeamRoles,
+);
+router.delete(
+  "/:orgId/teams/:teamId/roles/:roleId",
+  validate({ params: orgScopedParamSchema.merge(orgTeamIdParamSchema).merge(teamRoleParamSchema) }),
+  roleController.removeTeamRole,
 );
 
 export default router;

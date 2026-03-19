@@ -18,6 +18,7 @@ import {
   buildInvitationUrn,
   buildMemberUrn,
   buildOrganizationUrn,
+  buildRoleUrn,
   buildTeamUrn,
   ensureOrganizationIamBootstrap,
 } from "../services/organization-iam.service";
@@ -1039,6 +1040,14 @@ export const organizationWrapper = {
       "You do not have permission to view teams",
     );
     const prisma = getPrismaClient();
+    await ensureOrganizationIamBootstrap(organizationId);
+
+    const canReadRoles = await evaluateAccess(
+      userId,
+      organizationId,
+      "roles:read",
+      buildRoleUrn(organizationId, "*"),
+    );
 
     const teams = await prisma.team.findMany({
       where: { organizationId },
@@ -1057,6 +1066,33 @@ export const organizationWrapper = {
             },
           },
         },
+        roleAssignments: canReadRoles
+          ? {
+              include: {
+                role: {
+                  include: {
+                    policyAttachments: {
+                      include: {
+                        policy: {
+                          select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                            isManaged: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: {
+                role: {
+                  createdAt: "desc",
+                },
+              },
+            }
+          : false,
       },
       orderBy: { createdAt: "asc" },
     });

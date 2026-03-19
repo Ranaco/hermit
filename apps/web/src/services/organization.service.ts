@@ -29,6 +29,7 @@ export interface Team {
   createdAt: string;
   updatedAt: string;
   _count?: { members: number };
+  roleAssignments?: TeamRoleAssignment[];
   members?: {
     id: string;
     userId: string;
@@ -40,6 +41,25 @@ export interface Team {
       lastName?: string;
     };
   }[];
+}
+
+export interface TeamRoleAssignment {
+  id: string;
+  roleId: string;
+  role: {
+    id: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    policyAttachments: {
+      policy: {
+        id: string;
+        name: string;
+        description?: string | null;
+        isManaged?: boolean;
+      };
+    }[];
+  };
 }
 
 export interface Organization {
@@ -111,6 +131,10 @@ export interface CreateTeamData {
 export interface UpdateTeamData {
   name?: string;
   description?: string;
+}
+
+export interface AssignTeamRoleData {
+  roleId: string;
 }
 
 export const organizationService = {
@@ -228,5 +252,30 @@ export const organizationService = {
     userId: string,
   ): Promise<void> => {
     await apiClient.delete(`/organizations/${organizationId}/teams/${teamId}/members/${userId}`);
+  },
+
+  getTeamRoles: async (
+    organizationId: string,
+    teamId: string,
+  ): Promise<TeamRoleAssignment[]> => {
+    const response = await apiClient.get(`/organizations/${organizationId}/teams/${teamId}/roles`);
+    return response.data.data.assignments;
+  },
+
+  assignTeamRole: async (
+    organizationId: string,
+    teamId: string,
+    data: AssignTeamRoleData,
+  ): Promise<TeamRoleAssignment> => {
+    const response = await apiClient.put(`/organizations/${organizationId}/teams/${teamId}/roles`, data);
+    return response.data.data.assignment;
+  },
+
+  removeTeamRole: async (
+    organizationId: string,
+    teamId: string,
+    roleId: string,
+  ): Promise<void> => {
+    await apiClient.delete(`/organizations/${organizationId}/teams/${teamId}/roles/${roleId}`);
   },
 };
