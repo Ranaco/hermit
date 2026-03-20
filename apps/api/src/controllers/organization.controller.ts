@@ -207,6 +207,23 @@ export const getTeams = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: result });
 });
 
+export const getAccessGraph = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.getAccessGraph(user.id, req.params.id);
+  res.json({ success: true, data: result });
+});
+
+export const getGraphAccess = asyncHandler(async (req: Request, res: Response) => {
+  const user = assertUser(req);
+  const result = await organizationWrapper.getGraphAccess(
+    user.id,
+    req.params.id,
+    req.query.nodeType as string,
+    req.query.nodeId as string,
+  );
+  res.json({ success: true, data: result });
+});
+
 export const createTeam = asyncHandler(async (req: Request, res: Response) => {
   const user = assertUser(req);
   const { name, description } = req.body;

@@ -91,6 +91,10 @@ export const revealSecretSchema = z.object({
     .int()
     .positive()
     .optional(),
+
+  cliScope: z
+    .boolean()
+    .optional(),
 });
 
 export const setCurrentSecretVersionSchema = z.object({
@@ -130,6 +134,10 @@ export const bulkRevealSecretsSchema = z.object({
   vaultPassword: z
     .string()
     .min(1, 'Vault password is required')
+    .optional(),
+
+  cliScope: z
+    .boolean()
     .optional(),
 });
 
@@ -217,5 +225,11 @@ export const getSecretsSchema = z.object({
   search: z
     .string()
     .max(100, 'Search term too long')
+    .optional(),
+
+  cliScope: z
+    .string()
+    .transform((val) => val === 'true')
+    .or(z.boolean())
     .optional(),
 });

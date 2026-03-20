@@ -6,7 +6,7 @@ import {
   deleteGroup,
 } from "../controllers/secret-group.controller";
 import { validate } from "../validators/validation.middleware";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireOfficialCli } from "../middleware/auth";
 import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
 import { requireVaultHealth } from "../middleware/vault-health";
@@ -128,6 +128,12 @@ router.get(
   "/",
   validate({ query: getSecretGroupsSchema }),
   async (req, res, next) => {
+    if (req.query.cliScope === "true") {
+      return requireOfficialCli(req, res, () =>
+        requirePolicy(["groups:read", "secrets:read", "secrets:cli-use"], getGroupUrn)(req, res, next),
+      );
+    }
+
     if (req.query.forPolicyBuilder === "true") {
       return requirePolicy(
         ["policies:read", "policies:create", "policies:update"],

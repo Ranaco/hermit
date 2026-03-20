@@ -4,7 +4,7 @@
  */
 
 import express, { type Request } from "express";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireOfficialCli } from "../middleware/auth";
 import { requireVaultHealth } from "../middleware/vault-health";
 import { requirePolicy } from "../middleware/policy";
 import getPrismaClient from "../services/prisma.service";
@@ -126,42 +126,42 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
     }
     req.organizationId = vault.organizationId;
 
-    if (typeof search === "string" && search.trim().length > 0) {
-      const matchingSecrets = await prisma.secret.findMany({
-        where: {
-          vaultId: vaultId as string,
-          OR: [
-            { id: { startsWith: search.trim() } },
-            { name: { contains: search.trim(), mode: "insensitive" } },
-            { description: { contains: search.trim(), mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true,
-          secretGroup: {
-            select: {
-              path: true,
-            },
+    const matchingSecrets = await prisma.secret.findMany({
+      where: {
+        vaultId: vaultId as string,
+        ...(typeof search === "string" && search.trim().length > 0
+          ? {
+              OR: [
+                { id: { startsWith: search.trim() } },
+                { name: { contains: search.trim(), mode: "insensitive" } },
+                { description: { contains: search.trim(), mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        secretGroup: {
+          select: {
+            path: true,
           },
         },
-      });
+      },
+    });
 
-      return Array.from(
-        new Set([
-          buildSecretUrn(vault.organizationId, vaultId as string, "*"),
-          ...matchingSecrets.flatMap((secret) =>
-            buildSecretCandidateResourceUrns({
-              orgId: vault.organizationId,
-              vaultId: vaultId as string,
-              secretId: secret.id,
-              groupPath: secret.secretGroup?.path,
-            }),
-          ),
-        ]),
-      );
-    }
-
-    return buildSecretUrn(vault.organizationId, vaultId as string, "*");
+    return Array.from(
+      new Set([
+        buildSecretUrn(vault.organizationId, vaultId as string, "*"),
+        ...matchingSecrets.flatMap((secret) =>
+          buildSecretCandidateResourceUrns({
+            orgId: vault.organizationId,
+            vaultId: vaultId as string,
+            secretId: secret.id,
+            groupPath: secret.secretGroup?.path,
+          }),
+        ),
+      ]),
+    );
   }
 
   return "urn:hermit:org:*:vault:*:secret:*";
@@ -191,7 +191,15 @@ router.post(
 router.get(
   "/",
   validate({ query: getSecretsSchema }),
-  requirePolicy("secrets:read", getSecretUrn),
+  async (req, res, next) => {
+    if (req.query.cliScope === "true") {
+      return requireOfficialCli(req, res, () =>
+        requirePolicy(["secrets:read", "secrets:cli-use"], getSecretUrn)(req, res, next),
+      );
+    }
+
+    return requirePolicy("secrets:read", getSecretUrn)(req, res, next);
+  },
   getSecrets,
 );
 router.get(
@@ -207,9 +215,31 @@ router.post(
   bulkRevealSecrets,
 );
 router.post(
+  "/cli/bulk-reveal",
+  validate({ body: bulkRevealSecretsSchema }),
+  requireOfficialCli,
+  requirePolicy(["secrets:use", "secrets:cli-use"], getSecretUrn),
+  (req, _res, next) => {
+    req.body.cliScope = true;
+    next();
+  },
+  bulkRevealSecrets,
+);
+router.post(
   "/:id/reveal",
   validate({ params: secretIdParamSchema, body: revealSecretSchema }),
   requirePolicy("secrets:use", getSecretUrn),
+  revealSecret,
+);
+router.post(
+  "/:id/cli-reveal",
+  validate({ params: secretIdParamSchema, body: revealSecretSchema }),
+  requireOfficialCli,
+  requirePolicy(["secrets:use", "secrets:cli-use"], getSecretUrn),
+  (req, _res, next) => {
+    req.body.cliScope = true;
+    next();
+  },
   revealSecret,
 );
 router.put(

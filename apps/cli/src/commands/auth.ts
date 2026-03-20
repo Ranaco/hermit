@@ -4,6 +4,7 @@ import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpe
 import { promptInput, promptPassword } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
+import { ensureCliDevice } from "../lib/cli-device.js";
 
 interface LoginOptions {
   server?: string;
@@ -48,10 +49,20 @@ authCommand
           { message: "Password:" },
           "Password is required in non-interactive mode.",
         ));
+      const cliDevice = ensureCliDevice();
 
       let result: sdk.LoginResult;
       try {
-        result = await sdk.login({ email, password, mfaToken: opts.mfaToken });
+        result = await sdk.login({
+          email,
+          password,
+          mfaToken: opts.mfaToken,
+          deviceFingerprint: cliDevice.hardwareFingerprint,
+          clientType: "CLI",
+          cliPublicKey: cliDevice.publicKey,
+          cliLabel: cliDevice.label,
+          hardwareFingerprint: cliDevice.hardwareFingerprint,
+        });
       } catch (error: unknown) {
         const apiError = error as MfaApiError;
         const code = apiError.details?.error?.code;
@@ -65,13 +76,25 @@ authCommand
               },
               "MFA token is required in non-interactive mode.",
             ));
-          result = await sdk.login({ email, password, mfaToken });
+          result = await sdk.login({
+            email,
+            password,
+            mfaToken,
+            deviceFingerprint: cliDevice.hardwareFingerprint,
+            clientType: "CLI",
+            cliPublicKey: cliDevice.publicKey,
+            cliLabel: cliDevice.label,
+            hardwareFingerprint: cliDevice.hardwareFingerprint,
+          });
         } else {
           throw error;
         }
       }
 
       authStore.saveTokens(result.tokens);
+      authStore.updateCliDevice({
+        deviceId: result.device?.id,
+      });
       authStore.saveUser({
         id: result.user.id,
         email: result.user.email,

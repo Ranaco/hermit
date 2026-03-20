@@ -350,3 +350,24 @@ export function useRemoveTeamRole() {
     },
   });
 }
+
+export function useAccessGraph(organizationId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["organizations", organizationId, "graph"],
+    queryFn: () => organizationService.getAccessGraph(organizationId!),
+    enabled: enabled && !!organizationId,
+  });
+}
+
+export function useAccessGraphDetail(
+  organizationId?: string,
+  nodeType?: string,
+  nodeId?: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["organizations", organizationId, "graph", "detail", nodeType, nodeId],
+    queryFn: () => organizationService.getAccessGraphDetail(organizationId!, nodeType!, nodeId!),
+    enabled: enabled && !!organizationId && !!nodeType && !!nodeId,
+  });
+}

@@ -135,6 +135,7 @@ export const POLICY_SCOPE_GROUPS: PolicyScopeGroup[] = [
       { action: "secrets:update", label: "Update Secrets", description: "Rotate or edit existing secrets" },
       { action: "secrets:delete", label: "Delete Secrets", description: "Remove secrets from a vault" },
       { action: "secrets:use", label: "Use Secrets", description: "Reveal and consume secret values" },
+      { action: "secrets:cli-use", label: "CLI Use Only", description: "Allow official CLI injection without dashboard reveal access" },
     ],
   },
   {

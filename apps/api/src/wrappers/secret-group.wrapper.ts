@@ -250,9 +250,10 @@ export const secretGroupWrapper = {
       parentId?: string;
       includeChildren?: boolean;
       forPolicyBuilder?: boolean;
+      cliScope?: boolean;
     },
   ) {
-    const { vaultId, parentId, includeChildren, forPolicyBuilder } = data;
+    const { vaultId, parentId, includeChildren, forPolicyBuilder, cliScope } = data;
     const prisma = getPrismaClient();
 
     const vault = await prisma.vault.findUnique({
@@ -328,11 +329,20 @@ export const secretGroupWrapper = {
           vaultId,
           secretGroupId: { not: null },
           OR: groupPaths.map((path) => ({
-            secretGroup: {
-              path: {
-                startsWith: `${path}/`,
+            OR: [
+              {
+                secretGroup: {
+                  path: path,
+                },
               },
-            },
+              {
+                secretGroup: {
+                  path: {
+                    startsWith: `${path}/`,
+                  },
+                },
+              },
+            ],
           })),
         },
         select: {
@@ -347,6 +357,13 @@ export const secretGroupWrapper = {
     ]);
 
     return groups.filter((group) => {
+      const groupResourceUrns = buildGroupCandidateResourceUrns({
+        orgId: vault.organizationId,
+        vaultId,
+        groupId: group.id,
+        path: group.path,
+      });
+
       if (
         canAccessGroupAction(accessContext, "groups:read", {
           orgId: vault.organizationId,
@@ -362,13 +379,14 @@ export const secretGroupWrapper = {
         evaluateStatementsAgainstAny(
           accessContext.policyStatements,
           "secrets:read",
-          buildGroupCandidateResourceUrns({
-            orgId: vault.organizationId,
-            vaultId,
-            groupId: group.id,
-            path: group.path,
-          }),
-        )
+          groupResourceUrns,
+        ) ||
+        (cliScope &&
+          evaluateStatementsAgainstAny(
+            accessContext.policyStatements,
+            "secrets:cli-use",
+            groupResourceUrns,
+          ))
       ) {
         return true;
       }
@@ -392,7 +410,18 @@ export const secretGroupWrapper = {
                   groupId: descendantGroup.id,
                   path: descendantGroup.path,
                 }),
-              )),
+              ) ||
+              (cliScope &&
+                evaluateStatementsAgainstAny(
+                  accessContext.policyStatements,
+                  "secrets:cli-use",
+                  buildGroupCandidateResourceUrns({
+                    orgId: vault.organizationId,
+                    vaultId,
+                    groupId: descendantGroup.id,
+                    path: descendantGroup.path,
+                  }),
+                )))
         )
       ) {
         return true;
@@ -400,13 +429,21 @@ export const secretGroupWrapper = {
 
       return descendantSecrets.some(
         (secret) =>
-          secret.secretGroup?.path?.startsWith(`${group.path}/`) &&
-          canAccessSecretAction(accessContext, "secrets:read", {
+          (secret.secretGroup?.path === group.path ||
+            secret.secretGroup?.path?.startsWith(`${group.path}/`)) &&
+          (canAccessSecretAction(accessContext, "secrets:read", {
             orgId: vault.organizationId,
             vaultId,
             secretId: secret.id,
             groupPath: secret.secretGroup?.path,
-          }),
+          }) ||
+            (cliScope &&
+              canAccessSecretAction(accessContext, "secrets:cli-use", {
+                orgId: vault.organizationId,
+                vaultId,
+                secretId: secret.id,
+                groupPath: secret.secretGroup?.path,
+              }))),
       );
     });
   },

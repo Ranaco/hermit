@@ -90,10 +90,11 @@ secretCommand
         : await resolveGroup(vault.id, opts.group);
       const childGroups = opts.search
         ? []
-        : await sdk.getSecretGroups(vault.id, group ? { parentId: group.id } : {});
+        : await sdk.getSecretGroups(vault.id, group ? { parentId: group.id, cliScope: true } : { cliScope: true });
       const secrets = await sdk.getSecrets(vault.id, {
         secretGroupId: group?.id,
         search: opts.search,
+        cliScope: true,
       });
       renderData({ vault, group, childGroups, secrets });
       const label = group
@@ -142,7 +143,7 @@ secretCommand
       const group = opts.path
         ? await resolveGroupByPath(vault.id, opts.path)
         : await resolveGroup(vault.id, opts.group);
-      const secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id });
+      const secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id, cliScope: true });
       const name =
         nameArg ||
         (await promptInput(
@@ -251,10 +252,15 @@ secretCommand
         secretGroupId: group?.id,
         search: queryArg,
         limit: queryArg ? SECRET_LOOKUP_LIMIT : undefined,
+        cliScope: true,
       });
       if (queryArg && secrets.length === 0) {
         // Retry without search filter to allow ID-prefix matching
-        secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id, limit: SECRET_LOOKUP_LIMIT });
+        secrets = await sdk.getSecrets(vault.id, {
+          secretGroupId: group?.id,
+          limit: SECRET_LOOKUP_LIMIT,
+          cliScope: true,
+        });
       }
       if (secrets.length === 0) {
         abort("No secrets found.");
@@ -283,7 +289,7 @@ secretCommand
       let revealed: sdk.SecretRevealResult;
 
       try {
-        revealed = await sdk.revealSecret(secret.id, {
+        revealed = await sdk.revealSecretCli(secret.id, {
           password: secretPassword,
           vaultPassword,
         });
@@ -296,13 +302,13 @@ secretCommand
             { message: "Secret password:" },
             "Secret password is required in non-interactive mode.",
           );
-          revealed = await sdk.revealSecret(secret.id, { password: secretPassword });
+          revealed = await sdk.revealSecretCli(secret.id, { password: secretPassword });
         } else if (apiError.statusCode === 403 && code === "VAULT_PASSWORD_REQUIRED") {
           vaultPassword = await promptPassword(
             { message: "Vault password:" },
             "Vault password is required in non-interactive mode.",
           );
-          revealed = await sdk.revealSecret(secret.id, { vaultPassword });
+          revealed = await sdk.revealSecretCli(secret.id, { vaultPassword });
         } else {
           throw error;
         }
@@ -345,10 +351,15 @@ secretCommand
         secretGroupId: group?.id,
         search: queryArg,
         limit: queryArg ? SECRET_LOOKUP_LIMIT : undefined,
+        cliScope: true,
       });
       if (queryArg && secrets.length === 0) {
         // Retry without search filter to allow ID-prefix matching
-        secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id, limit: SECRET_LOOKUP_LIMIT });
+        secrets = await sdk.getSecrets(vault.id, {
+          secretGroupId: group?.id,
+          limit: SECRET_LOOKUP_LIMIT,
+          cliScope: true,
+        });
       }
       if (secrets.length === 0) {
         abort("No secrets found.");

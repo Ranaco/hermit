@@ -15,9 +15,14 @@ import getPrismaClient from "../services/prisma.service";
 import { createAuditLog } from "../services/audit.service";
 import { evaluateAccess } from "../services/policy-engine";
 import {
+  buildOrganizationGraph,
+  buildOrganizationGraphAccess,
+} from "../services/access-graph.service";
+import {
   buildInvitationUrn,
   buildMemberUrn,
   buildOrganizationUrn,
+  buildPolicyUrn,
   buildRoleUrn,
   buildTeamUrn,
   ensureOrganizationIamBootstrap,
@@ -1098,6 +1103,50 @@ export const organizationWrapper = {
     });
 
     return { teams };
+  },
+
+  async getAccessGraph(userId: string, organizationId: string) {
+    await requireOrganizationAction(
+      userId,
+      organizationId,
+      "policies:read",
+      buildPolicyUrn(organizationId, "*"),
+      "You do not have permission to view the access graph",
+    );
+
+    const graph = await buildOrganizationGraph(organizationId);
+    if (!graph) {
+      throw new NotFoundError(ErrorCode.ORGANIZATION_NOT_FOUND);
+    }
+
+    return graph;
+  },
+
+  async getGraphAccess(
+    userId: string,
+    organizationId: string,
+    nodeType: string,
+    nodeId: string,
+  ) {
+    await requireOrganizationAction(
+      userId,
+      organizationId,
+      "policies:read",
+      buildPolicyUrn(organizationId, "*"),
+      "You do not have permission to inspect access relationships",
+    );
+
+    const details = await buildOrganizationGraphAccess(
+      organizationId,
+      nodeType as any,
+      nodeId,
+    );
+
+    if (!details) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Graph node not found");
+    }
+
+    return details;
   },
 
   async createTeam(

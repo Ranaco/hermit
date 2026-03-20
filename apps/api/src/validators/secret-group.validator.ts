@@ -57,4 +57,10 @@ export const getSecretGroupsSchema = z.object({
     .transform((val) => val === 'true')
     .or(z.boolean())
     .optional(),
+
+  cliScope: z
+    .string()
+    .transform((val) => val === 'true')
+    .or(z.boolean())
+    .optional(),
 });

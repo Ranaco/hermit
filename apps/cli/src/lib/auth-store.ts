@@ -26,6 +26,15 @@ export interface VaultInfo {
   organizationId: string;
 }
 
+export interface CliDeviceInfo {
+  deviceId?: string;
+  publicKey: string;
+  privateKey: string;
+  hardwareFingerprint: string;
+  label: string;
+  clientType: "CLI";
+}
+
 export interface StoreSchema {
   schemaVersion: number;
   accessToken: string;
@@ -34,9 +43,10 @@ export interface StoreSchema {
   org: OrgInfo | null;
   vault: VaultInfo | null;
   serverUrl: string;
+  cliDevice: CliDeviceInfo | null;
 }
 
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 2;
 
 const store = new Conf<StoreSchema>({
   projectName: "hermit-cli",
@@ -51,6 +61,7 @@ const store = new Conf<StoreSchema>({
       type: "string",
       default: "https://hermit.ranax.co/api/v1",
     },
+    cliDevice: { type: ["object", "null"] as never, default: null },
   },
   encryptionKey: "hermit-cli-encryption-key-v1",
 });
@@ -84,6 +95,26 @@ export function clearTokens(): void {
   store.set("user", null);
   store.set("org", null);
   store.set("vault", null);
+}
+
+export function saveCliDevice(device: CliDeviceInfo): void {
+  store.set("cliDevice", device);
+}
+
+export function getCliDevice(): CliDeviceInfo | null {
+  return store.get("cliDevice");
+}
+
+export function updateCliDevice(partial: Partial<CliDeviceInfo>): void {
+  const current = store.get("cliDevice");
+  if (!current) {
+    return;
+  }
+
+  store.set("cliDevice", {
+    ...current,
+    ...partial,
+  });
 }
 
 export function isAuthenticated(): boolean {

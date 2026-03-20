@@ -156,7 +156,7 @@ export async function resolveGroupByPath(
   let current: sdk.SecretGroupSummary | undefined;
 
   for (const segment of segments) {
-    const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
+    const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId, cliScope: true } : { cliScope: true });
     // Try exact name match first
     current = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
     // Fall back to exact ID match
@@ -197,11 +197,11 @@ export async function resolveGroup(
     return undefined;
   }
 
-  const allGroups = await sdk.getSecretGroups(vaultId);
+  const allGroups = await sdk.getSecretGroups(vaultId, { cliScope: true });
   const queue = [...allGroups];
   while (queue.length > 0) {
     const group = queue.shift()!;
-    const children = await sdk.getSecretGroups(vaultId, { parentId: group.id });
+    const children = await sdk.getSecretGroups(vaultId, { parentId: group.id, cliScope: true });
     allGroups.push(...children);
     queue.push(...children);
   }

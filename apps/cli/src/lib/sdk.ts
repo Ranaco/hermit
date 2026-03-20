@@ -134,7 +134,7 @@ export interface LoginResult {
     accessToken: string;
     refreshToken: string;
   };
-  device: { id: string; isTrusted: boolean } | null;
+  device: { id: string; isTrusted: boolean; clientType?: "BROWSER" | "CLI" } | null;
 }
 
 export interface MfaSetupResult {
@@ -154,6 +154,11 @@ export async function login(payload: {
   email: string;
   password: string;
   mfaToken?: string;
+  deviceFingerprint?: string;
+  clientType?: "BROWSER" | "CLI";
+  cliPublicKey?: string;
+  cliLabel?: string;
+  hardwareFingerprint?: string;
 }): Promise<LoginResult> {
   return api.post<LoginResult>("/auth/login", payload, { skipAuth: true });
 }
@@ -284,13 +289,19 @@ export async function deleteKey(keyId: string): Promise<void> {
 
 export async function getSecretGroups(
   vaultId: string,
-  params: { parentId?: string | null } = {},
+  params: { parentId?: string | null; cliScope?: boolean } = {},
 ): Promise<SecretGroupSummary[]> {
   const search = new URLSearchParams({ vaultId });
   if (params.parentId) {
     search.set("parentId", params.parentId);
   }
-  const result = await api.get<SecretGroupSummary[]>(`/vaults/${vaultId}/groups?${search.toString()}`);
+  if (params.cliScope) {
+    search.set("cliScope", "true");
+  }
+  const result = await api.get<SecretGroupSummary[]>(
+    `/vaults/${vaultId}/groups?${search.toString()}`,
+    params.cliScope ? { signedCli: true } : undefined,
+  );
   return result;
 }
 
@@ -317,7 +328,7 @@ export async function deleteSecretGroup(vaultId: string, groupId: string): Promi
 
 export async function getSecrets(
   vaultId: string,
-  params: { secretGroupId?: string; search?: string; page?: number; limit?: number } = {},
+  params: { secretGroupId?: string; search?: string; page?: number; limit?: number; cliScope?: boolean } = {},
 ): Promise<SecretSummary[]> {
   const search = new URLSearchParams({ vaultId });
   if (params.secretGroupId) {
@@ -332,7 +343,13 @@ export async function getSecrets(
   if (params.limit) {
     search.set("limit", String(params.limit));
   }
-  const result = await api.get<{ secrets: SecretSummary[] }>(`/secrets?${search.toString()}`);
+  if (params.cliScope) {
+    search.set("cliScope", "true");
+  }
+  const result = await api.get<{ secrets: SecretSummary[] }>(
+    `/secrets?${search.toString()}`,
+    params.cliScope ? { signedCli: true } : undefined,
+  );
   return result.secrets;
 }
 
@@ -370,6 +387,13 @@ export async function revealSecret(
   return api.post(`/secrets/${secretId}/reveal`, payload);
 }
 
+export async function revealSecretCli(
+  secretId: string,
+  payload: { password?: string; vaultPassword?: string; versionNumber?: number } = {},
+): Promise<SecretRevealResult> {
+  return api.post(`/secrets/${secretId}/cli-reveal`, payload, { signedCli: true });
+}
+
 export async function deleteSecret(secretId: string): Promise<void> {
   await api.del(`/secrets/${secretId}`);
 }
@@ -383,4 +407,15 @@ export async function bulkRevealSecrets(payload: {
   vaultPassword?: string;
 }): Promise<BulkRevealResult> {
   return api.post("/secrets/bulk-reveal", payload);
+}
+
+export async function bulkRevealSecretsCli(payload: {
+  vaultId: string;
+  secretGroupId?: string;
+  secretIds?: string[];
+  includeDescendants?: boolean;
+  password?: string;
+  vaultPassword?: string;
+}): Promise<BulkRevealResult> {
+  return api.post("/secrets/cli/bulk-reveal", payload, { signedCli: true });
 }

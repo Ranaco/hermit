@@ -44,7 +44,7 @@ async function collectAccessibleGroupTree(
   parentId?: string,
   pathPrefix = "",
 ): Promise<GroupTreeNode[]> {
-  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
+  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId, cliScope: true } : { cliScope: true });
   const nodes: GroupTreeNode[] = [];
 
   for (const group of groups) {
@@ -65,6 +65,7 @@ async function findExactSecretsInGroup(
     secretGroupId: groupId,
     search: query,
     limit: SECRET_LOOKUP_LIMIT,
+    cliScope: true,
   });
 
   const exactName = nameSearch.filter((s) => s.name.toLowerCase() === query.toLowerCase());
@@ -73,7 +74,7 @@ async function findExactSecretsInGroup(
   // No name match — try ID prefix lookup against the full list
   const all = nameSearch.length > 0
     ? nameSearch
-    : await sdk.getSecrets(vaultId, { secretGroupId: groupId, limit: SECRET_LOOKUP_LIMIT });
+    : await sdk.getSecrets(vaultId, { secretGroupId: groupId, limit: SECRET_LOOKUP_LIMIT, cliScope: true });
   const exactId = all.filter((s) => s.id === query);
   if (exactId.length > 0) return exactId;
 
@@ -383,7 +384,7 @@ export const runCommand = new Command("run")
         };
       }
 
-      const result = await sdk.bulkRevealSecrets({
+      const result = await sdk.bulkRevealSecretsCli({
         vaultId: vault.id,
         secretGroupId: selection.secretIds ? undefined : selection.group?.id,
         secretIds: selection.secretIds,

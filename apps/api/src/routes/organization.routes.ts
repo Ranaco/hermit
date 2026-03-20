@@ -34,6 +34,7 @@ import {
   updateRoleSchema,
   assignRoleSchema,
   teamRoleParamSchema,
+  getGraphAccessQuerySchema,
 } from "../validators/organization.validator";
 
 const router = Router();
@@ -114,6 +115,16 @@ router.get(
   "/:id/teams",
   validate({ params: organizationIdParamSchema }),
   orgController.getTeams,
+);
+router.get(
+  "/:id/graph",
+  validate({ params: organizationIdParamSchema }),
+  orgController.getAccessGraph,
+);
+router.get(
+  "/:id/graph/access",
+  validate({ params: organizationIdParamSchema, query: getGraphAccessQuerySchema }),
+  orgController.getGraphAccess,
 );
 router.post(
   "/:id/teams",

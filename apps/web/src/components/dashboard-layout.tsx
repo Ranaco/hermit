@@ -19,6 +19,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Network,
   PanelLeftClose,
   PanelLeftOpen,
   ScrollText,
@@ -47,11 +48,20 @@ const navigation: NavigationItem[] = [
   { name: "Secrets", href: "/dashboard/secrets", icon: Lock },
   { name: "Vaults", href: "/dashboard/vaults", icon: Vault },
   { name: "Policies", href: "/dashboard/policies", icon: Shield, requires: "canReadPolicies" },
+  { name: "Graph", href: "/dashboard/graph", icon: Network, requires: "canReadPolicies" },
   { name: "Audit", href: "/dashboard/audit", icon: ScrollText },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({
+  children,
+  fullWidth = false,
+  contentClassName,
+}: {
+  children: React.ReactNode;
+  fullWidth?: boolean;
+  contentClassName?: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuthStore();
@@ -282,7 +292,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 lg:px-8">
+          <main
+            className={cn(
+              "w-full px-4 py-8 sm:px-6 lg:px-8",
+              fullWidth ? "mx-0 max-w-none" : "mx-auto max-w-[1180px]",
+              contentClassName,
+            )}
+          >
             {children}
           </main>
         </div>

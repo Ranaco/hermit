@@ -59,6 +59,7 @@ export const getSecrets = asyncHandler(async (req: Request, res: Response) => {
     page: req.query.page ? Number(req.query.page) : undefined,
     limit: req.query.limit ? Number(req.query.limit) : undefined,
     search: req.query.search as string | undefined,
+    cliScope: req.query.cliScope === "true",
   });
 
   res.json({
@@ -103,6 +104,7 @@ export const revealSecret = asyncHandler(
         password: req.body.password,
         vaultPassword: req.body.vaultPassword,
         versionNumber: req.body.versionNumber,
+        cliScope: Boolean(req.body.cliScope),
       },
       {
         ipAddress: req.ip || "unknown",
@@ -252,6 +254,7 @@ export const bulkRevealSecrets = asyncHandler(
         includeDescendants: req.body.includeDescendants,
         password: req.body.password,
         vaultPassword: req.body.vaultPassword,
+        cliScope: Boolean(req.body.cliScope),
       },
       {
         ipAddress: req.ip || "unknown",

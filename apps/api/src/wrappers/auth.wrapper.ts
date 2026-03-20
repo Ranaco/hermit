@@ -25,7 +25,12 @@ import {
   hashBackupCode,
   validateMfaToken,
 } from "../utils/mfa";
-import { getOrCreateDevice, createSession } from "../utils/device";
+import {
+  getOrCreateDevice,
+  createSession,
+  enrollCliDevice as enrollCliDeviceRecord,
+  finalizeDeviceEnrollment,
+} from "../utils/device";
 import { auditLog } from "../services/audit.service";
 import config from "../config";
 
@@ -41,10 +46,28 @@ export const authWrapper = {
     username?: string;
     organizationName?: string;
     deviceFingerprint?: string;
+    clientType?: "BROWSER" | "CLI";
+    cliPublicKey?: string;
+    cliLabel?: string;
+    hardwareFingerprint?: string;
     ipAddress?: string;
     userAgent?: string;
   }) {
-    const { email, password, firstName, lastName, username, organizationName, deviceFingerprint, ipAddress, userAgent } = data;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      username,
+      organizationName,
+      deviceFingerprint,
+      clientType,
+      cliPublicKey,
+      cliLabel,
+      hardwareFingerprint,
+      ipAddress,
+      userAgent,
+    } = data;
 
     // Validate required fields
     if (!email || !password) {
@@ -106,15 +129,7 @@ export const authWrapper = {
 
     const result = { user, organization: null };
 
-    // Generate tokens without organization (user needs to complete onboarding)
-    const tokens = generateTokenPair({
-      userId: result.user.id,
-      email: result.user.email,
-      organizationId: undefined,
-    });
-
-    // Get or create device from request data
-    const device = await getOrCreateDevice(
+    let device = await getOrCreateDevice(
       result.user.id,
       {
         ip: ipAddress || "unknown",
@@ -122,6 +137,22 @@ export const authWrapper = {
       } as any,
       deviceFingerprint,
     );
+
+    device = (await finalizeDeviceEnrollment(device as any, {
+      clientType,
+      cliPublicKey,
+      cliLabel,
+      hardwareFingerprint,
+    })) as typeof device;
+
+    // Generate tokens without organization (user needs to complete onboarding)
+    const tokens = generateTokenPair({
+      userId: result.user.id,
+      email: result.user.email,
+      organizationId: undefined,
+      deviceId: device.id,
+      clientType: device.clientType as "BROWSER" | "CLI",
+    });
 
     // Create session with device
     await createSession(
@@ -142,7 +173,11 @@ export const authWrapper = {
       user: result.user,
       organization: result.organization,
       tokens,
-      device: { id: device.id, isTrusted: device.isTrusted },
+      device: {
+        id: device.id,
+        isTrusted: device.isTrusted,
+        clientType: device.clientType,
+      },
     };
   },
 
@@ -154,6 +189,10 @@ export const authWrapper = {
     password: string;
     mfaToken?: string;
     deviceFingerprint?: string;
+    clientType?: "BROWSER" | "CLI";
+    cliPublicKey?: string;
+    cliLabel?: string;
+    hardwareFingerprint?: string;
     ipAddress?: string;
     userAgent?: string;
   }) {
@@ -162,6 +201,10 @@ export const authWrapper = {
       password,
       mfaToken,
       deviceFingerprint,
+      clientType,
+      cliPublicKey,
+      cliLabel,
+      hardwareFingerprint,
       ipAddress,
       userAgent,
     } = data;
@@ -292,7 +335,7 @@ export const authWrapper = {
     });
 
     // Get or create device from request data
-    const device = await getOrCreateDevice(
+    let device = await getOrCreateDevice(
       user.id,
       {
         ip: ipAddress || "unknown",
@@ -300,6 +343,13 @@ export const authWrapper = {
       } as any,
       deviceFingerprint,
     );
+
+    device = (await finalizeDeviceEnrollment(device as any, {
+      clientType,
+      cliPublicKey,
+      cliLabel,
+      hardwareFingerprint,
+    })) as typeof device;
 
     // Get user's primary organization
     const primaryOrg = user.organizations[0]?.organization;
@@ -309,6 +359,8 @@ export const authWrapper = {
       userId: user.id,
       email: user.email,
       organizationId: primaryOrg?.id,
+      deviceId: device.id,
+      clientType: device.clientType as "BROWSER" | "CLI",
     });
 
     // Create session with device
@@ -339,7 +391,13 @@ export const authWrapper = {
       organization: primaryOrg
         ? { id: primaryOrg.id, name: primaryOrg.name }
         : null,
-      device: device ? { id: device.id, isTrusted: device.isTrusted } : null,
+      device: device
+        ? {
+            id: device.id,
+            isTrusted: device.isTrusted,
+            clientType: device.clientType,
+          }
+        : null,
       tokens,
     };
   },
@@ -407,6 +465,12 @@ export const authWrapper = {
         expiresAt: { gt: new Date() },
       },
       include: {
+        device: {
+          select: {
+            id: true,
+            clientType: true,
+          },
+        },
         user: {
           include: {
             organizations: {
@@ -432,6 +496,8 @@ export const authWrapper = {
       userId: session.user.id,
       email: session.user.email,
       organizationId: primaryOrg?.id,
+      deviceId: session.device.id,
+      clientType: session.device.clientType as "BROWSER" | "CLI",
     });
 
     // Update session with new refresh token
@@ -637,7 +703,10 @@ export const authWrapper = {
         id: true,
         name: true,
         fingerprint: true,
+        clientType: true,
+        hardwareFingerprint: true,
         isTrusted: true,
+        enrolledAt: true,
         lastUsedAt: true,
         ipAddress: true,
         createdAt: true,
@@ -675,5 +744,50 @@ export const authWrapper = {
     await auditLog.removeDevice(userId, deviceId);
 
     return { success: true };
+  },
+
+  async enrollCliDevice(
+    userId: string,
+    deviceId: string,
+    data: {
+      cliPublicKey: string;
+      cliLabel?: string;
+      hardwareFingerprint: string;
+    },
+  ) {
+    const prisma = getPrismaClient();
+
+    const device = await prisma.device.findFirst({
+      where: {
+        id: deviceId,
+        userId,
+      },
+    });
+
+    if (!device) {
+      throw new NotFoundError(ErrorCode.USER_NOT_FOUND, "Device not found");
+    }
+
+    const enrolled = await enrollCliDeviceRecord(device.id, data);
+
+    await auditLog.addDevice(
+      userId,
+      enrolled.id,
+      {
+        name: enrolled.name || data.cliLabel || "Official CLI",
+        clientType: enrolled.clientType,
+        hardwareFingerprint: enrolled.hardwareFingerprint,
+      },
+    );
+
+    return {
+      device: {
+        id: enrolled.id,
+        name: enrolled.name,
+        isTrusted: enrolled.isTrusted,
+        clientType: enrolled.clientType,
+        enrolledAt: enrolled.enrolledAt,
+      },
+    };
   },
 };

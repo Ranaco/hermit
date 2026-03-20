@@ -14,6 +14,7 @@ import {
   logoutSchema,
   verifyMfaSetupSchema,
   disableMfaSchema,
+  enrollCliDeviceSchema,
 } from '../validators/auth.validator';
 
 const router = Router();
@@ -42,5 +43,6 @@ router.post('/mfa/disable', authenticate, sensitiveOperationsRateLimiter, valida
  */
 router.get('/devices', authenticate, authController.getDevices);
 router.delete('/devices/:id', authenticate, authController.removeDevice);
+router.post('/cli/enroll', authenticate, validate({ body: enrollCliDeviceSchema }), authController.enrollCliDevice);
 
 export default router;

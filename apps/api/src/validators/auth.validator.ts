@@ -25,6 +25,13 @@ const emailSchema = z.string().email("Invalid email format").toLowerCase();
 
 // UUID validation
 const uuidSchema = z.string().uuid("Invalid UUID format");
+const clientTypeSchema = z.enum(["BROWSER", "CLI"]).default("BROWSER");
+const cliEnrollmentFields = {
+  clientType: clientTypeSchema.optional(),
+  cliPublicKey: z.string().min(32).max(4096).optional(),
+  cliLabel: z.string().min(1).max(120).optional(),
+  hardwareFingerprint: z.string().min(8).max(512).optional(),
+};
 
 // Register user schema
 export const registerSchema = z.object({
@@ -43,6 +50,7 @@ export const registerSchema = z.object({
     .optional(),
   organizationName: z.string().min(1).max(100).optional(),
   deviceFingerprint: z.string().optional(),
+  ...cliEnrollmentFields,
 });
 
 // Login schema
@@ -55,6 +63,7 @@ export const loginSchema = z.object({
     .regex(/^\d+$/, "MFA token must contain only digits")
     .optional(),
   deviceFingerprint: z.string().optional(),
+  ...cliEnrollmentFields,
 });
 
 // Refresh token schema
@@ -109,4 +118,10 @@ export const verifyEmailSchema = z.object({
 // Resend verification schema
 export const resendVerificationSchema = z.object({
   email: emailSchema,
+});
+
+export const enrollCliDeviceSchema = z.object({
+  cliPublicKey: z.string().min(32).max(4096),
+  cliLabel: z.string().min(1).max(120).optional(),
+  hardwareFingerprint: z.string().min(8).max(512),
 });

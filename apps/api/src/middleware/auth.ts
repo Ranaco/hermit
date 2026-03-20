@@ -4,10 +4,12 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { AuthenticationError, ErrorCode, asyncHandler } from '@hermit/error-handling';
 import { verifyAccessToken } from '../utils/jwt';
 import getPrismaClient from '../services/prisma.service';
 import { validateMfaToken } from '../utils/mfa';
+import { cleanupExpiredCliNonces, registerRequestNonce } from '../utils/device';
 
 declare global {
   namespace Express {
@@ -16,6 +18,12 @@ declare global {
         id: string;
         email: string;
         organizationId?: string;
+        deviceId?: string;
+        clientType?: "BROWSER" | "CLI";
+      };
+      cliDevice?: {
+        id: string;
+        hardwareFingerprint?: string | null;
       };
     }
   }
@@ -43,6 +51,8 @@ export const authenticate = asyncHandler(async (req: Request, _res: Response, ne
       id: payload.userId,
       email: payload.email,
       organizationId: payload.organizationId,
+      deviceId: payload.deviceId,
+      clientType: payload.clientType,
     };
 
     // Update context with user ID
@@ -80,6 +90,8 @@ export const optionalAuth = asyncHandler(async (req: Request, _res: Response, ne
       id: payload.userId,
       email: payload.email,
       organizationId: payload.organizationId,
+      deviceId: payload.deviceId,
+      clientType: payload.clientType,
     };
 
     if (req.context) {
@@ -171,6 +183,107 @@ export function requireOrganization(organizationId?: string) {
     next();
   });
 }
+
+function getRequestBodyHash(req: Request) {
+  const payload = req.body && Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : "";
+  return crypto.createHash("sha256").update(payload).digest("base64");
+}
+
+function getCliSigningPayload(req: Request, timestamp: string, nonce: string) {
+  return [
+    req.method.toUpperCase(),
+    req.originalUrl,
+    timestamp,
+    nonce,
+    getRequestBodyHash(req),
+  ].join("\n");
+}
+
+export const requireOfficialCli = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+  if (!req.user?.deviceId || req.user.clientType !== "CLI") {
+    throw new AuthenticationError(
+      ErrorCode.INSUFFICIENT_PERMISSIONS,
+      "Official CLI authentication is required for this operation",
+    );
+  }
+
+  const deviceIdHeader = req.headers["x-hermit-device-id"];
+  const signatureHeader = req.headers["x-hermit-signature"];
+  const nonceHeader = req.headers["x-hermit-nonce"];
+  const timestampHeader = req.headers["x-hermit-timestamp"];
+
+  if (
+    typeof deviceIdHeader !== "string" ||
+    typeof signatureHeader !== "string" ||
+    typeof nonceHeader !== "string" ||
+    typeof timestampHeader !== "string"
+  ) {
+    throw new AuthenticationError(
+      ErrorCode.INSUFFICIENT_PERMISSIONS,
+      "Official CLI request signature is required",
+    );
+  }
+
+  if (deviceIdHeader !== req.user.deviceId) {
+    throw new AuthenticationError(ErrorCode.TOKEN_INVALID, "CLI device binding mismatch");
+  }
+
+  const timestamp = Number(timestampHeader);
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 5 * 60 * 1000) {
+    throw new AuthenticationError(ErrorCode.TOKEN_INVALID, "CLI request signature expired");
+  }
+
+  const prisma = getPrismaClient();
+  const device = await prisma.device.findFirst({
+    where: {
+      id: req.user.deviceId,
+      userId: req.user.id,
+      clientType: "CLI",
+      isTrusted: true,
+    },
+    select: {
+      id: true,
+      publicKey: true,
+      hardwareFingerprint: true,
+    },
+  });
+
+  if (!device?.publicKey) {
+    throw new AuthenticationError(
+      ErrorCode.INSUFFICIENT_PERMISSIONS,
+      "CLI device enrollment is required",
+    );
+  }
+
+  const verified = crypto.verify(
+    null,
+    Buffer.from(getCliSigningPayload(req, timestampHeader, nonceHeader)),
+    device.publicKey,
+    Buffer.from(signatureHeader, "base64"),
+  );
+
+  if (!verified) {
+    throw new AuthenticationError(ErrorCode.TOKEN_INVALID, "Invalid CLI request signature");
+  }
+
+  await cleanupExpiredCliNonces(device.id);
+  const nonceRecorded = await registerRequestNonce(
+    device.id,
+    nonceHeader,
+    new Date(timestamp + 5 * 60 * 1000),
+  );
+
+  if (!nonceRecorded) {
+    throw new AuthenticationError(ErrorCode.TOKEN_INVALID, "CLI request nonce has already been used");
+  }
+
+  req.cliDevice = {
+    id: device.id,
+    hardwareFingerprint: device.hardwareFingerprint,
+  };
+
+  next();
+});
 
 /**
  * Require minimum role in organization

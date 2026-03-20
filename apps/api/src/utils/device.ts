@@ -6,6 +6,13 @@ import type { Request } from 'express';
 import crypto from 'crypto';
 import getPrismaClient from '../services/prisma.service';
 
+type CliEnrollmentInput = {
+  cliPublicKey?: string;
+  cliLabel?: string;
+  hardwareFingerprint?: string;
+  clientType?: "BROWSER" | "CLI";
+};
+
 /**
  * Generate device fingerprint from request
  * Creates a hash based on user agent, IP, and other identifiable info
@@ -106,6 +113,82 @@ export async function getOrCreateDevice(userId: string, req: Request, customFing
         userAgent,
         lastUsedAt: new Date(),
       },
+    });
+  }
+
+  return device;
+}
+
+export async function enrollCliDevice(
+  deviceId: string,
+  data: {
+    cliPublicKey: string;
+    cliLabel?: string;
+    hardwareFingerprint: string;
+  },
+) {
+  const prisma = getPrismaClient();
+
+  return prisma.device.update({
+    where: { id: deviceId },
+    data: {
+      clientType: "CLI",
+      publicKey: data.cliPublicKey,
+      hardwareFingerprint: data.hardwareFingerprint,
+      name: data.cliLabel || "Official CLI",
+      isTrusted: true,
+      enrolledAt: new Date(),
+      trustedAt: new Date(),
+    },
+  });
+}
+
+export async function registerRequestNonce(deviceId: string, nonce: string, expiresAt: Date) {
+  const prisma = getPrismaClient();
+
+  try {
+    await prisma.cliRequestNonce.create({
+      data: {
+        deviceId,
+        nonce,
+        expiresAt,
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function cleanupExpiredCliNonces(deviceId: string) {
+  const prisma = getPrismaClient();
+  await prisma.cliRequestNonce.deleteMany({
+    where: {
+      deviceId,
+      expiresAt: {
+        lt: new Date(),
+      },
+    },
+  });
+}
+
+export async function finalizeDeviceEnrollment(
+  device: {
+    id: string;
+    clientType: "BROWSER" | "CLI";
+    isTrusted: boolean;
+  },
+  cliEnrollment?: CliEnrollmentInput,
+) {
+  if (
+    cliEnrollment?.clientType === "CLI" &&
+    cliEnrollment.cliPublicKey &&
+    cliEnrollment.hardwareFingerprint
+  ) {
+    return enrollCliDevice(device.id, {
+      cliPublicKey: cliEnrollment.cliPublicKey,
+      cliLabel: cliEnrollment.cliLabel,
+      hardwareFingerprint: cliEnrollment.hardwareFingerprint,
     });
   }
 

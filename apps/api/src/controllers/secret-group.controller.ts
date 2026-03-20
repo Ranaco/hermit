@@ -49,6 +49,7 @@ export const getGroups = asyncHandler(
         parentId: req.query.parentId as string | undefined,
         includeChildren: req.query.includeChildren === "true",
         forPolicyBuilder: req.query.forPolicyBuilder === "true",
+        cliScope: req.query.cliScope === "true",
       }
     );
 

@@ -13,11 +13,22 @@ export interface PolicyDocument {
   statements: PolicyStatement[];
 }
 
+export interface PolicyStatementSource {
+  statement: PolicyStatement;
+  policyId: string;
+  policyName: string;
+  roleId: string;
+  roleName: string;
+  sourceType: "member-role" | "team-role";
+  teamId?: string;
+  teamName?: string;
+}
+
 /**
  * Helper to match an action or resource string against a pattern that may contain a wildcard `*`.
  * e.g., matchURN("urn:hermit:org:123:vault:*", "urn:hermit:org:123:vault:456:secret:789") -> true
  */
-function isMatch(pattern: string, target: string): boolean {
+export function isMatch(pattern: string, target: string): boolean {
   if (pattern === target) return true;
   if (pattern === "*") return true;
 
@@ -28,6 +39,34 @@ function isMatch(pattern: string, target: string): boolean {
   }
 
   return false;
+}
+
+export function explainPolicySourcesAgainstAny(
+  sources: PolicyStatementSource[],
+  actions: string[],
+  resourceUrns: string[],
+) {
+  const candidateResources = resourceUrns.length > 0 ? resourceUrns : ["*"];
+
+  return actions.map((action) => {
+    const matched = sources.filter(({ statement }) => {
+      const matchesAction = statement.actions.some((pattern) => isMatch(pattern, action));
+      const matchesResource = statement.resources.some((pattern) =>
+        candidateResources.some((resourceUrn) => isMatch(pattern, resourceUrn)),
+      );
+      return matchesAction && matchesResource;
+    });
+
+    const denied = matched.filter(({ statement }) => statement.effect === "DENY");
+    const allowed = matched.filter(({ statement }) => statement.effect === "ALLOW");
+
+    return {
+      action,
+      allowed: denied.length === 0 && allowed.length > 0,
+      denied: denied.length > 0,
+      matches: matched,
+    };
+  });
 }
 
 export function evaluateStatements(
@@ -71,6 +110,11 @@ export function evaluateStatementsAgainstAny(
  * and indirectly via Team assignments, returning the combined Statements.
  */
 export async function getUserPolicies(userId: string, orgId: string): Promise<PolicyStatement[]> {
+  const sources = await getUserPolicySources(userId, orgId);
+  return sources.map((source) => source.statement);
+}
+
+export async function getUserPolicySources(userId: string, orgId: string): Promise<PolicyStatementSource[]> {
   const prisma = getPrismaClient();
   await ensureOrganizationIamBootstrap(orgId);
 
@@ -110,14 +154,23 @@ export async function getUserPolicies(userId: string, orgId: string): Promise<Po
     },
   });
 
-  const statements: PolicyStatement[] = [];
+  const statements: PolicyStatementSource[] = [];
 
   // Parse direct role policies
   if (orgMembership?.role) {
     for (const attachment of orgMembership.role.policyAttachments) {
       const doc = attachment.policy.document as unknown as PolicyDocument;
       if (doc?.statements) {
-        statements.push(...doc.statements);
+        statements.push(
+          ...doc.statements.map((statement) => ({
+            statement,
+            policyId: attachment.policy.id,
+            policyName: attachment.policy.name,
+            roleId: orgMembership.role!.id,
+            roleName: orgMembership.role!.name,
+            sourceType: "member-role" as const,
+          })),
+        );
       }
     }
   }
@@ -128,7 +181,18 @@ export async function getUserPolicies(userId: string, orgId: string): Promise<Po
       for (const attachment of assignment.role.policyAttachments) {
         const doc = attachment.policy.document as unknown as PolicyDocument;
         if (doc?.statements) {
-          statements.push(...doc.statements);
+          statements.push(
+            ...doc.statements.map((statement) => ({
+              statement,
+              policyId: attachment.policy.id,
+              policyName: attachment.policy.name,
+              roleId: assignment.role.id,
+              roleName: assignment.role.name,
+              sourceType: "team-role" as const,
+              teamId: tm.team.id,
+              teamName: tm.team.name,
+            })),
+          );
         }
       }
     }

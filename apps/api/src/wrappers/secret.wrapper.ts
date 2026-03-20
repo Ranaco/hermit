@@ -63,6 +63,18 @@ type AccessContext = {
   policyStatements: PolicyStatement[];
 };
 
+function hasAction(
+  accessContext: AccessContext,
+  action: string,
+  resourceUrns: string[],
+) {
+  if (accessContext.canBypass) {
+    return true;
+  }
+
+  return evaluateStatementsAgainstAny(accessContext.policyStatements, action, resourceUrns);
+}
+
 async function getAccessContext(
   prisma: ReturnType<typeof getPrismaClient>,
   userId: string,
@@ -170,6 +182,39 @@ function assertSecretAction(
   );
 }
 
+function resolveTransitKeyName(data: {
+  version?: {
+    encryptionContext?: unknown;
+  } | null;
+  key?: {
+    currentVersion?: {
+      encryptedValue?: string | null;
+    } | null;
+    versions?: Array<{
+      encryptedValue?: string | null;
+    }>;
+  } | null;
+}): string | null {
+  const encryptionContext = data.version?.encryptionContext;
+  if (
+    encryptionContext &&
+    typeof encryptionContext === "object" &&
+    "vaultKeyName" in encryptionContext &&
+    typeof encryptionContext.vaultKeyName === "string" &&
+    encryptionContext.vaultKeyName
+  ) {
+    return encryptionContext.vaultKeyName;
+  }
+
+  const currentVersionKeyName = data.key?.currentVersion?.encryptedValue;
+  if (currentVersionKeyName) {
+    return currentVersionKeyName;
+  }
+
+  const latestVersionKeyName = data.key?.versions?.[0]?.encryptedValue;
+  return latestVersionKeyName || null;
+}
+
 export const secretWrapper = {
   /**
    * Create a new secret
@@ -238,6 +283,11 @@ export const secretWrapper = {
         vaultId,
       },
       include: {
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -290,7 +340,13 @@ export const secretWrapper = {
     }
 
     // Get the vault transit key name from the key version
-    const vaultKeyName = key.versions[0].encryptedValue;
+    const vaultKeyName = resolveTransitKeyName({ key });
+    if (!vaultKeyName) {
+      throw new NotFoundError(
+        ErrorCode.KEY_NOT_FOUND,
+        "Key transit configuration not found",
+      );
+    }
 
     // Encrypt the secret value using HashiCorp Vault Transit Engine
     const encryptedValue = await encryptionService.encrypt(vaultKeyName, value);
@@ -392,9 +448,10 @@ export const secretWrapper = {
       page?: number;
       limit?: number;
       search?: string;
+      cliScope?: boolean;
     },
   ) {
-    const { vaultId, secretGroupId, page = 1, limit = 20, search } = data;
+    const { vaultId, secretGroupId, page = 1, limit = 20, search, cliScope } = data;
 
     const where: any = {
       vaultId,
@@ -474,12 +531,17 @@ export const secretWrapper = {
     // Don't return encrypted values or password hashes in list view
     const sanitizedSecrets = secrets
       .filter((secret) => {
-        return canAccessSecretAction(accessContext, "secrets:read", {
+        const resourceUrns = buildSecretCandidateResourceUrns({
           orgId: vault.organizationId,
           vaultId,
           secretId: secret.id,
           groupPath: secret.secretGroup?.path,
         });
+
+        return cliScope
+          ? hasAction(accessContext, "secrets:read", resourceUrns) ||
+              hasAction(accessContext, "secrets:cli-use", resourceUrns)
+          : hasAction(accessContext, "secrets:read", resourceUrns);
       })
       .map((secret) => ({
         ...secret,
@@ -610,13 +672,14 @@ export const secretWrapper = {
       password?: string;
       vaultPassword?: string;
       versionNumber?: number;
+      cliScope?: boolean;
     },
     auditInfo: {
       ipAddress?: string;
       userAgent?: string;
     },
   ) {
-    const { secretId, password, vaultPassword, versionNumber } = data;
+    const { secretId, password, vaultPassword, versionNumber, cliScope } = data;
 
     const prisma = getPrismaClient();
 
@@ -638,6 +701,11 @@ export const secretWrapper = {
         },
         key: {
           include: {
+            currentVersion: {
+              select: {
+                encryptedValue: true,
+              },
+            },
             versions: {
               orderBy: { versionNumber: "desc" },
               take: 1,
@@ -649,6 +717,7 @@ export const secretWrapper = {
             id: true,
             versionNumber: true,
             encryptedValue: true,
+            encryptionContext: true,
           },
         },
         versions: {
@@ -664,12 +733,30 @@ export const secretWrapper = {
     }
 
     const accessContext = await getAccessContext(prisma, userId, secret.vault.organizationId);
-    assertSecretAction(accessContext, "secrets:use", {
+    const secretResourceUrns = buildSecretCandidateResourceUrns({
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
       groupPath: secret.secretGroup?.path,
     });
+    if (cliScope) {
+      const hasCliAccess =
+        hasAction(accessContext, "secrets:use", secretResourceUrns) ||
+        hasAction(accessContext, "secrets:cli-use", secretResourceUrns);
+      if (!hasCliAccess) {
+        throw new ForbiddenError(
+          ErrorCode.INSUFFICIENT_PERMISSIONS,
+          "Access denied by IAM policy",
+        );
+      }
+    } else {
+      assertSecretAction(accessContext, "secrets:use", {
+        orgId: secret.vault.organizationId,
+        vaultId: secret.vault.id,
+        secretId: secret.id,
+        groupPath: secret.secretGroup?.path,
+      });
+    }
 
     // Three-tier security verification
     // 1. Secret-level password (highest priority)
@@ -761,7 +848,10 @@ export const secretWrapper = {
     }
 
     // Get vault transit key name
-    const vaultKeyName = secret.key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName({
+      version,
+      key: secret.key,
+    });
     if (!vaultKeyName) {
       throw new Error("Key configuration error");
     }
@@ -873,6 +963,11 @@ export const secretWrapper = {
         },
         key: {
           include: {
+            currentVersion: {
+              select: {
+                encryptedValue: true,
+              },
+            },
             versions: {
               orderBy: { versionNumber: "desc" },
               take: 1,
@@ -904,7 +999,9 @@ export const secretWrapper = {
       : 1;
 
     // Get vault transit key name
-    const vaultKeyName = secret.key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName({
+      key: secret.key,
+    });
     if (!vaultKeyName) {
       throw new Error("Key configuration error");
     }
@@ -1321,6 +1418,7 @@ export const secretWrapper = {
       includeDescendants?: boolean;
       password?: string;
       vaultPassword?: string;
+      cliScope?: boolean;
     },
     auditInfo: {
       ipAddress?: string;
@@ -1334,6 +1432,7 @@ export const secretWrapper = {
       includeDescendants,
       password,
       vaultPassword,
+      cliScope,
     } = data;
 
     const prisma = getPrismaClient();
@@ -1408,6 +1507,11 @@ export const secretWrapper = {
         },
         key: {
           include: {
+            currentVersion: {
+              select: {
+                encryptedValue: true,
+              },
+            },
             versions: {
               orderBy: { versionNumber: "desc" as const },
               take: 1,
@@ -1419,6 +1523,7 @@ export const secretWrapper = {
             id: true,
             versionNumber: true,
             encryptedValue: true,
+            encryptionContext: true,
           },
         },
       },
@@ -1431,12 +1536,19 @@ export const secretWrapper = {
     const secretsToDecrypt: typeof secrets = [];
 
     for (const secret of secrets) {
-      if (!canAccessSecretAction(accessContext, "secrets:use", {
+      const resourceUrns = buildSecretCandidateResourceUrns({
         orgId: vault.organizationId,
         vaultId,
         secretId: secret.id,
         groupPath: secret.secretGroup?.path,
-      })) {
+      });
+
+      const canUseSecret = cliScope
+        ? hasAction(accessContext, "secrets:use", resourceUrns) ||
+          hasAction(accessContext, "secrets:cli-use", resourceUrns)
+        : hasAction(accessContext, "secrets:use", resourceUrns);
+
+      if (!canUseSecret) {
         continue;
       }
 
@@ -1465,7 +1577,10 @@ export const secretWrapper = {
         continue;
       }
 
-      const vaultKeyName = secret.key.versions[0]?.encryptedValue;
+      const vaultKeyName = resolveTransitKeyName({
+        version: secret.currentVersion,
+        key: secret.key,
+      });
       if (!vaultKeyName) {
         skipped.push({ name: secret.name, reason: "key-error" });
         continue;
@@ -1477,7 +1592,14 @@ export const secretWrapper = {
     // Group secrets by their HashiCorp Vault key name
     const byVaultKey = new Map<string, typeof secrets>();
     for (const secret of secretsToDecrypt) {
-      const vaultKeyName = secret.key.versions[0].encryptedValue;
+      const vaultKeyName = resolveTransitKeyName({
+        version: secret.currentVersion,
+        key: secret.key,
+      });
+      if (!vaultKeyName) {
+        skipped.push({ name: secret.name, reason: "key-error" });
+        continue;
+      }
       if (!byVaultKey.has(vaultKeyName)) byVaultKey.set(vaultKeyName, []);
       byVaultKey.get(vaultKeyName)!.push(secret);
     }

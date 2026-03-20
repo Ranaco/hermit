@@ -13,6 +13,23 @@ import getPrismaClient from "../services/prisma.service";
 import encryptionService from "../services/encryption.service";
 import { createAuditLog } from "../services/audit.service";
 
+function resolveTransitKeyName(data: {
+  currentVersion?: {
+    encryptedValue?: string | null;
+  } | null;
+  versions?: Array<{
+    encryptedValue?: string | null;
+  }>;
+}): string | null {
+  const currentVersionKeyName = data.currentVersion?.encryptedValue;
+  if (currentVersionKeyName) {
+    return currentVersionKeyName;
+  }
+
+  const latestVersionKeyName = data.versions?.[0]?.encryptedValue;
+  return latestVersionKeyName || null;
+}
+
 export const keyWrapper = {
   /**
    * Create a new encryption key
@@ -104,6 +121,11 @@ export const keyWrapper = {
               name: true,
             },
           },
+          currentVersion: {
+            select: {
+              encryptedValue: true,
+            },
+          },
           versions: {
             orderBy: { versionNumber: "desc" },
           },
@@ -160,6 +182,11 @@ export const keyWrapper = {
             name: true,
           },
         },
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           include: {
             createdBy: {
@@ -200,6 +227,11 @@ export const keyWrapper = {
             name: true,
           },
         },
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
         },
@@ -235,6 +267,12 @@ export const keyWrapper = {
             organizationId: true,
           },
         },
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+            versionNumber: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 5,
@@ -249,7 +287,7 @@ export const keyWrapper = {
       );
     }
 
-    const vaultKeyName = key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName(key);
     if (!vaultKeyName) {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
@@ -258,7 +296,7 @@ export const keyWrapper = {
     await encryptionService.rotateKey(vaultKeyName);
 
     // Create new version in database
-    const latestVersion = key.versions[0];
+    const latestVersion = key.currentVersion || key.versions[0];
     const newVersion = await prisma.$transaction(async (tx) => {
       const createdVersion = await tx.keyVersion.create({
         data: {
@@ -310,6 +348,11 @@ export const keyWrapper = {
     const key = await prisma.key.findUnique({
       where: { id: keyId },
       include: {
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -324,7 +367,7 @@ export const keyWrapper = {
       );
     }
 
-    const vaultKeyName = key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName(key);
     if (!vaultKeyName) {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
@@ -352,6 +395,11 @@ export const keyWrapper = {
     const key = await prisma.key.findUnique({
       where: { id: keyId },
       include: {
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -366,7 +414,7 @@ export const keyWrapper = {
       );
     }
 
-    const vaultKeyName = key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName(key);
     if (!vaultKeyName) {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
@@ -393,6 +441,11 @@ export const keyWrapper = {
     const key = await prisma.key.findUnique({
       where: { id: keyId },
       include: {
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -404,7 +457,7 @@ export const keyWrapper = {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND);
     }
 
-    const vaultKeyName = key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName(key);
     if (!vaultKeyName) {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
@@ -433,6 +486,11 @@ export const keyWrapper = {
     const key = await prisma.key.findUnique({
       where: { id: keyId },
       include: {
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -444,7 +502,7 @@ export const keyWrapper = {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND);
     }
 
-    const vaultKeyName = key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName(key);
     if (!vaultKeyName) {
       throw new NotFoundError(ErrorCode.KEY_NOT_FOUND, "Key version not found");
     }
@@ -467,6 +525,11 @@ export const keyWrapper = {
     const key = await prisma.key.findUnique({
       where: { id: keyId },
       include: {
+        currentVersion: {
+          select: {
+            encryptedValue: true,
+          },
+        },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -481,7 +544,7 @@ export const keyWrapper = {
       );
     }
 
-    const vaultKeyName = key.versions[0]?.encryptedValue;
+    const vaultKeyName = resolveTransitKeyName(key);
     if (vaultKeyName) {
       // Delete key from Vault
       await encryptionService.deleteKey(vaultKeyName);

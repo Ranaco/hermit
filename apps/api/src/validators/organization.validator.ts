@@ -200,3 +200,8 @@ export const updateRoleSchema = z.object({
 export const assignRoleSchema = z.object({
   roleId: uuidSchema,
 });
+
+export const getGraphAccessQuerySchema = z.object({
+  nodeType: z.enum(["organization", "vault", "group", "key", "secret", "team", "role", "policy", "member"]),
+  nodeId: uuidSchema,
+});

@@ -173,3 +173,25 @@ export const removeDevice = asyncHandler(
     });
   },
 );
+
+/**
+ * Enroll the current device as an official CLI device
+ * POST /api/v1/auth/cli/enroll
+ */
+export const enrollCliDevice = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.deviceId) {
+    throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
+  }
+
+  const result = await authWrapper.enrollCliDevice(req.user.id, req.user.deviceId, {
+    cliPublicKey: req.body.cliPublicKey,
+    cliLabel: req.body.cliLabel,
+    hardwareFingerprint: req.body.hardwareFingerprint,
+  });
+
+  res.json({
+    success: true,
+    data: result,
+    message: "CLI device enrolled successfully",
+  });
+});

@@ -137,6 +137,39 @@ export interface AssignTeamRoleData {
   roleId: string;
 }
 
+export interface AccessGraphNode {
+  id: string;
+  type: "organization" | "vault" | "group" | "key" | "secret" | "team" | "role" | "policy" | "member";
+  entityId: string;
+  label: string;
+  subtitle?: string | null;
+  parentId?: string | null;
+  meta?: Record<string, unknown>;
+}
+
+export interface AccessGraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  type: "contains" | "belongs-to" | "member-of" | "assigned-role" | "attached-policy" | "protected-by-key";
+}
+
+export interface AccessGraph {
+  nodes: AccessGraphNode[];
+  edges: AccessGraphEdge[];
+  counts: Record<string, number>;
+}
+
+export interface AccessGraphDetail {
+  nodeType: string;
+  nodeId: string;
+  title: string;
+  subtitle?: string | null;
+  details?: Record<string, unknown>;
+  resourceAccess?: Record<string, unknown>;
+  principalAccess?: Record<string, unknown>;
+}
+
 export const organizationService = {
   getAll: async (): Promise<Organization[]> => {
     const response = await apiClient.get("/organizations");
@@ -277,5 +310,21 @@ export const organizationService = {
     roleId: string,
   ): Promise<void> => {
     await apiClient.delete(`/organizations/${organizationId}/teams/${teamId}/roles/${roleId}`);
+  },
+
+  getAccessGraph: async (organizationId: string): Promise<AccessGraph> => {
+    const response = await apiClient.get(`/organizations/${organizationId}/graph`);
+    return response.data.data;
+  },
+
+  getAccessGraphDetail: async (
+    organizationId: string,
+    nodeType: string,
+    nodeId: string,
+  ): Promise<AccessGraphDetail> => {
+    const response = await apiClient.get(`/organizations/${organizationId}/graph/access`, {
+      params: { nodeType, nodeId },
+    });
+    return response.data.data;
   },
 };

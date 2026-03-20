@@ -11,6 +11,8 @@ export interface JwtPayload {
   userId: string;
   email: string;
   organizationId?: string;
+  deviceId?: string;
+  clientType?: "BROWSER" | "CLI";
   type: "access" | "refresh";
   iat?: number;
   exp?: number;
