@@ -24,6 +24,32 @@ APP_DIR="/deploy/hermit"
 COMPOSE_FILE="docker-compose.deploy.yml"
 REFRESH_RUNTIME_VAULT_ENV=false
 
+render_http_only_nginx_config() {
+  cat > nginx/conf.d/hermit.conf <<NGINX
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 200 'waiting for ssl';
+    }
+}
+NGINX
+}
+
+render_full_nginx_config() {
+  envsubst '${DOMAIN}' < nginx/conf.d/hermit.conf.template > nginx/conf.d/hermit.conf
+}
+
+cert_exists() {
+  docker compose -f "$COMPOSE_FILE" --env-file .env.production run --rm certbot \
+    certificates --cert-name "$DOMAIN" >/dev/null 2>&1
+}
+
 write_runtime_vault_env() {
   local deploy_token_file="${VAULT_DEPLOY_TOKEN_FILE:-$APP_DIR/vault/init/provisioning/deploy-token}"
   local runtime_env_file="$APP_DIR/.env.runtime"
@@ -101,7 +127,7 @@ if [[ ! -f .env.runtime ]]; then
 fi
 
 echo "Generating nginx config for $DOMAIN..."
-envsubst '${DOMAIN}' < nginx/conf.d/hermit.conf.template > nginx/conf.d/hermit.conf
+render_full_nginx_config
 
 if [[ ! -f .env.production ]]; then
   echo "Creating .env.production from template..."
@@ -122,21 +148,9 @@ set -a
 source .env.production
 set +a
 
-if [[ ! -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
+if ! cert_exists; then
   echo "Obtaining SSL certificate for $DOMAIN..."
-
-  cat > nginx/conf.d/hermit-temp.conf <<NGINX
-server {
-    listen 80;
-    server_name $DOMAIN;
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-    location / {
-        return 200 'waiting for ssl';
-    }
-}
-NGINX
+  render_http_only_nginx_config
 
   docker compose -f "$COMPOSE_FILE" --env-file .env.production up -d nginx
   sleep 3
@@ -149,8 +163,8 @@ NGINX
     --no-eff-email \
     -d "$DOMAIN"
 
-  rm -f nginx/conf.d/hermit-temp.conf
   docker compose -f "$COMPOSE_FILE" --env-file .env.production down
+  render_full_nginx_config
 fi
 
 echo "Pulling and starting all services..."

@@ -74,3 +74,4 @@ Key tables and their core relationships:
 - **Vault runtime split**: `apps/hcv_engine/scripts/start.sh` must stay runtime-only. Vault initialization and provisioning are explicit operator workflows handled by `bootstrap-vault.sh` and `provision-vault.sh`, never by container startup.
 - **No webhook recovery path**: Root tokens, unseal keys, recovery JSON, and similar bootstrap material must not be sent through webhook automation or stored as normal deploy artifacts.
 - **Wrapped AppRole inputs**: Production app auth should prefer scoped AppRole RoleIDs plus wrapped SecretIDs over static SecretIDs or long-lived root tokens.
+- **ACME bootstrap rule**: Do not load the full HTTPS nginx config before the first Let's Encrypt certificate exists. For initial issuance, serve only the HTTP challenge config, then render the SSL config after Certbot succeeds. Certificate existence checks must use the Certbot volume/container state, not host `/etc/letsencrypt` paths.

@@ -40,3 +40,8 @@
 - Rotate any bootstrap credentials or SecretIDs that were exposed by the old webhook flow.
 - Add a scheduler on the VPS for `backup-raft-snapshot.sh`.
 - Move from manual wrapped SecretID placement toward a tighter host-local unwrap handoff if desired.
+
+## Post-update deployment note
+
+- First-time Let's Encrypt issuance must bootstrap nginx with an HTTP-only ACME challenge config. Rendering the full SSL config before the cert exists causes nginx startup failure because `fullchain.pem`/`privkey.pem` are not present yet.
+- Because Certbot state is stored in the Docker `certbot_conf` volume, deployment checks must query Certbot/container state rather than host `/etc/letsencrypt/live/...`.

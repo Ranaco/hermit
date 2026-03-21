@@ -103,9 +103,6 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
-    depends_on:
-      - api
-      - web
     networks:
       - hermit
 
