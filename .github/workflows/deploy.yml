@@ -72,17 +72,13 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -euo pipefail
-
-            cd /deploy/hermit
-
-            printf 'IMAGE_TAG=%s\n' '${{ github.event.workflow_run.head_sha }}' > .env.release
-
-            echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml pull
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d db hcv
-            vault_status="$(docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T hcv vault status -format=json 2>/dev/null || true)"
+            set -euo pipefail && \
+            cd /deploy/hermit && \
+            printf 'IMAGE_TAG=%s\n' '${{ github.event.workflow_run.head_sha }}' > .env.release && \
+            echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml pull && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d db hcv && \
+            vault_status="$(docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T hcv vault status -format=json 2>/dev/null || true)" && \
             if [ -z "$vault_status" ]; then
               echo "Unable to query Vault status after startup" >&2
               exit 1
@@ -95,10 +91,9 @@ jobs:
               echo "Vault is sealed. Unseal it or enable auto-unseal before automatic deployments continue." >&2
               exit 1
             fi
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d api
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d web nginx certbot
-
-            curl -fsS http://127.0.0.1/health > /dev/null
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml ps
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d api && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d web nginx certbot && \
+            curl -fsS http://127.0.0.1/health > /dev/null && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml ps && \
             docker image prune -f

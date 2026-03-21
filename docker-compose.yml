@@ -11,6 +11,7 @@ services:
       ENV: development
       VAULT_ADDR: https://127.0.0.1:8200
       VAULT_SKIP_VERIFY: "true"
+      VAULT_CACERT: /vault/tls/cert.pem
       VAULT_API_ADDR: https://127.0.0.1:8200
       VAULT_CLUSTER_ADDR: https://127.0.0.1:8201
       VAULT_TLS_DISABLE: "false"
