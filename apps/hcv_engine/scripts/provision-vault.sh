@@ -82,7 +82,7 @@ write_wrapped_secret_id="$(vault write -wrap-ttl="$VAULT_WRAP_TTL" -f auth/appro
 admin_wrapped_secret_id="$(vault write -wrap-ttl="$VAULT_WRAP_TTL" -f auth/approle/role/hermit-admin/secret-id -format=json | jq -r '.wrap_info.token')"
 deploy_token_file="$VAULT_OPERATOR_OUTPUT_DIR/deploy-token"
 printf '%s\n' "$deploy_token" > "$deploy_token_file"
-chmod 600 "$deploy_token_file"
+chmod 644 "$deploy_token_file"
 
 summary_file="$VAULT_OPERATOR_OUTPUT_DIR/approle-bootstrap-${timestamp}.env"
 cat > "$summary_file" <<EOF

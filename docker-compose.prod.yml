@@ -17,9 +17,7 @@ services:
       retries: 5
 
   hcv:
-    build:
-      context: ./apps/hcv_engine
-      dockerfile: Dockerfile
+    image: ghcr.io/ranaco/hermit-hcv:${HCV_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       ENV: production

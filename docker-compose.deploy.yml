@@ -17,7 +17,7 @@ services:
       retries: 5
 
   hcv:
-    image: ghcr.io/ranaco/hermit-hcv:${IMAGE_TAG:-latest}
+    image: ghcr.io/ranaco/hermit-hcv:${HCV_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
     environment:
