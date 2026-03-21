@@ -22,33 +22,22 @@ import type {
   VaultError,
 } from "./types";
 
-/**
- * VaultService - A comprehensive wrapper for HashiCorp Vault Transit Engine
- *
- * This service provides:
- * - Encryption/Decryption using Transit Engine
- * - Key versioning and rotation
- * - Data key generation (envelope encryption)
- * - Digital signatures and verification
- * - Key management operations
- * - Health checks and monitoring
- */
 export class VaultService {
   private client: vault.client;
   private transitMount: string;
   private config: VaultConfig;
   private tokenRenewalTimer?: NodeJS.Timeout;
   private initialized = false;
+  private resolvedSecretId?: string;
 
   constructor(config: VaultConfig) {
     this.config = config;
     this.transitMount = config.transitMount || "transit";
 
-    // Initialize Vault client
     this.client = vault({
       apiVersion: "v1",
       endpoint: config.endpoint,
-      token: config.token, // Can be undefined initially if using approle
+      token: config.token,
       namespace: config.namespace,
       requestOptions: {
         timeout: config.requestTimeout || 5000,
@@ -62,9 +51,6 @@ export class VaultService {
     });
   }
 
-  /**
-   * Initialize service, performs AppRole login if configured
-   */
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
@@ -73,36 +59,68 @@ export class VaultService {
     if (!this.config.token && this.config.appRole) {
       await this.loginWithAppRole();
     } else if (this.config.token) {
-      // If we provided a token, try to schedule renewal for it assuming it's renewable
       await this.scheduleTokenRenewal();
     }
 
     this.initialized = true;
   }
 
-  /**
-   * Authenticate with Vault using AppRole
-   */
+  private async resolveAppRoleSecretId(): Promise<string> {
+    if (!this.config.appRole) {
+      throw new Error("AppRole configuration missing");
+    }
+
+    if (this.resolvedSecretId) {
+      return this.resolvedSecretId;
+    }
+
+    if (this.config.appRole.secretId) {
+      this.resolvedSecretId = this.config.appRole.secretId;
+      return this.resolvedSecretId;
+    }
+
+    if (!this.config.appRole.wrappedSecretId) {
+      throw new Error("AppRole secret material is missing");
+    }
+
+    const unwrapClient = vault({
+      apiVersion: "v1",
+      endpoint: this.config.endpoint,
+      token: this.config.appRole.wrappedSecretId,
+      namespace: this.config.namespace,
+      requestOptions: {
+        timeout: this.config.requestTimeout || 5000,
+      },
+    });
+
+    const unwrapResponse = await unwrapClient.write("sys/wrapping/unwrap", {});
+    const secretId = unwrapResponse?.data?.secret_id as string | undefined;
+    if (!secretId) {
+      throw new Error("Wrapped SecretID unwrap did not return a secret_id");
+    }
+
+    this.resolvedSecretId = secretId;
+    return secretId;
+  }
+
   private async loginWithAppRole(): Promise<void> {
     if (!this.config.appRole) {
       throw new Error("AppRole configuration missing");
     }
 
     try {
-      const { roleId, secretId, mountPoint = "approle" } = this.config.appRole;
-      
+      const { roleId, mountPoint = "approle" } = this.config.appRole;
+      const secretId = await this.resolveAppRoleSecretId();
+
       const response = await this.client.write(`auth/${mountPoint}/login`, {
         role_id: roleId,
         secret_id: secretId,
       });
 
-      const clientToken = response.auth.client_token;
-      
-      // Update client with new token
       this.client = vault({
         apiVersion: "v1",
         endpoint: this.config.endpoint,
-        token: clientToken,
+        token: response.auth.client_token,
         namespace: this.config.namespace,
         requestOptions: {
           timeout: this.config.requestTimeout || 5000,
@@ -112,61 +130,61 @@ export class VaultService {
       log.info("Successfully authenticated with Vault via AppRole");
       await this.scheduleTokenRenewal(response.auth);
     } catch (error: any) {
-      if (error?.code === 'ECONNREFUSED' || error?.message?.includes('ECONNREFUSED')) {
-         log.error("Vault connection refused during AppRole login");
+      if (error?.code === "ECONNREFUSED" || error?.message?.includes("ECONNREFUSED")) {
+        log.error("Vault connection refused during AppRole login");
       } else {
-         log.error("Vault AppRole login failed", { error });
+        log.error("Vault AppRole login failed", { error });
       }
-      // Schedule a retry so the client self-heals after transient failures
-      // (e.g. vault briefly unreachable during token renewal → re-login also fails → stuck with expired token)
-      if (this.tokenRenewalTimer) clearTimeout(this.tokenRenewalTimer);
+
+      if (this.tokenRenewalTimer) {
+        clearTimeout(this.tokenRenewalTimer);
+      }
+
       this.tokenRenewalTimer = setTimeout(async () => {
         log.info("Retrying Vault AppRole login after previous failure...");
         await this.loginWithAppRole();
       }, 30_000);
-      if (this.tokenRenewalTimer.unref) this.tokenRenewalTimer.unref();
+
+      if (this.tokenRenewalTimer.unref) {
+        this.tokenRenewalTimer.unref();
+      }
     }
   }
 
-  /**
-   * Schedule Vault token renewal
-   */
   private async scheduleTokenRenewal(authInfo?: any): Promise<void> {
     if (this.tokenRenewalTimer) {
       clearTimeout(this.tokenRenewalTimer);
     }
 
     try {
-      // If authInfo isn't provided, try to look up the current token
       const info = authInfo || (await this.client.tokenLookupSelf()).data;
-      
+
       if (!info.renewable) {
         log.debug("Vault token is not renewable");
         return;
       }
 
-      // Renew at 90% of the TTL
       const ttl = info.lease_duration;
-      if (!ttl || ttl === 0) return; // Root tokens or non-expiring
+      if (!ttl || ttl === 0) {
+        return;
+      }
 
-      const renewalDelayMs = Math.max((ttl * 0.9) * 1000, 5000); // At least 5 seconds
+      const renewalDelayMs = Math.max(ttl * 0.9 * 1000, 5000);
 
       this.tokenRenewalTimer = setTimeout(async () => {
         try {
           await this.client.tokenRenewSelf();
           log.debug("Successfully renewed Vault token");
-          await this.scheduleTokenRenewal(); // Schedule the next one
+          await this.scheduleTokenRenewal();
         } catch (err) {
           log.error("Failed to renew Vault token", { error: err });
-          // If renewal fails, attempt to re-login via AppRole if configured
           if (this.config.appRole) {
-             log.info("Attempting AppRole re-login due to failed token renewal");
-             await this.loginWithAppRole();
+            log.info("Attempting AppRole re-login due to failed token renewal");
+            await this.loginWithAppRole();
           }
         }
       }, renewalDelayMs);
 
-      // Prevent timer from keeping Node process alive
       if (this.tokenRenewalTimer.unref) {
         this.tokenRenewalTimer.unref();
       }
@@ -175,21 +193,11 @@ export class VaultService {
     }
   }
 
-  /**
-   * Encrypt plaintext data using Transit Engine
-   * @param options Encryption options
-   * @returns Encrypted ciphertext and key version
-   */
   async encrypt(options: EncryptOptions): Promise<EncryptResult> {
     try {
-      const { keyName, plaintext, context, keyVersion, nonce, convergent } =
-        options;
-
-      // Base64 encode the plaintext
-      const base64Plaintext = Buffer.from(plaintext).toString("base64");
-
+      const { keyName, plaintext, context, keyVersion, nonce, convergent } = options;
       const payload: Record<string, unknown> = {
-        plaintext: base64Plaintext,
+        plaintext: Buffer.from(plaintext).toString("base64"),
       };
 
       if (context) payload.context = Buffer.from(context).toString("base64");
@@ -197,19 +205,10 @@ export class VaultService {
       if (nonce) payload.nonce = nonce;
       if (convergent !== undefined) payload.convergent_encryption = convergent;
 
-      const response = await this.client.write(
-        `${this.transitMount}/encrypt/${keyName}`,
-        payload,
-      );
-
-      const ciphertext = response.data.ciphertext as string;
-      const version = response.data.key_version as number;
-
-      log.debug("Encryption successful", { keyName, keyVersion: version });
-
+      const response = await this.client.write(`${this.transitMount}/encrypt/${keyName}`, payload);
       return {
-        ciphertext,
-        keyVersion: version,
+        ciphertext: response.data.ciphertext as string,
+        keyVersion: response.data.key_version as number,
       };
     } catch (error) {
       log.error("Encryption failed", { error, keyName: options.keyName });
@@ -217,47 +216,24 @@ export class VaultService {
     }
   }
 
-  /**
-   * Decrypt ciphertext using Transit Engine
-   * @param options Decryption options
-   * @returns Decrypted plaintext
-   */
   async decrypt(options: DecryptOptions): Promise<DecryptResult> {
     try {
       const { keyName, ciphertext, context, nonce } = options;
-
-      const payload: Record<string, unknown> = {
-        ciphertext,
-      };
+      const payload: Record<string, unknown> = { ciphertext };
 
       if (context) payload.context = Buffer.from(context).toString("base64");
       if (nonce) payload.nonce = nonce;
 
-      const response = await this.client.write(
-        `${this.transitMount}/decrypt/${keyName}`,
-        payload,
-      );
-
-      const base64Plaintext = response.data.plaintext as string;
-      const plaintext = Buffer.from(base64Plaintext, "base64").toString(
-        "utf-8",
-      );
-
-      log.debug("Decryption successful", { keyName });
-
-      return { plaintext };
+      const response = await this.client.write(`${this.transitMount}/decrypt/${keyName}`, payload);
+      return {
+        plaintext: Buffer.from(response.data.plaintext as string, "base64").toString("utf-8"),
+      };
     } catch (error) {
       log.error("Decryption failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Batch encrypt multiple plaintext values
-   * @param keyName The key to use for encryption
-   * @param items Array of plaintext items to encrypt
-   * @returns Array of encryption results
-   */
   async batchEncrypt(
     keyName: string,
     items: Array<{ plaintext: string; context?: string }>,
@@ -265,31 +241,16 @@ export class VaultService {
     try {
       const batchInput = items.map((item) => ({
         plaintext: Buffer.from(item.plaintext).toString("base64"),
-        context: item.context
-          ? Buffer.from(item.context).toString("base64")
-          : undefined,
+        context: item.context ? Buffer.from(item.context).toString("base64") : undefined,
       }));
 
-      const response = await this.client.write(
-        `${this.transitMount}/encrypt/${keyName}`,
-        {
-          batch_input: batchInput,
-        },
-      );
-
-      const results = response.data.batch_results as Array<{
-        ciphertext: string;
-        key_version: number;
-      }>;
-
-      log.debug("Batch encryption successful", {
-        keyName,
-        count: items.length,
+      const response = await this.client.write(`${this.transitMount}/encrypt/${keyName}`, {
+        batch_input: batchInput,
       });
 
-      return results.map((r) => ({
-        ciphertext: r.ciphertext,
-        keyVersion: r.key_version,
+      return (response.data.batch_results as Array<{ ciphertext: string; key_version: number }>).map((result) => ({
+        ciphertext: result.ciphertext,
+        keyVersion: result.key_version,
       }));
     } catch (error) {
       log.error("Batch encryption failed", { error, keyName });
@@ -297,12 +258,6 @@ export class VaultService {
     }
   }
 
-  /**
-   * Batch decrypt multiple ciphertext values
-   * @param keyName The key to use for decryption
-   * @param items Array of ciphertext items to decrypt
-   * @returns Array of decryption results
-   */
   async batchDecrypt(
     keyName: string,
     items: Array<{ ciphertext: string; context?: string }>,
@@ -310,29 +265,15 @@ export class VaultService {
     try {
       const batchInput = items.map((item) => ({
         ciphertext: item.ciphertext,
-        context: item.context
-          ? Buffer.from(item.context).toString("base64")
-          : undefined,
+        context: item.context ? Buffer.from(item.context).toString("base64") : undefined,
       }));
 
-      const response = await this.client.write(
-        `${this.transitMount}/decrypt/${keyName}`,
-        {
-          batch_input: batchInput,
-        },
-      );
-
-      const results = response.data.batch_results as Array<{
-        plaintext: string;
-      }>;
-
-      log.debug("Batch decryption successful", {
-        keyName,
-        count: items.length,
+      const response = await this.client.write(`${this.transitMount}/decrypt/${keyName}`, {
+        batch_input: batchInput,
       });
 
-      return results.map((r) => ({
-        plaintext: Buffer.from(r.plaintext, "base64").toString("utf-8"),
+      return (response.data.batch_results as Array<{ plaintext: string }>).map((result) => ({
+        plaintext: Buffer.from(result.plaintext, "base64").toString("utf-8"),
       }));
     } catch (error) {
       log.error("Batch decryption failed", { error, keyName });
@@ -340,46 +281,20 @@ export class VaultService {
     }
   }
 
-  /**
-   * Rotate a Transit encryption key
-   * @param keyName The name of the key to rotate
-   * @returns Rotation result with new version number
-   */
   async rotateKey(keyName: string): Promise<KeyRotationResult> {
     try {
-      await this.client.write(
-        `${this.transitMount}/keys/${keyName}/rotate`,
-        {},
-      );
-
+      await this.client.write(`${this.transitMount}/keys/${keyName}/rotate`, {});
       const keyInfo = await this.getKeyInfo(keyName);
-
-      log.info("Key rotation successful", {
-        keyName,
-        newVersion: keyInfo.latestVersion,
-      });
-
-      return {
-        success: true,
-        newVersion: keyInfo.latestVersion,
-      };
+      return { success: true, newVersion: keyInfo.latestVersion };
     } catch (error) {
       log.error("Key rotation failed", { error, keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Get information about a Transit key
-   * @param keyName The name of the key
-   * @returns Key information including versions
-   */
   async getKeyInfo(keyName: string): Promise<KeyInfo> {
     try {
-      const response = await this.client.read(
-        `${this.transitMount}/keys/${keyName}`,
-      );
-
+      const response = await this.client.read(`${this.transitMount}/keys/${keyName}`);
       const data = response.data;
 
       return {
@@ -399,40 +314,33 @@ export class VaultService {
     }
   }
 
-  /**
-   * Ensure the transit secrets engine is enabled
-   */
   private async ensureTransitEnabled(): Promise<void> {
     try {
-      // Check if already mounted
       const mounts = await this.client.mounts();
-      if (mounts.data[this.transitMount + "/"]) {
-        return; // already enabled
+      if (mounts.data[`${this.transitMount}/`]) {
+        return;
       }
-    } catch (error) {
-      // ignore errors during check
+    } catch {
+      // Best-effort mount check only.
     }
 
     try {
-      await this.client.write(`sys/mounts/${this.transitMount}`, {
-        type: "transit",
-      });
+      await this.client.write(`sys/mounts/${this.transitMount}`, { type: "transit" });
       log.info("Transit engine enabled", { mount: this.transitMount });
     } catch (error: any) {
       if (error?.response?.statusCode === 403) {
         const errors: string[] = error?.response?.body?.errors || [];
-        const isInvalidToken = errors.some((e: string) => e.includes("invalid token"));
-        if (isInvalidToken) {
-          throw error; // Let it bubble up so handleVaultError can trigger re-login
+        if (errors.some((entry: string) => entry.includes("invalid token"))) {
+          throw error;
         }
-        log.warn("403 Forbidden when enabling transit engine. Assuming it is already enabled by admin.", { mount: this.transitMount });
+        log.warn("403 enabling transit; assuming admin already configured it", {
+          mount: this.transitMount,
+        });
         return;
       }
       if (
         error?.response?.statusCode === 400 &&
-        error?.response?.body?.errors?.some((e: string) =>
-          e.includes("already in use")
-        )
+        error?.response?.body?.errors?.some((entry: string) => entry.includes("already in use"))
       ) {
         log.info("Transit engine already enabled", { mount: this.transitMount });
         return;
@@ -442,39 +350,19 @@ export class VaultService {
     }
   }
 
-  /**
-   * Create a new Transit encryption key
-   * @param keyName The name for the new key
-   * @param options Key creation options
-   */
   async createKey(keyName: string, options?: CreateKeyOptions): Promise<void> {
-    // Ensure transit engine is enabled
     await this.ensureTransitEnabled();
 
     try {
       const payload: Record<string, unknown> = {};
-
-      if (options?.convergentEncryption !== undefined) {
-        payload.convergent_encryption = options.convergentEncryption;
-      }
-      if (options?.derived !== undefined) {
-        payload.derived = options.derived;
-      }
-      if (options?.exportable !== undefined) {
-        payload.exportable = options.exportable;
-      }
-      if (options?.allowPlaintextBackup !== undefined) {
-        payload.allow_plaintext_backup = options.allowPlaintextBackup;
-      }
-      if (options?.type) {
-        payload.type = options.type;
-      }
-      if (options?.autoRotatePeriod) {
-        payload.auto_rotate_period = options.autoRotatePeriod;
-      }
+      if (options?.convergentEncryption !== undefined) payload.convergent_encryption = options.convergentEncryption;
+      if (options?.derived !== undefined) payload.derived = options.derived;
+      if (options?.exportable !== undefined) payload.exportable = options.exportable;
+      if (options?.allowPlaintextBackup !== undefined) payload.allow_plaintext_backup = options.allowPlaintextBackup;
+      if (options?.type) payload.type = options.type;
+      if (options?.autoRotatePeriod) payload.auto_rotate_period = options.autoRotatePeriod;
 
       await this.client.write(`${this.transitMount}/keys/${keyName}`, payload);
-
       log.info("Transit key created", { keyName, options });
     } catch (error) {
       log.error("Failed to create key", { error, keyName });
@@ -482,20 +370,12 @@ export class VaultService {
     }
   }
 
-  /**
-   * Delete a Transit encryption key
-   * @param keyName The name of the key to delete
-   */
   async deleteKey(keyName: string): Promise<void> {
     try {
-      // First, update the key to allow deletion
       await this.client.write(`${this.transitMount}/keys/${keyName}/config`, {
         deletion_allowed: true,
       });
-
-      // Then delete the key
       await this.client.delete(`${this.transitMount}/keys/${keyName}`);
-
       log.info("Transit key deleted", { keyName });
     } catch (error) {
       log.error("Failed to delete key", { error, keyName });
@@ -503,31 +383,16 @@ export class VaultService {
     }
   }
 
-  /**
-   * Rewrap ciphertext with the latest version of the key
-   * Useful for key rotation without decrypting/re-encrypting on the client
-   * @param options Rewrap options
-   * @returns New ciphertext with updated key version
-   */
   async rewrap(options: RewrapOptions): Promise<RewrapResult> {
     try {
       const { keyName, ciphertext, context, keyVersion, nonce } = options;
-
-      const payload: Record<string, unknown> = {
-        ciphertext,
-      };
+      const payload: Record<string, unknown> = { ciphertext };
 
       if (context) payload.context = Buffer.from(context).toString("base64");
       if (keyVersion) payload.key_version = keyVersion;
       if (nonce) payload.nonce = nonce;
 
-      const response = await this.client.write(
-        `${this.transitMount}/rewrap/${keyName}`,
-        payload,
-      );
-
-      log.debug("Rewrap successful", { keyName });
-
+      const response = await this.client.write(`${this.transitMount}/rewrap/${keyName}`, payload);
       return {
         ciphertext: response.data.ciphertext as string,
         keyVersion: response.data.key_version as number,
@@ -538,99 +403,52 @@ export class VaultService {
     }
   }
 
-  /**
-   * Generate a data key for envelope encryption
-   * Returns both plaintext and encrypted versions of the key
-   * @param options Data key generation options
-   * @returns Generated data key (plaintext and ciphertext)
-   */
-  async generateDataKey(
-    options: DataKeyGenerateOptions,
-  ): Promise<DataKeyGenerateResult> {
+  async generateDataKey(options: DataKeyGenerateOptions): Promise<DataKeyGenerateResult> {
     try {
       const { keyName, bits = 256, context, nonce } = options;
-
       const payload: Record<string, unknown> = {};
 
       if (bits) payload.bits = bits;
       if (context) payload.context = Buffer.from(context).toString("base64");
       if (nonce) payload.nonce = nonce;
 
-      const response = await this.client.write(
-        `${this.transitMount}/datakey/plaintext/${keyName}`,
-        payload,
-      );
-
-      log.debug("Data key generated", { keyName, bits });
-
+      const response = await this.client.write(`${this.transitMount}/datakey/plaintext/${keyName}`, payload);
       return {
         plaintext: response.data.plaintext as string,
         ciphertext: response.data.ciphertext as string,
         keyVersion: response.data.key_version as number,
       };
     } catch (error) {
-      log.error("Data key generation failed", {
-        error,
-        keyName: options.keyName,
-      });
+      log.error("Data key generation failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Generate a wrapped data key (encrypted only, no plaintext returned)
-   * More secure alternative to generateDataKey
-   * @param options Data key generation options
-   * @returns Encrypted data key
-   */
   async generateWrappedDataKey(
     options: DataKeyGenerateOptions,
   ): Promise<{ ciphertext: string; keyVersion: number }> {
     try {
       const { keyName, bits = 256, context, nonce } = options;
-
       const payload: Record<string, unknown> = {};
 
       if (bits) payload.bits = bits;
       if (context) payload.context = Buffer.from(context).toString("base64");
       if (nonce) payload.nonce = nonce;
 
-      const response = await this.client.write(
-        `${this.transitMount}/datakey/wrapped/${keyName}`,
-        payload,
-      );
-
-      log.debug("Wrapped data key generated", { keyName, bits });
-
+      const response = await this.client.write(`${this.transitMount}/datakey/wrapped/${keyName}`, payload);
       return {
         ciphertext: response.data.ciphertext as string,
         keyVersion: response.data.key_version as number,
       };
     } catch (error) {
-      log.error("Wrapped data key generation failed", {
-        error,
-        keyName: options.keyName,
-      });
+      log.error("Wrapped data key generation failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Sign data using a Transit key
-   * @param options Signing options
-   * @returns Signature
-   */
   async sign(options: SignOptions): Promise<SignResult> {
     try {
-      const {
-        keyName,
-        input,
-        hashAlgorithm,
-        signatureAlgorithm,
-        prehashed,
-        context,
-      } = options;
-
+      const { keyName, input, hashAlgorithm, signatureAlgorithm, prehashed, context } = options;
       const payload: Record<string, unknown> = {
         input: Buffer.from(input).toString("base64"),
       };
@@ -640,39 +458,17 @@ export class VaultService {
       if (prehashed !== undefined) payload.prehashed = prehashed;
       if (context) payload.context = Buffer.from(context).toString("base64");
 
-      const response = await this.client.write(
-        `${this.transitMount}/sign/${keyName}`,
-        payload,
-      );
-
-      log.debug("Signing successful", { keyName });
-
-      return {
-        signature: response.data.signature as string,
-      };
+      const response = await this.client.write(`${this.transitMount}/sign/${keyName}`, payload);
+      return { signature: response.data.signature as string };
     } catch (error) {
       log.error("Signing failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Verify a signature
-   * @param options Verification options
-   * @returns Verification result
-   */
   async verify(options: VerifyOptions): Promise<VerifyResult> {
     try {
-      const {
-        keyName,
-        input,
-        signature,
-        hashAlgorithm,
-        signatureAlgorithm,
-        prehashed,
-        context,
-      } = options;
-
+      const { keyName, input, signature, hashAlgorithm, signatureAlgorithm, prehashed, context } = options;
       const payload: Record<string, unknown> = {
         input: Buffer.from(input).toString("base64"),
         signature,
@@ -683,33 +479,17 @@ export class VaultService {
       if (prehashed !== undefined) payload.prehashed = prehashed;
       if (context) payload.context = Buffer.from(context).toString("base64");
 
-      const response = await this.client.write(
-        `${this.transitMount}/verify/${keyName}`,
-        payload,
-      );
-
-      log.debug("Verification successful", {
-        keyName,
-        valid: response.data.valid,
-      });
-
-      return {
-        valid: response.data.valid as boolean,
-      };
+      const response = await this.client.write(`${this.transitMount}/verify/${keyName}`, payload);
+      return { valid: response.data.valid as boolean };
     } catch (error) {
       log.error("Verification failed", { error, keyName: options.keyName });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Check Vault health status
-   * @returns Health status information
-   */
   async checkHealth(): Promise<VaultHealth> {
     try {
       const response = await this.client.health();
-
       return {
         initialized: response.initialized,
         sealed: response.sealed,
@@ -728,45 +508,22 @@ export class VaultService {
     }
   }
 
-  /**
-   * List all Transit keys
-   * @returns Array of key names
-   */
   async listKeys(): Promise<string[]> {
     try {
       const response = await this.client.list(`${this.transitMount}/keys`);
-
-      const keys = (response.data.keys as string[]) || [];
-
-      log.debug("Keys listed", { count: keys.length });
-
-      return keys;
+      return (response.data.keys as string[]) || [];
     } catch (error) {
       log.error("Failed to list keys", { error });
       throw this.handleVaultError(error as VaultError);
     }
   }
 
-  /**
-   * Update Transit mount configuration
-   * @param config Configuration options
-   */
-  async updateConfig(config: {
-    maxVersions?: number;
-    cacheTtl?: string;
-  }): Promise<void> {
+  async updateConfig(config: { maxVersions?: number; cacheTtl?: string }): Promise<void> {
     try {
       const payload: Record<string, unknown> = {};
-
-      if (config.maxVersions !== undefined) {
-        payload.max_versions = config.maxVersions;
-      }
-      if (config.cacheTtl) {
-        payload.cache_ttl = config.cacheTtl;
-      }
-
+      if (config.maxVersions !== undefined) payload.max_versions = config.maxVersions;
+      if (config.cacheTtl) payload.cache_ttl = config.cacheTtl;
       await this.client.write(`${this.transitMount}/config/keys`, payload);
-
       log.info("Transit config updated", config);
     } catch (error) {
       log.error("Failed to update config", { error });
@@ -774,40 +531,26 @@ export class VaultService {
     }
   }
 
-  /**
-   * Handle Vault errors and convert to standardized format
-   * @param error Original error from Vault client
-   * @returns Formatted error
-   */
   private handleVaultError(error: VaultError): Error {
     const statusCode = error.response?.statusCode || error.statusCode;
     const message = error.message || "Unknown Vault error";
 
-    // If the token is invalid/expired, trigger AppRole re-login so the next request succeeds
     if (statusCode === 403 && this.config.appRole) {
       const errors: string[] = error.response?.body?.errors || [];
-      const isInvalidToken = errors.some((e) => e.includes("invalid token"));
-      if (isInvalidToken) {
+      if (errors.some((entry) => entry.includes("invalid token"))) {
         log.info("Invalid Vault token detected, triggering AppRole re-login...");
-        this.loginWithAppRole().catch((err) =>
-          log.error("AppRole re-login failed after invalid token", { error: err })
+        this.loginWithAppRole().catch((reloginError) =>
+          log.error("AppRole re-login failed after invalid token", { error: reloginError }),
         );
       }
     }
 
-    const errorMessage = `Vault Error (${statusCode || "unknown"}): ${message}`;
-
-    const vaultError = new Error(errorMessage) as VaultError;
+    const vaultError = new Error(`Vault Error (${statusCode || "unknown"}): ${message}`) as VaultError;
     vaultError.statusCode = statusCode;
     vaultError.response = error.response;
-
     return vaultError;
   }
 
-  /**
-   * Test connection to Vault
-   * @returns True if connection is successful
-   */
   async testConnection(): Promise<boolean> {
     try {
       await this.initialize();
@@ -827,11 +570,6 @@ export class VaultService {
   }
 }
 
-/**
- * Factory function to create a VaultService instance
- * @param config Vault configuration
- * @returns VaultService instance
- */
 export function createVaultService(config: VaultConfig): VaultService {
   return new VaultService(config);
 }

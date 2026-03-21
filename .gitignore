@@ -30,6 +30,13 @@ decrypt_*.js
 *_decrypted*.json
 *_encrypted*.json
 vault_credentials*.json
+vault/init/*
+vault/backups/*
+vault/audit/*
+!vault/init/.gitkeep
+!vault/backups/.gitkeep
+!vault/audit/.gitkeep
+!vault/tls/.gitkeep
 
 # Temp dirs
 tmp/

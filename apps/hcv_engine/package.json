@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "build": "node -e \"require('fs').mkdirSync('dist', {recursive:true}); require('fs').writeFileSync('dist/build.txt', 'done')\"",
-    "start": "bash scripts/start.sh"
+    "start": "bash scripts/start.sh",
+    "bootstrap": "bash scripts/bootstrap-vault.sh",
+    "provision": "bash scripts/provision-vault.sh",
+    "backup": "bash scripts/backup-raft-snapshot.sh"
   },
   "keywords": [],
   "author": "",

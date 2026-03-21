@@ -8,21 +8,25 @@ services:
     ports:
       - "8200:8200"
     environment:
-      - ENV=development
-      - VAULT_ADDR=http://127.0.0.1:8200
-      - VAULT_SKIP_VERIFY=true
-      - WEBHOOK_URL=https://webhook.site/4d73e799-68aa-4715-9fed-bcc842f709be
-      - CREDENTIALS_FILE=./vault_credentials.json
-      - WEBHOOK_SECRET=your-shared-secret-key-here
+      ENV: development
+      VAULT_ADDR: https://127.0.0.1:8200
+      VAULT_SKIP_VERIFY: "true"
+      VAULT_API_ADDR: https://127.0.0.1:8200
+      VAULT_CLUSTER_ADDR: https://127.0.0.1:8201
+      VAULT_TLS_DISABLE: "false"
+      VAULT_TLS_DISABLE_NUMERIC: "0"
+      VAULT_TLS_CERT_FILE: /vault/certs/cert.pem
+      VAULT_TLS_KEY_FILE: /vault/certs/private_key.pem
+      VAULT_TLS_CA_FILE: /vault/certs/cert.pem
 
   db:
     image: postgres:15-alpine
     ports:
       - "5434:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=hermit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hermit
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

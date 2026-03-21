@@ -32,6 +32,16 @@ import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
 
+const createWriteAppRoleConfig = (): any =>
+  config.vault.appRole.writeRoleId &&
+  (config.vault.appRole.writeSecretId || config.vault.appRole.writeWrappedSecretId)
+    ? {
+        roleId: config.vault.appRole.writeRoleId,
+        secretId: config.vault.appRole.writeSecretId || undefined,
+        wrappedSecretId: config.vault.appRole.writeWrappedSecretId || undefined,
+      }
+    : undefined;
+
 /**
  * Create and configure Express application
  */
@@ -155,12 +165,7 @@ async function checkVaultConnection(): Promise<boolean> {
       namespace: config.vault.namespace,
       transitMount: config.vault.transitMount,
       requestTimeout: config.vault.requestTimeout,
-      appRole: config.vault.appRole.writeRoleId && config.vault.appRole.writeSecretId
-        ? {
-            roleId: config.vault.appRole.writeRoleId,
-            secretId: config.vault.appRole.writeSecretId,
-          }
-        : undefined,
+      appRole: createWriteAppRoleConfig(),
     });
 
     return await vaultService.testConnection();
@@ -196,7 +201,7 @@ export async function initializeApp(): Promise<void> {
   log.info("Database migrations check skipped (managed externally)");
   
   // TODO: Initialize Vault keys if needed
-  log.info("Vault keys initialization check skipped (managed by hcv_engine)");
+  log.info("Vault keys initialization check skipped (managed by operator-controlled Vault bootstrap)");
 
   log.info("Application initialized successfully");
 }

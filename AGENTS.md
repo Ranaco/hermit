@@ -67,3 +67,10 @@ Key tables and their core relationships:
 
 - **New Threads for New Contexts**: To keep the context window unpolluted, start a new AI thread when switching from feature development to bug fixing, or when starting a completely different branch of work.
 - **Continual Learning**: Whenever a complex failure occurs or a project-specific preference is established, append an explanation directly into this very file (`AGENTS.md`) so the context is preserved for future sessions.
+
+## 9. Deployment & Vault Operations
+
+- **Image-based deploys**: Production deploys target `/deploy/hermit` and must use `docker-compose.deploy.yml` with prebuilt GHCR images. Normal releases should not build app images on the VPS.
+- **Vault runtime split**: `apps/hcv_engine/scripts/start.sh` must stay runtime-only. Vault initialization and provisioning are explicit operator workflows handled by `bootstrap-vault.sh` and `provision-vault.sh`, never by container startup.
+- **No webhook recovery path**: Root tokens, unseal keys, recovery JSON, and similar bootstrap material must not be sent through webhook automation or stored as normal deploy artifacts.
+- **Wrapped AppRole inputs**: Production app auth should prefer scoped AppRole RoleIDs plus wrapped SecretIDs over static SecretIDs or long-lived root tokens.

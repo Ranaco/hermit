@@ -5,14 +5,15 @@
 
 export interface VaultConfig {
   endpoint: string;
-  token?: string; // Optional if using AppRole
+  token?: string;
   namespace?: string;
   transitMount?: string;
   requestTimeout?: number;
   appRole?: {
     roleId: string;
-    secretId: string;
-    mountPoint?: string; // Defaults to 'approle'
+    secretId?: string;
+    wrappedSecretId?: string;
+    mountPoint?: string;
   };
 }
 
@@ -129,7 +130,7 @@ export interface DataKeyGenerateResult {
   keyVersion: number;
 }
 
-export type KeyType = 'aes256-gcm96' | 'aes128-gcm96' | 'chacha20-poly1305' | 'ed25519' | 'ecdsa-p256' | 'ecdsa-p384' | 'ecdsa-p521' | 'rsa-2048' | 'rsa-3072' | 'rsa-4096';
+export type KeyType = "aes256-gcm96" | "aes128-gcm96" | "chacha20-poly1305" | "ed25519" | "ecdsa-p256" | "ecdsa-p384" | "ecdsa-p521" | "rsa-2048" | "rsa-3072" | "rsa-4096";
 
 export interface CreateKeyOptions {
   convergentEncryption?: boolean;
