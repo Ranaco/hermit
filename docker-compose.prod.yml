@@ -59,7 +59,9 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
-    env_file: .env.production
+    env_file:
+      - .env.production
+      - .env.runtime
     environment:
       NODE_ENV: production
       PORT: 5001

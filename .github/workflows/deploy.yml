@@ -91,6 +91,7 @@ jobs:
               echo "Vault is sealed. Unseal it or enable auto-unseal before automatic deployments continue." >&2
               exit 1
             fi
+            bash ./deploy.sh --refresh-runtime-vault-env && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d api && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d web nginx certbot && \

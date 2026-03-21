@@ -22,14 +22,55 @@ set -euo pipefail
 
 APP_DIR="/deploy/hermit"
 COMPOSE_FILE="docker-compose.deploy.yml"
+REFRESH_RUNTIME_VAULT_ENV=false
+
+write_runtime_vault_env() {
+  local deploy_token_file="${VAULT_DEPLOY_TOKEN_FILE:-$APP_DIR/vault/init/provisioning/deploy-token}"
+  local runtime_env_file="$APP_DIR/.env.runtime"
+
+  if [[ ! -f "$deploy_token_file" ]]; then
+    echo "Vault deploy token file not found at $deploy_token_file." >&2
+    echo "Provision Vault first so the VPS can mint wrapped AppRole credentials per deploy." >&2
+    return 1
+  fi
+
+  local deploy_token
+  deploy_token="$(tr -d '\r\n' < "$deploy_token_file")"
+
+  local read_role_id
+  local write_role_id
+  local read_wrapped_secret_id
+  local write_wrapped_secret_id
+
+  read_role_id="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T -e VAULT_TOKEN="$deploy_token" hcv vault read -field=role_id auth/approle/role/hermit-read/role-id)"
+  write_role_id="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T -e VAULT_TOKEN="$deploy_token" hcv vault read -field=role_id auth/approle/role/hermit-write/role-id)"
+  read_wrapped_secret_id="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T -e VAULT_TOKEN="$deploy_token" hcv /vault/scripts/issue-wrapped-secret-id.sh hermit-read | tail -n 1)"
+  write_wrapped_secret_id="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T -e VAULT_TOKEN="$deploy_token" hcv /vault/scripts/issue-wrapped-secret-id.sh hermit-write | tail -n 1)"
+
+  cat > "$runtime_env_file" <<EOF
+VAULT_APPROLE_ROLE_ID_READ=${read_role_id}
+VAULT_APPROLE_WRAPPED_SECRET_ID_READ=${read_wrapped_secret_id}
+VAULT_APPROLE_ROLE_ID_WRITE=${write_role_id}
+VAULT_APPROLE_WRAPPED_SECRET_ID_WRITE=${write_wrapped_secret_id}
+EOF
+  chmod 600 "$runtime_env_file"
+  echo "Wrote fresh wrapped Vault AppRole credentials to $runtime_env_file"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --domain) DOMAIN="$2"; shift 2 ;;
     --email) EMAIL="$2"; shift 2 ;;
+    --refresh-runtime-vault-env) REFRESH_RUNTIME_VAULT_ENV=true; shift ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
+
+if [[ "$REFRESH_RUNTIME_VAULT_ENV" == "true" ]]; then
+  cd "$APP_DIR"
+  write_runtime_vault_env
+  exit 0
+fi
 
 if [[ -z "${DOMAIN:-}" ]]; then
   read -rp "Enter domain (e.g. kms.example.com): " DOMAIN
@@ -49,6 +90,10 @@ export DOMAIN EMAIL
 mkdir -p "$APP_DIR/nginx/conf.d"
 mkdir -p "$APP_DIR/vault/tls" "$APP_DIR/vault/init" "$APP_DIR/vault/backups" "$APP_DIR/vault/audit"
 cd "$APP_DIR"
+
+if [[ ! -f .env.release ]]; then
+  printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG:-latest}" > .env.release
+fi
 
 echo "Generating nginx config for $DOMAIN..."
 envsubst '${DOMAIN}' < nginx/conf.d/hermit.conf.template > nginx/conf.d/hermit.conf
@@ -104,16 +149,16 @@ NGINX
 fi
 
 echo "Pulling and starting all services..."
-docker compose -f "$COMPOSE_FILE" --env-file .env.production pull
-docker compose -f "$COMPOSE_FILE" --env-file .env.production up -d db hcv nginx certbot
+docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release pull
+docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d db hcv nginx certbot
 
 echo "Waiting for database to be ready..."
-until docker compose -f "$COMPOSE_FILE" --env-file .env.production exec -T db pg_isready -U "$POSTGRES_USER" >/dev/null 2>&1; do
+until docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T db pg_isready -U "$POSTGRES_USER" >/dev/null 2>&1; do
   sleep 2
 done
 
 echo "Checking Vault initialization state..."
-vault_status="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production exec -T hcv vault status -format=json 2>/dev/null || true)"
+vault_status="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T hcv vault status -format=json 2>/dev/null || true)"
 if [[ -z "$vault_status" ]]; then
   echo "Unable to query Vault status. Check hcv logs before continuing." >&2
   exit 1
@@ -131,10 +176,12 @@ if jq -e '.sealed == true' >/dev/null <<<"$vault_status"; then
   exit 1
 fi
 
-docker compose -f "$COMPOSE_FILE" --env-file .env.production up -d api web
+write_runtime_vault_env
+
+docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d api web
 
 echo "Running database migrations..."
-docker compose -f "$COMPOSE_FILE" --env-file .env.production exec -T api \
+docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T api \
   npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
 
 echo "Checking health..."

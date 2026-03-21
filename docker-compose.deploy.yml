@@ -57,7 +57,9 @@ services:
     image: ghcr.io/ranaco/hermit-api:${IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
-    env_file: .env.production
+    env_file:
+      - .env.production
+      - .env.runtime
     environment:
       NODE_ENV: production
       PORT: 5001

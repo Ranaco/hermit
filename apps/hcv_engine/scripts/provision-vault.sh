@@ -10,6 +10,7 @@ set -eu
 : "${VAULT_OPERATOR_OUTPUT_DIR:=/vault/init/provisioning}"
 : "${VAULT_WRAP_TTL:=15m}"
 : "${VAULT_REVOKE_BOOTSTRAP_TOKEN:=true}"
+: "${VAULT_DEPLOY_TOKEN_PERIOD:=168h}"
 
 export VAULT_ADDR
 export VAULT_SKIP_VERIFY
@@ -48,6 +49,7 @@ vault policy write hermit-transit "$VAULT_POLICY_DIR/transit-policy.hcl"
 vault policy write hermit-read "$VAULT_POLICY_DIR/read_only.hcl"
 vault policy write hermit-write "$VAULT_POLICY_DIR/write-policy.hcl"
 vault policy write hermit-admin "$VAULT_POLICY_DIR/admin-policy.hcl"
+vault policy write hermit-deploy "$VAULT_POLICY_DIR/deploy-policy.hcl"
 
 vault write auth/approle/role/hermit-read \
   token_policies="hermit-read" \
@@ -74,9 +76,13 @@ timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 read_role_id="$(vault read -field=role_id auth/approle/role/hermit-read/role-id)"
 write_role_id="$(vault read -field=role_id auth/approle/role/hermit-write/role-id)"
 admin_role_id="$(vault read -field=role_id auth/approle/role/hermit-admin/role-id)"
+deploy_token="$(vault token create -policy="hermit-deploy" -period="$VAULT_DEPLOY_TOKEN_PERIOD" -orphan -field=token)"
 read_wrapped_secret_id="$(vault write -wrap-ttl="$VAULT_WRAP_TTL" -f auth/approle/role/hermit-read/secret-id -format=json | jq -r '.wrap_info.token')"
 write_wrapped_secret_id="$(vault write -wrap-ttl="$VAULT_WRAP_TTL" -f auth/approle/role/hermit-write/secret-id -format=json | jq -r '.wrap_info.token')"
 admin_wrapped_secret_id="$(vault write -wrap-ttl="$VAULT_WRAP_TTL" -f auth/approle/role/hermit-admin/secret-id -format=json | jq -r '.wrap_info.token')"
+deploy_token_file="$VAULT_OPERATOR_OUTPUT_DIR/deploy-token"
+printf '%s\n' "$deploy_token" > "$deploy_token_file"
+chmod 600 "$deploy_token_file"
 
 summary_file="$VAULT_OPERATOR_OUTPUT_DIR/approle-bootstrap-${timestamp}.env"
 cat > "$summary_file" <<EOF
@@ -88,6 +94,7 @@ VAULT_APPROLE_ROLE_ID_WRITE=${write_role_id}
 VAULT_APPROLE_WRAPPED_SECRET_ID_WRITE=${write_wrapped_secret_id}
 VAULT_ADMIN_ROLE_ID=${admin_role_id}
 VAULT_ADMIN_WRAPPED_SECRET_ID=${admin_wrapped_secret_id}
+VAULT_DEPLOY_TOKEN_FILE=${deploy_token_file}
 EOF
 chmod 600 "$summary_file"
 
