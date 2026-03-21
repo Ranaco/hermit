@@ -83,7 +83,7 @@ groupCommand
   .description("Create a secret group")
   .option("--vault <query>", "Vault name or id")
   .option("--parent <query>", "Parent group id or name")
-  .option("--path <path>", "Path like prod/api")
+  .option("-p, --path <path>", "Path like prod/api")
   .option("-n, --name <name>", "Group name")
   .option("-d, --description <description>", "Description")
   .action((opts: GroupCreateOptions) =>

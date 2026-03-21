@@ -5,6 +5,8 @@ import { promptConfirm, promptEditor, promptInput, promptPassword, promptSelect 
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
 import { isNonInteractive } from "../lib/runtime.js";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const valueTypes = ["STRING", "JSON", "NUMBER", "BOOLEAN", "MULTILINE"] as const;
 
@@ -25,6 +27,7 @@ interface SecretSetOptions {
   type?: ValueType;
   description?: string;
   password?: boolean;
+  file?: string;
 }
 
 interface SecretGetOptions {
@@ -79,7 +82,7 @@ secretCommand
   .description("List secrets in a vault")
   .option("--vault <query>", "Vault name or id")
   .option("--group <query>", "Group id or name")
-  .option("--path <path>", "Group path like prod/api")
+  .option("-p, --path <path>", "Group path like prod/api")
   .option("--search <term>", "Search term")
   .action((opts: SecretListOptions) =>
     runCommand(async () => {
@@ -132,10 +135,11 @@ secretCommand
   .option("--vault <query>", "Vault name or id")
   .option("--key <id>", "Key id")
   .option("--group <query>", "Group id or name")
-  .option("--path <path>", "Group path like prod/api")
+  .option("-p, --path <path>", "Group path like prod/api")
   .option("--type <type>", "Value type")
   .option("--description <description>", "Description")
   .option("--password", "Prompt for a secret password")
+  .option("-f, --file <filepath>", "Read secret value from a file")
   .action((nameArg: string | undefined, valueArg: string | undefined, opts: SecretSetOptions) =>
     runCommand(async () => {
       requireAuth();
@@ -169,6 +173,14 @@ secretCommand
             ));
 
       let value = valueArg;
+      if (!value && opts.file) {
+        try {
+          value = readFileSync(resolve(opts.file), "utf-8");
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          abort(`Failed to read file "${opts.file}": ${message}`);
+        }
+      }
       if (!value) {
         if (valueType === "MULTILINE") {
           value = await promptEditor({ message: "Secret value:" }, "Secret value is required in non-interactive mode.");
@@ -237,7 +249,7 @@ secretCommand
   .argument("[query]", "Secret name, id, or short id prefix")
   .option("--vault <query>", "Vault name or id")
   .option("--group <query>", "Group id or name")
-  .option("--path <path>", "Group path like prod/api")
+  .option("-p, --path <path>", "Group path like prod/api")
   .option("--password <password>", "Secret password for password-protected secrets")
   .option("--vault-password <password>", "Vault password for vault-protected secrets")
   .option("-c, --copy", "Copy to clipboard")
@@ -338,7 +350,7 @@ secretCommand
   .argument("[query]", "Secret name, id, or short id prefix")
   .option("--vault <query>", "Vault name or id")
   .option("--group <query>", "Group id or name")
-  .option("--path <path>", "Group path like prod/api")
+  .option("-p, --path <path>", "Group path like prod/api")
   .option("-y, --yes", "Skip confirmation")
   .action((queryArg: string | undefined, opts: SecretDeleteOptions) =>
     runCommand(async () => {
