@@ -15,9 +15,11 @@ services:
       VAULT_CLUSTER_ADDR: https://127.0.0.1:8201
       VAULT_TLS_DISABLE: "false"
       VAULT_TLS_DISABLE_NUMERIC: "0"
-      VAULT_TLS_CERT_FILE: /vault/certs/cert.pem
-      VAULT_TLS_KEY_FILE: /vault/certs/private_key.pem
-      VAULT_TLS_CA_FILE: /vault/certs/cert.pem
+      VAULT_TLS_CERT_FILE: /vault/tls/cert.pem
+      VAULT_TLS_KEY_FILE: /vault/tls/private_key.pem
+      VAULT_TLS_CA_FILE: /vault/tls/cert.pem
+    volumes:
+      - ./apps/hcv_engine/certs:/vault/tls:ro
 
   db:
     image: postgres:15-alpine

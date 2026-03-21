@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y vault
 
 COPY config /vault/config
 COPY scripts /vault/scripts
-COPY certs /vault/certs
 RUN find /vault/scripts -type f -exec sed -i 's/\r$//' {} \; \
   && find /vault/scripts -type f -name '*.sh' -exec chmod +x {} \;
 
@@ -21,9 +20,9 @@ ENV VAULT_CLUSTER_ADDR="https://hcv:8201"
 ENV VAULT_LOG_LEVEL="info"
 ENV VAULT_TLS_DISABLE="false"
 ENV VAULT_TLS_DISABLE_NUMERIC="0"
-ENV VAULT_TLS_CERT_FILE="/vault/certs/cert.pem"
-ENV VAULT_TLS_KEY_FILE="/vault/certs/private_key.pem"
-ENV VAULT_TLS_CA_FILE="/vault/certs/cert.pem"
+ENV VAULT_TLS_CERT_FILE="/vault/tls/tls.crt"
+ENV VAULT_TLS_KEY_FILE="/vault/tls/tls.key"
+ENV VAULT_TLS_CA_FILE="/vault/tls/ca.pem"
 
 RUN mkdir -p /etc/hashicorp_vault/raft_storage /vault/init /vault/audit /vault/backups
 
