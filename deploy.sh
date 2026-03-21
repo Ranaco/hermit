@@ -46,8 +46,8 @@ render_full_nginx_config() {
 }
 
 cert_exists() {
-  docker compose -f "$COMPOSE_FILE" --env-file .env.production run --rm certbot \
-    certificates --cert-name "$DOMAIN" >/dev/null 2>&1
+  docker compose -f "$COMPOSE_FILE" --env-file .env.production run --rm \
+    --entrypoint certbot certbot certificates --cert-name "$DOMAIN" >/dev/null 2>&1
 }
 
 write_runtime_vault_env() {
@@ -155,8 +155,8 @@ if ! cert_exists; then
   docker compose -f "$COMPOSE_FILE" --env-file .env.production up -d nginx
   sleep 3
 
-  docker compose -f "$COMPOSE_FILE" --env-file .env.production run --rm certbot \
-    certonly --webroot \
+  docker compose -f "$COMPOSE_FILE" --env-file .env.production run --rm \
+    --entrypoint certbot certbot certonly --webroot \
     --webroot-path=/var/www/certbot \
     --email "$EMAIL" \
     --agree-tos \
