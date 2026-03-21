@@ -17,6 +17,7 @@ server {
     listen 443 ssl;
     http2 on;
     server_name ${DOMAIN};
+    resolver 127.0.0.11 valid=30s ipv6=off;
 
     # SSL certificates (managed by Certbot)
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
@@ -38,7 +39,8 @@ server {
 
     # API routes — proxy to Express API
     location /api/ {
-        proxy_pass http://api:5001/api/;
+        set $api_upstream http://api:5001;
+        proxy_pass $api_upstream/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -49,7 +51,8 @@ server {
 
     # Health check (at API root level)
     location /health {
-        proxy_pass http://api:5001/health;
+        set $api_upstream http://api:5001;
+        proxy_pass $api_upstream/health;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -57,7 +60,8 @@ server {
     }
 
     location /status {
-        proxy_pass http://api:5001/status;
+        set $api_upstream http://api:5001;
+        proxy_pass $api_upstream/status;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -66,7 +70,8 @@ server {
 
     # Everything else — proxy to Next.js
     location / {
-        proxy_pass http://web:3000;
+        set $web_upstream http://web:3000;
+        proxy_pass $web_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

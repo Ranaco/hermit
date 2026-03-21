@@ -92,9 +92,11 @@ jobs:
               echo "Vault is sealed. Unseal it or enable auto-unseal before automatic deployments continue." >&2
               exit 1
             fi
-            bash ./deploy.sh --restart-app-services && \
+            bash ./deploy.sh --refresh-runtime-vault-env && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d --force-recreate --no-deps api web && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T nginx nginx -s reload || docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d --force-recreate --no-deps nginx && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d web nginx certbot && \
+            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d certbot && \
             curl -fsS http://127.0.0.1/health > /dev/null && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml ps && \
             docker image prune -f

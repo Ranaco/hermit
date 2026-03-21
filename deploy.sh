@@ -224,6 +224,8 @@ fi
 write_runtime_vault_env
 
 docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d --force-recreate --no-deps api web
+docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T nginx nginx -s reload || \
+  docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d --force-recreate --no-deps nginx
 
 echo "Running database migrations..."
 docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T api \
