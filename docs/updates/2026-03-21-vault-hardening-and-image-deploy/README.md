@@ -46,3 +46,4 @@
 - First-time Let's Encrypt issuance must bootstrap nginx with an HTTP-only ACME challenge config. Rendering the full SSL config before the cert exists causes nginx startup failure because `fullchain.pem`/`privkey.pem` are not present yet.
 - Because Certbot state is stored in the Docker `certbot_conf` volume, deployment checks must query Certbot/container state rather than host `/etc/letsencrypt/live/...`.
 - One-off Certbot commands in this stack must override the service entrypoint. `docker compose run certbot ...` otherwise executes the renew loop entrypoint instead of the requested subcommand.
+- Wrapped AppRole SecretIDs are one-time handoff credentials. Before restarting production app containers, refresh `.env.runtime` and force-recreate `api`/`web` so the containers consume fresh wrapped SecretIDs.

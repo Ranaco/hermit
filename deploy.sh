@@ -23,6 +23,7 @@ set -euo pipefail
 APP_DIR="/deploy/hermit"
 COMPOSE_FILE="docker-compose.deploy.yml"
 REFRESH_RUNTIME_VAULT_ENV=false
+RESTART_APP_SERVICES=false
 
 render_http_only_nginx_config() {
   cat > nginx/conf.d/hermit.conf <<NGINX
@@ -88,13 +89,38 @@ while [[ $# -gt 0 ]]; do
     --domain) DOMAIN="$2"; shift 2 ;;
     --email) EMAIL="$2"; shift 2 ;;
     --refresh-runtime-vault-env) REFRESH_RUNTIME_VAULT_ENV=true; shift ;;
+    --restart-app-services) RESTART_APP_SERVICES=true; shift ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
-if [[ "$REFRESH_RUNTIME_VAULT_ENV" == "true" ]]; then
+if [[ "$REFRESH_RUNTIME_VAULT_ENV" == "true" && "$RESTART_APP_SERVICES" == "false" ]]; then
   cd "$APP_DIR"
   write_runtime_vault_env
+  exit 0
+fi
+
+if [[ "$RESTART_APP_SERVICES" == "true" ]]; then
+  cd "$APP_DIR"
+
+  if [[ ! -f .env.release ]]; then
+    echo ".env.release is required to restart app services." >&2
+    exit 1
+  fi
+
+  vault_status="$(docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T hcv vault status -format=json 2>/dev/null || true)"
+  if [[ -z "$vault_status" ]]; then
+    echo "Unable to query Vault status. Check hcv logs before continuing." >&2
+    exit 1
+  fi
+
+  if jq -e '.sealed == true' >/dev/null <<<"$vault_status"; then
+    echo "Vault is sealed. Unseal it or enable auto-unseal before restarting app services." >&2
+    exit 1
+  fi
+
+  write_runtime_vault_env
+  docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d --force-recreate --no-deps api web
   exit 0
 fi
 
@@ -197,7 +223,7 @@ fi
 
 write_runtime_vault_env
 
-docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d api web
+docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release up -d --force-recreate --no-deps api web
 
 echo "Running database migrations..."
 docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T api \
