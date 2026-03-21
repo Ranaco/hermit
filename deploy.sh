@@ -95,6 +95,11 @@ if [[ ! -f .env.release ]]; then
   printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG:-latest}" > .env.release
 fi
 
+if [[ ! -f .env.runtime ]]; then
+  : > .env.runtime
+  chmod 600 .env.runtime
+fi
+
 echo "Generating nginx config for $DOMAIN..."
 envsubst '${DOMAIN}' < nginx/conf.d/hermit.conf.template > nginx/conf.d/hermit.conf
 

@@ -75,6 +75,7 @@ jobs:
             set -euo pipefail && \
             cd /deploy/hermit && \
             printf 'IMAGE_TAG=%s\n' '${{ github.event.workflow_run.head_sha }}' > .env.release && \
+            touch .env.runtime && chmod 600 .env.runtime && \
             echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml pull && \
             docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d db hcv && \
