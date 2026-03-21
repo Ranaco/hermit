@@ -74,6 +74,27 @@ export class VaultService {
       return this.resolvedSecretId;
     }
 
+    if (this.config.appRole.wrappedSecretId) {
+      const unwrapClient = vault({
+        apiVersion: "v1",
+        endpoint: this.config.endpoint,
+        token: this.config.appRole.wrappedSecretId,
+        namespace: this.config.namespace,
+        requestOptions: {
+          timeout: this.config.requestTimeout || 5000,
+        },
+      });
+
+      const unwrapResponse = await unwrapClient.write("sys/wrapping/unwrap", {});
+      const secretId = unwrapResponse?.data?.secret_id as string | undefined;
+      if (!secretId) {
+        throw new Error("Wrapped SecretID unwrap did not return a secret_id");
+      }
+
+      this.resolvedSecretId = secretId;
+      return secretId;
+    }
+
     if (this.config.appRole.secretId) {
       this.resolvedSecretId = this.config.appRole.secretId;
       return this.resolvedSecretId;
@@ -83,24 +104,7 @@ export class VaultService {
       throw new Error("AppRole secret material is missing");
     }
 
-    const unwrapClient = vault({
-      apiVersion: "v1",
-      endpoint: this.config.endpoint,
-      token: this.config.appRole.wrappedSecretId,
-      namespace: this.config.namespace,
-      requestOptions: {
-        timeout: this.config.requestTimeout || 5000,
-      },
-    });
-
-    const unwrapResponse = await unwrapClient.write("sys/wrapping/unwrap", {});
-    const secretId = unwrapResponse?.data?.secret_id as string | undefined;
-    if (!secretId) {
-      throw new Error("Wrapped SecretID unwrap did not return a secret_id");
-    }
-
-    this.resolvedSecretId = secretId;
-    return secretId;
+    throw new Error("AppRole secret material is missing");
   }
 
   private async loginWithAppRole(): Promise<void> {
