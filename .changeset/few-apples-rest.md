@@ -1,5 +1,5 @@
 ---
-"@hermit-kms/cli": minor
+"@hermit-kms/cli": patch
 ---
 
 Improve the Hermit CLI release with safer runtime behavior, better scripting support, and stronger test coverage.
