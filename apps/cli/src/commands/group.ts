@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { requireActiveVault, resolveGroup, resolveGroupByPath, resolveVault } from "../lib/context.js";
 import { abort, renderData, requireAuth, runCommand } from "../lib/command-helpers.js";
+import { handleGroupTree } from "../lib/group-handlers.js";
 import { promptConfirm, promptInput } from "../lib/prompts.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
@@ -30,25 +31,6 @@ interface GroupDeleteOptions {
   yes?: boolean;
 }
 
-interface GroupTreeOptions {
-  vault?: string;
-}
-
-async function renderGroupTree(vaultId: string, parentId?: string | null): Promise<ui.NestedTreeItem[]> {
-  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
-  const nodes: ui.NestedTreeItem[] = [];
-  for (const group of groups) {
-    nodes.push({
-      id: group.id,
-      name: group.name,
-      isGroup: true,
-      meta: `${group._count?.secrets ?? 0} secrets · ${group._count?.children ?? 0} groups`,
-      children: await renderGroupTree(vaultId, group.id),
-    });
-  }
-  return nodes;
-}
-
 export const groupCommand = new Command("group").description("Manage secret groups");
 
 groupCommand
@@ -68,11 +50,11 @@ groupCommand
         return;
       }
       const label = opts.parent ? `${vault.name} / ${opts.parent}` : vault.name;
-      const treeItems: ui.TreeListingItem[] = groups.map((g) => ({
-        id: g.id,
-        name: g.name,
+      const treeItems: ui.TreeListingItem[] = groups.map((group) => ({
+        id: group.id,
+        name: group.name,
         isGroup: true,
-        meta: `${g._count?.secrets ?? 0} secrets · ${g._count?.children ?? 0} groups`,
+        meta: `${group._count?.secrets ?? 0} secrets · ${group._count?.children ?? 0} groups`,
       }));
       ui.treeListing(label, treeItems);
     }),
@@ -177,18 +159,4 @@ groupCommand
   .command("tree")
   .description("Render the secret group hierarchy")
   .option("--vault <query>", "Vault name or id")
-  .action((opts: GroupTreeOptions) =>
-    runCommand(async () => {
-      requireAuth();
-      const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
-      const nodes = await renderGroupTree(vault.id);
-      renderData({ vault, tree: nodes });
-      if (nodes.length === 0) {
-        ui.warn("No secret groups found");
-        ui.newline();
-        return;
-      }
-      ui.nestedTreeListing(`${vault.name}`, nodes);
-    }),
-  );
-
+  .action((opts: { vault?: string }) => runCommand(() => handleGroupTree({ vaultQuery: opts.vault })));

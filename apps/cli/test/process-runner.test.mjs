@@ -26,8 +26,34 @@ await test("process-runner", { concurrency: 1 }, async (t) => {
     assert.equal(code, 42);
   });
 
+  await t.test("preserves arguments containing shell metacharacters", async () => {
+    const code = await runWithEnv(
+      "node",
+      [
+        "-e",
+        "const value = process.argv[1]; process.exit(value === 'hello & goodbye' ? 0 : 1)",
+        "hello & goodbye",
+      ],
+      {},
+    );
+    assert.equal(code, 0);
+  });
+
+  await t.test("preserves arguments containing spaces and quotes", async () => {
+    const code = await runWithEnv(
+      "node",
+      [
+        "-e",
+        "const value = process.argv[1]; process.exit(value === 'say \"hello world\"' ? 0 : 1)",
+        'say "hello world"',
+      ],
+      {},
+    );
+    assert.equal(code, 0);
+  });
+
   if (process.platform === "win32") {
-    await t.test("runs bare command on Windows via shell without ENOENT", async () => {
+    await t.test("runs Windows shell commands safely via cmd /c", async () => {
       const code = await runWithEnv("cmd", ["/c", "echo", "hello"], {});
       assert.equal(code, 0);
     });

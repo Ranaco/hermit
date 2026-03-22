@@ -27,6 +27,10 @@ function resolveCommand(command: string): string {
   return matches[0] || command;
 }
 
+function requiresShell(command: string): boolean {
+  return process.platform === "win32" && /\.(cmd|bat)$/i.test(command);
+}
+
 /**
  * Spawn a child process with injected environment variables.
  * Secrets are passed ONLY through spawn options, never written to disk.
@@ -39,21 +43,13 @@ export function runWithEnv(
   envVars: Record<string, string>
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    // On Windows we use shell:true so cmd.exe handles PATH resolution.
-    const isWindows = process.platform === "win32";
-    const resolvedCommand = isWindows ? command : resolveCommand(command);
-    const child: ChildProcess = isWindows
-      ? spawn([resolvedCommand, ...args].join(" "), [], {
-          stdio: "inherit",
-          env: { ...process.env, ...envVars },
-          shell: true,
-          windowsHide: true,
-        })
-      : spawn(resolvedCommand, args, {
-          stdio: "inherit",
-          env: { ...process.env, ...envVars },
-          windowsHide: true,
-        });
+    const resolvedCommand = resolveCommand(command);
+    const child: ChildProcess = spawn(resolvedCommand, args, {
+      stdio: "inherit",
+      env: { ...process.env, ...envVars },
+      shell: requiresShell(resolvedCommand),
+      windowsHide: true,
+    });
 
     const cleanupSignalHandlers = new Map<NodeJS.Signals, () => void>();
     const registeredSignals: NodeJS.Signals[] = ["SIGTERM", "SIGINT", "SIGHUP"];

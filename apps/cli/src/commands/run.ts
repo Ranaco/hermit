@@ -2,7 +2,9 @@ import { Command } from "commander";
 import { resolveGroup, resolveGroupByPath, resolveVault } from "../lib/context.js";
 import { abort, renderData, requireAuth, runCommand as executeCommand } from "../lib/command-helpers.js";
 import { loadProjectConfig, resolveEnvironmentConfig } from "../lib/config.js";
+import { buildInjectedEnvVars } from "../lib/env-utils.js";
 import { runWithEnv } from "../lib/process-runner.js";
+import { findSecretCandidates, getAccessibleGroupTree, type GroupTreeNode } from "../lib/resource-resolver.js";
 import { setRuntimeState } from "../lib/runtime.js";
 import * as sdk from "../lib/sdk.js";
 import * as ui from "../lib/ui.js";
@@ -20,11 +22,6 @@ interface RunOptions {
   vaultPassword?: string;
 }
 
-interface GroupTreeNode {
-  group: sdk.SecretGroupSummary;
-  path: string;
-}
-
 interface SecretMatch {
   secret: sdk.SecretSummary;
   path: string;
@@ -35,50 +32,6 @@ interface RunSelection {
   includeDescendants?: boolean;
   secretIds?: string[];
   targetLabel: string;
-}
-
-const SECRET_LOOKUP_LIMIT = 200;
-
-async function collectAccessibleGroupTree(
-  vaultId: string,
-  parentId?: string,
-  pathPrefix = "",
-): Promise<GroupTreeNode[]> {
-  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId, cliScope: true } : { cliScope: true });
-  const nodes: GroupTreeNode[] = [];
-
-  for (const group of groups) {
-    const path = pathPrefix ? `${pathPrefix}/${group.name}` : group.name;
-    nodes.push({ group, path });
-    nodes.push(...await collectAccessibleGroupTree(vaultId, group.id, path));
-  }
-
-  return nodes;
-}
-
-async function findExactSecretsInGroup(
-  vaultId: string,
-  groupId: string | undefined,
-  query: string,
-): Promise<sdk.SecretSummary[]> {
-  const nameSearch = await sdk.getSecrets(vaultId, {
-    secretGroupId: groupId,
-    search: query,
-    limit: SECRET_LOOKUP_LIMIT,
-    cliScope: true,
-  });
-
-  const exactName = nameSearch.filter((s) => s.name.toLowerCase() === query.toLowerCase());
-  if (exactName.length > 0) return exactName;
-
-  // No name match — try ID prefix lookup against the full list
-  const all = nameSearch.length > 0
-    ? nameSearch
-    : await sdk.getSecrets(vaultId, { secretGroupId: groupId, limit: SECRET_LOOKUP_LIMIT, cliScope: true });
-  const exactId = all.filter((s) => s.id === query);
-  if (exactId.length > 0) return exactId;
-
-  return all.filter((s) => s.id.startsWith(query));
 }
 
 async function findAccessibleSecretMatches(
@@ -92,12 +45,12 @@ async function findAccessibleSecretMatches(
   const matches: SecretMatch[] = [];
 
   if (!scope?.group) {
-    const rootSecrets = await findExactSecretsInGroup(vaultId, undefined, secretName);
+    const rootSecrets = await findSecretCandidates(vaultId, undefined, secretName);
     matches.push(...rootSecrets.map((secret) => ({ secret, path: secret.name })));
 
-    const groups = await collectAccessibleGroupTree(vaultId);
+    const groups = await getAccessibleGroupTree(vaultId);
     for (const node of groups) {
-      const secrets = await findExactSecretsInGroup(vaultId, node.group.id, secretName);
+      const secrets = await findSecretCandidates(vaultId, node.group.id, secretName);
       matches.push(...secrets.map((secret) => ({ secret, path: `${node.path}/${secret.name}` })));
     }
 
@@ -112,11 +65,11 @@ async function findAccessibleSecretMatches(
   ];
 
   if (scope.includeDescendants) {
-    scopedNodes.push(...await collectAccessibleGroupTree(vaultId, scope.group.id, scope.group.name));
+    scopedNodes.push(...await getAccessibleGroupTree(vaultId, scope.group.id, scope.group.name));
   }
 
   for (const node of scopedNodes) {
-    const secrets = await findExactSecretsInGroup(vaultId, node.group.id, secretName);
+    const secrets = await findSecretCandidates(vaultId, node.group.id, secretName);
     matches.push(...secrets.map((secret) => ({ secret, path: `${node.path}/${secret.name}` })));
   }
 
@@ -176,20 +129,20 @@ async function resolveInjectSelection(vaultId: string, target: string): Promise<
       targetLabel: target,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!message.includes("No secret group path matches")) {
-      throw error;
-    }
-
     const segments = target.split("/").map((segment) => segment.trim()).filter(Boolean);
     if (segments.length < 2) {
-      abort(`No accessible inject target matches "${target}".`);
+      throw error;
     }
 
     const secretName = segments.pop()!;
     const parentPath = segments.join("/");
-    const group = await resolveGroupByPath(vaultId, parentPath);
-    const matches = await findExactSecretsInGroup(vaultId, group.id, secretName);
+    let group: sdk.SecretGroupSummary;
+    try {
+      group = await resolveGroupByPath(vaultId, parentPath);
+    } catch {
+      throw error;
+    }
+    const matches = await findSecretCandidates(vaultId, group.id, secretName);
 
     if (matches.length === 0) {
       abort(`No accessible secret matches "${target}".`);
@@ -210,90 +163,12 @@ async function resolveInjectSelection(vaultId: string, target: string): Promise<
   }
 }
 
-function parseMultilineSecret(value: string): Array<{ key: string; value: string }> {
-  const pairs: Array<{ key: string; value: string }> = [];
-  for (const line of value.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIndex = trimmed.indexOf("=");
-    if (eqIndex <= 0) continue;
-    const key = trimmed.slice(0, eqIndex).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
-    let val = trimmed.slice(eqIndex + 1);
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1);
-    }
-    pairs.push({ key, value: val });
-  }
-  return pairs;
-}
-
-function buildInjectedEnvVars(
-  revealedSecrets: Array<{ name: string; value: string; valueType?: string }>,
-  configMap?: Record<string, string>,
-): Record<string, string> {
-  const envVars: Record<string, string> = {};
-  const assignedNames = new Map<string, string>();
-  const collisions = new Map<string, string[]>();
-
-  for (const secret of revealedSecrets) {
-    if ((secret.valueType ?? "").toUpperCase() === "MULTILINE" || secret.value.includes("\n")) {
-      const pairs = parseMultilineSecret(secret.value);
-      if (pairs.length > 0) {
-        for (const { key, value } of pairs) {
-          const envName = configMap?.[key] || key;
-          const existingSource = assignedNames.get(envName);
-          if (existingSource && !existingSource.startsWith(`${secret.name}:`)) {
-            const current = collisions.get(envName) || [];
-            if (current.length === 0) current.push(existingSource);
-            current.push(`${secret.name}:${key}`);
-            collisions.set(envName, current);
-            continue;
-          }
-          envVars[envName] = value;
-          assignedNames.set(envName, `${secret.name}:${key}`);
-        }
-        continue;
-      }
-      // Fall through to single-var injection if no key=value pairs found (e.g. certificates, SSH keys)
-    }
-    const envName = configMap?.[secret.name] || secret.name;
-    const existingSource = assignedNames.get(envName);
-    if (existingSource && existingSource !== secret.name) {
-      const current = collisions.get(envName) || [];
-      if (current.length === 0) {
-        current.push(existingSource);
-      }
-      current.push(secret.name);
-      collisions.set(envName, current);
-      continue;
-    }
-
-    envVars[envName] = secret.value;
-    assignedNames.set(envName, secret.name);
-  }
-
-  if (collisions.size > 0) {
-    abort("Injected environment variable names collided.", {
-      suggestions: ["Use `.hermit.yml` `map` entries to assign unique environment variable names."],
-      details: {
-        collisions: Array.from(collisions.entries()).map(([envName, names]) => ({
-          envName,
-          sources: names,
-        })),
-      },
-    });
-  }
-
-  return envVars;
-}
-
 export const runCommand = new Command("run")
   .description("Run a command with real-time Hermit secrets injected into the child process environment")
   .option("--vault <query>", "Vault name or id")
   .option("--org <query>", "Organization name or id")
   .option("--group <query>", "Group id or name")
-  .option("--path <path>", "Group path like prod/api")
+  .option("-p, --path <path>", "Group path like prod/api")
   .option("--secret <name>", "Inject only one secret by name")
   .option("-i, --inject <target>", "Inject a folder path or a full folder/secret path")
   .option("--env <name>", "Environment from .hermit.yml")

@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import figlet from "figlet";
-import { getRuntimeState, isInteractiveMode, isJsonMode, setRuntimeState } from "./runtime.js";
+import { getRuntimeState, isInteractiveMode, isJsonMode, isQuiet, setRuntimeState } from "./runtime.js";
 
 const ESCAPE = String.fromCharCode(27);
 const ANSI_PATTERN = new RegExp(`${ESCAPE}\\[[0-9;]*m`, "g");
@@ -569,17 +569,17 @@ export function formatBooleanState(enabled: boolean): string {
 }
 
 export function info(text: string): void {
-  if (isJsonMode()) return;
+  if (isJsonMode() || isQuiet()) return;
   console.log(`  ${colors.cyan(symbols.info)} ${colors.primary(text)}`);
 }
 
 export function warn(text: string): void {
-  if (isJsonMode()) return;
+  if (isJsonMode() || isQuiet()) return;
   console.log(`  ${colors.amber(symbols.warning)} ${colors.amber(text)}`);
 }
 
 export function success(text: string): void {
-  if (isJsonMode()) return;
+  if (isJsonMode() || isQuiet()) return;
   console.log(`  ${colors.green(symbols.success)} ${colors.primary(text)}`);
 }
 
@@ -599,7 +599,7 @@ export function printJson(data: unknown): void {
 }
 
 export function newline(): void {
-  if (!isJsonMode()) {
+  if (!isJsonMode() && !isQuiet()) {
     console.log();
   }
 }

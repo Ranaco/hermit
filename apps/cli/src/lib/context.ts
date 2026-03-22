@@ -1,6 +1,7 @@
 import * as sdk from "./sdk.js";
 import * as authStore from "./auth-store.js";
 import { abort } from "./command-helpers.js";
+import { getAccessibleGroupChildren, getAllAccessibleGroups } from "./resource-resolver.js";
 import { matchId } from "./ui.js";
 
 interface ResolveVaultOptions {
@@ -154,9 +155,10 @@ export async function resolveGroupByPath(
 
   let parentId: string | null = null;
   let current: sdk.SecretGroupSummary | undefined;
+  let traversedPath = "";
 
   for (const segment of segments) {
-    const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId, cliScope: true } : { cliScope: true });
+    const groups = await getAccessibleGroupChildren(vaultId, parentId);
     // Try exact name match first
     current = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
     // Fall back to exact ID match
@@ -173,9 +175,13 @@ export async function resolveGroupByPath(
       }
     }
     if (!current) {
-      throw new Error(`No secret group path matches "${pathValue}".`);
+      const parentLabel = traversedPath || "root";
+      const available = groups.map((group) => group.name).sort();
+      const availableText = available.length > 0 ? ` Available: ${available.join(", ")}.` : "";
+      throw new Error(`Group path "${pathValue}" failed at segment "${segment}". No child of "${parentLabel}" matched.${availableText}`);
     }
     parentId = current.id;
+    traversedPath = traversedPath ? `${traversedPath}/${current.name}` : current.name;
   }
 
   if (!current) {
@@ -197,14 +203,7 @@ export async function resolveGroup(
     return undefined;
   }
 
-  const allGroups = await sdk.getSecretGroups(vaultId, { cliScope: true });
-  const queue = [...allGroups];
-  while (queue.length > 0) {
-    const group = queue.shift()!;
-    const children = await sdk.getSecretGroups(vaultId, { parentId: group.id, cliScope: true });
-    allGroups.push(...children);
-    queue.push(...children);
-  }
+  const allGroups = await getAllAccessibleGroups(vaultId);
 
   return requireByIdOrName(allGroups, query, "secret group");
 }

@@ -1,4 +1,8 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { randomBytes } from "node:crypto";
 import Conf from "conf";
+import envPaths from "env-paths";
 
 export interface AuthTokens {
   accessToken: string;
@@ -46,25 +50,107 @@ export interface StoreSchema {
   cliDevice: CliDeviceInfo | null;
 }
 
-const CURRENT_SCHEMA_VERSION = 2;
+const PROJECT_NAME = "hermit-cli";
+const PROJECT_SUFFIX = "nodejs";
+const STORE_CONFIG_NAME = "config";
+const STORE_FILE_EXTENSION = "json";
+const LEGACY_ENCRYPTION_KEY = "hermit-cli-encryption-key-v1";
+const ENCRYPTION_KEY_FILE = "store-key";
+const CURRENT_SCHEMA_VERSION = 3;
+const DEFAULT_SERVER_URL = "https://hermit.ranax.co/api/v1";
 
-const store = new Conf<StoreSchema>({
-  projectName: "hermit-cli",
-  schema: {
-    schemaVersion: { type: "number", default: CURRENT_SCHEMA_VERSION },
-    accessToken: { type: "string", default: "" },
-    refreshToken: { type: "string", default: "" },
-    user: { type: ["object", "null"] as never, default: null },
-    org: { type: ["object", "null"] as never, default: null },
-    vault: { type: ["object", "null"] as never, default: null },
-    serverUrl: {
-      type: "string",
-      default: "https://hermit.ranax.co/api/v1",
+const configDirectory = envPaths(PROJECT_NAME, { suffix: PROJECT_SUFFIX }).config;
+const storePath = resolve(configDirectory, `${STORE_CONFIG_NAME}.${STORE_FILE_EXTENSION}`);
+const encryptionKeyPath = resolve(configDirectory, ENCRYPTION_KEY_FILE);
+
+function createStore(encryptionKey: string): Conf<StoreSchema> {
+  return new Conf<StoreSchema>({
+    projectName: PROJECT_NAME,
+    cwd: configDirectory,
+    configName: STORE_CONFIG_NAME,
+    fileExtension: STORE_FILE_EXTENSION,
+    schema: {
+      schemaVersion: { type: "number", default: CURRENT_SCHEMA_VERSION },
+      accessToken: { type: "string", default: "" },
+      refreshToken: { type: "string", default: "" },
+      user: { type: ["object", "null"] as never, default: null },
+      org: { type: ["object", "null"] as never, default: null },
+      vault: { type: ["object", "null"] as never, default: null },
+      serverUrl: {
+        type: "string",
+        default: DEFAULT_SERVER_URL,
+      },
+      cliDevice: { type: ["object", "null"] as never, default: null },
     },
-    cliDevice: { type: ["object", "null"] as never, default: null },
-  },
-  encryptionKey: "hermit-cli-encryption-key-v1",
-});
+    encryptionKey,
+  } as ConstructorParameters<typeof Conf<StoreSchema>>[0]);
+}
+
+function getStoreSnapshot(conf: Conf<StoreSchema>): StoreSchema {
+  return (conf as unknown as { store: StoreSchema }).store;
+}
+
+function setStoreSnapshot(conf: Conf<StoreSchema>, snapshot: StoreSchema): void {
+  (conf as unknown as { store: StoreSchema }).store = snapshot;
+}
+
+function ensureConfigDirectory(): void {
+  mkdirSync(configDirectory, { recursive: true });
+}
+
+function generateEncryptionKey(): string {
+  return randomBytes(32).toString("hex");
+}
+
+function persistEncryptionKey(encryptionKey: string): void {
+  ensureConfigDirectory();
+  writeFileSync(encryptionKeyPath, encryptionKey, { encoding: "utf8", mode: 0o600 });
+}
+
+function readPersistedEncryptionKey(): string | null {
+  if (!existsSync(encryptionKeyPath)) {
+    return null;
+  }
+
+  const key = readFileSync(encryptionKeyPath, "utf8").trim();
+  return key || null;
+}
+
+function snapshotLegacyStore(): StoreSchema | null {
+  if (!existsSync(storePath)) {
+    return null;
+  }
+
+  try {
+    const legacyStore = createStore(LEGACY_ENCRYPTION_KEY);
+    return getStoreSnapshot(legacyStore);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Hermit CLI could not unlock the existing credential store. If you removed the local store key file, restore it or re-authenticate. Underlying error: ${message}`,
+    );
+  }
+}
+
+function resolveEncryptionKey(): string {
+  const persisted = readPersistedEncryptionKey();
+  if (persisted) {
+    return persisted;
+  }
+
+  const legacySnapshot = snapshotLegacyStore();
+  const generatedKey = generateEncryptionKey();
+  persistEncryptionKey(generatedKey);
+
+  if (legacySnapshot) {
+    const migratedStore = createStore(generatedKey);
+    setStoreSnapshot(migratedStore, legacySnapshot);
+  }
+
+  return generatedKey;
+}
+
+const store = createStore(resolveEncryptionKey());
 
 function migrateStore(): void {
   const schemaVersion = store.get("schemaVersion") || 0;
@@ -173,4 +259,12 @@ export function setServerUrl(url: string): void {
 
 export function getStorePath(): string {
   return store.path;
+}
+
+export function getStoreKeyPath(): string {
+  return encryptionKeyPath;
+}
+
+export function getStoreDirectory(): string {
+  return dirname(store.path);
 }
