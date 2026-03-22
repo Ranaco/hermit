@@ -1,6 +1,7 @@
 name: Deploy
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["CI"]
     types:
@@ -9,7 +10,7 @@ on:
 jobs:
   build-images:
     name: Build and Push Images
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -36,7 +37,7 @@ jobs:
       - name: Checkout the exact commit that passed CI
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up Docker Buildx
@@ -57,7 +58,7 @@ jobs:
           push: true
           tags: |
             ${{ matrix.image }}:latest
-            ${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
+            ${{ matrix.image }}:${{ github.event.workflow_run.head_sha || github.sha }}
 
   deploy:
     name: Deploy on VPS
@@ -72,14 +73,34 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -euo pipefail && \
-            cd /deploy/hermit && \
-            printf 'IMAGE_TAG=%s\n' '${{ github.event.workflow_run.head_sha }}' > .env.release && \
-            touch .env.runtime && chmod 600 .env.runtime && \
-            echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml pull && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d db hcv && \
-            vault_status="$(docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T hcv vault status -format=json 2>/dev/null || true)" && \
+            set -euo pipefail
+            cd /deploy/hermit
+
+            image_tag='${{ github.event.workflow_run.head_sha || github.sha }}'
+            compose_args=(--env-file .env.production --env-file .env.release -f docker-compose.deploy.yml)
+            vault_status=""
+
+            printf 'IMAGE_TAG=%s\n' "$image_tag" > .env.release
+            touch .env.runtime
+            chmod 600 .env.runtime
+
+            echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+
+            pull_attempts=0
+            until docker compose "${compose_args[@]}" pull; do
+              pull_attempts=$((pull_attempts + 1))
+              if [ "$pull_attempts" -ge 3 ]; then
+                echo "Docker pull failed after ${pull_attempts} attempts." >&2
+                docker info >&2 || true
+                docker system df >&2 || true
+                exit 1
+              fi
+              echo "Docker pull failed; retrying in 5 seconds (attempt $((pull_attempts + 1))/3)..." >&2
+              sleep 5
+            done
+
+            docker compose "${compose_args[@]}" up -d db hcv
+            vault_status="$(docker compose "${compose_args[@]}" exec -T hcv vault status -format=json 2>/dev/null || true)"
             if [ -z "$vault_status" ]; then
               echo "Unable to query Vault status after startup" >&2
               exit 1
@@ -92,11 +113,12 @@ jobs:
               echo "Vault is sealed. Unseal it or enable auto-unseal before automatic deployments continue." >&2
               exit 1
             fi
-            bash ./deploy.sh --refresh-runtime-vault-env && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d --force-recreate --no-deps api web && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T nginx nginx -s reload || docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d --force-recreate --no-deps nginx && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml up -d certbot && \
-            curl -fsS http://127.0.0.1/health > /dev/null && \
-            docker compose --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml ps && \
+
+            bash ./deploy.sh --refresh-runtime-vault-env
+            docker compose "${compose_args[@]}" up -d --force-recreate --no-deps api web
+            docker compose "${compose_args[@]}" exec -T nginx nginx -s reload || docker compose "${compose_args[@]}" up -d --force-recreate --no-deps nginx
+            docker compose "${compose_args[@]}" exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
+            docker compose "${compose_args[@]}" up -d certbot
+            curl -fsS http://127.0.0.1/health > /dev/null
+            docker compose "${compose_args[@]}" ps
             docker image prune -f
