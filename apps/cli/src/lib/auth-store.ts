@@ -150,9 +150,24 @@ function resolveEncryptionKey(): string {
   return generatedKey;
 }
 
-const store = createStore(resolveEncryptionKey());
+let storeInstance: Conf<StoreSchema> | null = null;
 
-function migrateStore(): void {
+function initializeStore(): Conf<StoreSchema> {
+  if (storeInstance) {
+    return storeInstance;
+  }
+
+  const store = createStore(resolveEncryptionKey());
+  migrateStore(store);
+  storeInstance = store;
+  return store;
+}
+
+function getStore(): Conf<StoreSchema> {
+  return initializeStore();
+}
+
+function migrateStore(store: Conf<StoreSchema>): void {
   const schemaVersion = store.get("schemaVersion") || 0;
   if (schemaVersion >= CURRENT_SCHEMA_VERSION) {
     return;
@@ -161,14 +176,14 @@ function migrateStore(): void {
   store.set("schemaVersion", CURRENT_SCHEMA_VERSION);
 }
 
-migrateStore();
-
 export function saveTokens(tokens: AuthTokens): void {
+  const store = getStore();
   store.set("accessToken", tokens.accessToken);
   store.set("refreshToken", tokens.refreshToken);
 }
 
 export function getTokens(): AuthTokens | null {
+  const store = getStore();
   const accessToken = store.get("accessToken");
   const refreshToken = store.get("refreshToken");
   if (!accessToken || !refreshToken) return null;
@@ -176,6 +191,7 @@ export function getTokens(): AuthTokens | null {
 }
 
 export function clearTokens(): void {
+  const store = getStore();
   store.set("accessToken", "");
   store.set("refreshToken", "");
   store.set("user", null);
@@ -184,14 +200,17 @@ export function clearTokens(): void {
 }
 
 export function saveCliDevice(device: CliDeviceInfo): void {
+  const store = getStore();
   store.set("cliDevice", device);
 }
 
 export function getCliDevice(): CliDeviceInfo | null {
+  const store = getStore();
   return store.get("cliDevice");
 }
 
 export function updateCliDevice(partial: Partial<CliDeviceInfo>): void {
+  const store = getStore();
   const current = store.get("cliDevice");
   if (!current) {
     return;
@@ -208,30 +227,37 @@ export function isAuthenticated(): boolean {
 }
 
 export function saveUser(user: UserInfo): void {
+  const store = getStore();
   store.set("user", user);
 }
 
 export function getUser(): UserInfo | null {
+  const store = getStore();
   return store.get("user");
 }
 
 export function saveOrg(org: OrgInfo): void {
+  const store = getStore();
   store.set("org", org);
 }
 
 export function getOrg(): OrgInfo | null {
+  const store = getStore();
   return store.get("org");
 }
 
 export function saveVault(vault: VaultInfo): void {
+  const store = getStore();
   store.set("vault", vault);
 }
 
 export function clearVault(): void {
+  const store = getStore();
   store.set("vault", null);
 }
 
 export function saveVaultId(vaultId: string): void {
+  const store = getStore();
   const current = store.get("vault");
   if (!vaultId) {
     store.set("vault", null);
@@ -242,23 +268,27 @@ export function saveVaultId(vaultId: string): void {
 }
 
 export function getVault(): VaultInfo | null {
+  const store = getStore();
   return store.get("vault");
 }
 
 export function getVaultId(): string {
+  const store = getStore();
   return store.get("vault")?.id || "";
 }
 
 export function getServerUrl(): string {
+  const store = getStore();
   return store.get("serverUrl");
 }
 
 export function setServerUrl(url: string): void {
+  const store = getStore();
   store.set("serverUrl", url);
 }
 
 export function getStorePath(): string {
-  return store.path;
+  return storePath;
 }
 
 export function getStoreKeyPath(): string {
@@ -266,5 +296,5 @@ export function getStoreKeyPath(): string {
 }
 
 export function getStoreDirectory(): string {
-  return dirname(store.path);
+  return dirname(storePath);
 }
