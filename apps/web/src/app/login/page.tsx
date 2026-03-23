@@ -163,6 +163,17 @@ function LoginContent() {
               Sign up
             </button>
           </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            {copy.checklist.map((item) => (
+              <div
+                key={item}
+                className="rounded-[16px] border border-black/5 bg-background/75 px-3 py-3 text-[12px] font-medium leading-5 text-muted-foreground dark:border-white/8 dark:bg-white/[0.025]"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
         </div>
 
         {returnUrl ? (

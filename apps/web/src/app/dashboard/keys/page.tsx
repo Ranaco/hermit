@@ -8,6 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -24,13 +32,12 @@ import {
   RefreshCw,
   Search,
   KeyRound,
-  Vault,
   Loader2,
   ShieldCheck,
   ArrowUpRight,
 } from "lucide-react";
 import Link from 'next/link'
-import { cn, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 const keyTypes = ["STRING", "JSON", "NUMBER", "BOOLEAN", "MULTILINE"] as const;
 type KeyType = (typeof keyTypes)[number];
@@ -119,18 +126,18 @@ export default function KeysPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-[58ch]">
+        <section className="app-page-header">
+          <div className="app-page-intro">
             <p className="app-eyebrow">Keys</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
               Keys
             </h1>
-            <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
+            <p className="app-page-copy">
               Transit-backed encryption keys.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="app-toolbar">
             <Badge variant="secondary">
               <ShieldCheck className="mr-1.5 h-4 w-4" />
               {currentVault.name}
@@ -144,13 +151,15 @@ export default function KeysPage() {
           </div>
         </section>
 
-        <section
-          className={cn(
-            "grid border-b border-border transition-[grid-template-rows,opacity] duration-200",
-            permissions.canCreateKey && showCreateForm ? "grid-rows-[1fr] pb-6 opacity-100" : "grid-rows-[0fr] pb-0 opacity-0",
-          )}
-        >
-          <form onSubmit={handleCreateKey} className={cn("grid gap-4 pt-2 md:grid-cols-3", !showCreateForm && "overflow-hidden")}>
+        <Dialog open={permissions.canCreateKey && showCreateForm} onOpenChange={setShowCreateForm}>
+          <DialogContent className="max-w-3xl p-0">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 sm:px-7">
+              <DialogTitle>Create key</DialogTitle>
+              <DialogDescription>
+                Provision a new transit-backed key in the selected vault.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateKey} className="app-dialog-body grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="key-name">Name</Label>
               <Input
@@ -206,11 +215,7 @@ export default function KeysPage() {
                 onValueChange={(value) => setNewKey({ ...newKey, vaultId: value })}
               />
             </div>
-            <div className="flex items-end gap-3">
-              <Button type="submit" disabled={isCreating || !newKey.name}>
-                {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Save
-              </Button>
+            <DialogFooter className="app-dialog-footer md:col-span-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -226,9 +231,14 @@ export default function KeysPage() {
               >
                 Cancel
               </Button>
-            </div>
+              <Button type="submit" disabled={isCreating || !newKey.name}>
+                {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save
+              </Button>
+            </DialogFooter>
           </form>
-        </section>
+          </DialogContent>
+        </Dialog>
 
         <section className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -240,8 +250,8 @@ export default function KeysPage() {
           />
         </section>
 
-        <section className="space-y-2">
-          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto] gap-4 border-b border-border pb-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+        <section className="app-grid-table overflow-hidden">
+          <div className="app-grid-table-header grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto]">
             <p>Name</p>
             <p>Type</p>
             <p>Created</p>
@@ -249,14 +259,14 @@ export default function KeysPage() {
           </div>
 
           {isLoading ? (
-            <div className="flex h-40 items-center justify-center border-b border-border">
+            <div className="flex h-40 items-center justify-center">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : filteredKeys && filteredKeys.length > 0 ? (
             filteredKeys.map((key) => (
               <div
                 key={key.id}
-                className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto] gap-4 border-b border-border py-4"
+                className="app-grid-table-row grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto]"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
@@ -304,7 +314,7 @@ export default function KeysPage() {
               </div>
             ))
           ) : (
-            <div className="app-empty">
+            <div className="app-empty border-0 rounded-none">
               <KeyRound className="mx-auto mb-3 h-8 w-8" />
               {searchQuery
                 ? "No keys match your search."

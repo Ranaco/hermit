@@ -22,7 +22,7 @@ import {
   useAssignTeamRole,
   useRemoveTeamRole,
 } from "@/hooks/use-organizations";
-import type { InviteUserResponse, OrganizationInvitation, Team } from "@/services/organization.service";
+import type { InviteUserResponse, OrganizationInvitation } from "@/services/organization.service";
 import { useOrganizationStore } from "@/store/organization.store";
 import { useRBAC } from "@/hooks/use-rbac";
 import { useRoles } from "@/hooks/use-policies";
@@ -61,10 +61,6 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-
-const roleOptions = ["MEMBER", "ADMIN", "OWNER"] as const;
-
-type Role = (typeof roleOptions)[number];
 
 function displayName(member: {
   user: {
@@ -359,13 +355,13 @@ export default function OrganizationsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-[60ch]">
+        <section className="app-page-header">
+          <div className="app-page-intro">
             <p className="app-eyebrow">Organizations</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
               Organizations
             </h1>
-            <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
+            <p className="app-page-copy">
               Members, roles, and teams.
             </p>
           </div>
@@ -375,15 +371,16 @@ export default function OrganizationsPage() {
           </Button>
         </section>
 
-        <div
-          className={cn(
-            "grid gap-4 overflow-hidden transition-all duration-500 ease-in-out",
-            showCreateForm ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-          )}
-        >
-          <div className="min-h-0">
-            <form onSubmit={handleCreateOrg} className="grid gap-4 border-b border-border pb-6 md:grid-cols-3">
-              <div className="space-y-2 md:col-span-1">
+        <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+          <DialogContent className="max-w-3xl p-0">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 sm:px-7">
+              <DialogTitle>Create organization</DialogTitle>
+              <DialogDescription>
+                Set up a new workspace boundary for members, vaults, and policies.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateOrg} className="app-dialog-body grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="new-org-name">Name</Label>
                 <Input
                   id="new-org-name"
@@ -393,7 +390,7 @@ export default function OrganizationsPage() {
                   required
                 />
               </div>
-              <div className="space-y-2 md:col-span-1">
+              <div className="space-y-2">
                 <Label htmlFor="new-org-description">Description</Label>
                 <Input
                   id="new-org-description"
@@ -402,11 +399,7 @@ export default function OrganizationsPage() {
                   placeholder="Production KMS tenant"
                 />
               </div>
-              <div className="flex items-end gap-3 md:col-span-1">
-                <Button type="submit" disabled={isCreating || !newOrgName}>
-                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Create
-                </Button>
+              <DialogFooter className="app-dialog-footer md:col-span-2">
                 <Button
                   type="button"
                   variant="ghost"
@@ -418,10 +411,14 @@ export default function OrganizationsPage() {
                 >
                   Cancel
                 </Button>
-              </div>
+                <Button type="submit" disabled={isCreating || !newOrgName}>
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {organizations?.map((org) => {
@@ -725,55 +722,6 @@ export default function OrganizationsPage() {
               </CardHeader>
 
               <CardContent className="p-6 lg:p-8 flex-1 space-y-6">
-                <div
-                  className={cn(
-                    "overflow-hidden transition-all duration-500 ease-in-out",
-                    permissions.canManageTeams && showTeamForm ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-                  )}
-                >
-                  <form onSubmit={handleCreateTeam} className="mb-6 space-y-4 border-b border-border pb-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="team-name">Team Name</Label>
-                      <Input
-                        id="team-name"
-                        value={newTeamName}
-                        onChange={(e) => setNewTeamName(e.target.value)}
-                        placeholder="Engineering"
-                        className="h-11"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="team-description">Description</Label>
-                      <Input
-                        id="team-description"
-                        value={newTeamDescription}
-                        onChange={(e) => setNewTeamDescription(e.target.value)}
-                        placeholder="Handles infra and runtime secrets"
-                        className="h-11"
-                      />
-                    </div>
-                    <div className="flex gap-3 pt-2">
-                      <Button type="submit" size="sm" disabled={isCreatingTeam || !newTeamName.trim()}>
-                        {isCreatingTeam && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Create Team
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setShowTeamForm(false);
-                          setNewTeamName("");
-                          setNewTeamDescription("");
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-
                 <div className="space-y-4">
                   {teams?.map((team) => (
                     <div key={team.id} className="border-b border-border pb-5">
@@ -886,7 +834,7 @@ export default function OrganizationsPage() {
                     </div>
                   ))}
 
-                  {(!teams || teams.length === 0) && !showTeamForm && (
+                  {(!teams || teams.length === 0) && (
                     <div className="app-empty">
                       <Layers className="h-10 w-10 text-muted-foreground/40 mb-4" />
                       <p className="text-[15px] font-semibold text-foreground">No Teams Built</p>
@@ -903,6 +851,60 @@ export default function OrganizationsPage() {
             <p className="text-[15px] text-muted-foreground mt-2">Select an organization above.</p>
           </section>
         )}
+
+        <Dialog
+          open={permissions.canManageTeams && showTeamForm}
+          onOpenChange={setShowTeamForm}
+        >
+          <DialogContent className="max-w-xl p-0">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 sm:px-7">
+              <DialogTitle>Create team</DialogTitle>
+              <DialogDescription>
+                Group members and attach inherited access in one place.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateTeam} className="app-dialog-body space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="team-name">Team Name</Label>
+                <Input
+                  id="team-name"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  placeholder="Engineering"
+                  className="h-11"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="team-description">Description</Label>
+                <Input
+                  id="team-description"
+                  value={newTeamDescription}
+                  onChange={(e) => setNewTeamDescription(e.target.value)}
+                  placeholder="Handles infra and runtime secrets"
+                  className="h-11"
+                />
+              </div>
+              <DialogFooter className="app-dialog-footer">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowTeamForm(false);
+                    setNewTeamName("");
+                    setNewTeamDescription("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isCreatingTeam || !newTeamName.trim()}>
+                  {isCreatingTeam ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create Team
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog
           open={!!accessTeam && permissions.canReadRoles}

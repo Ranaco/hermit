@@ -34,9 +34,9 @@ export function AuthShell({
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen w-full max-w-[1120px] items-center px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid w-full gap-8 lg:grid-cols-[0.95fr_minmax(0,0.85fr)]">
-          <section className="hidden border-r border-border pr-10 lg:flex lg:flex-col lg:justify-between">
+          <section className="hidden rounded-[30px] border border-border/70 bg-card/70 p-8 shadow-[0_28px_70px_-38px_rgba(15,23,42,0.28)] lg:flex lg:flex-col lg:justify-between">
             <div className="space-y-8">
-              <div className="flex items-center justify-between gap-4 pt-2">
+              <div className="flex items-center justify-between gap-4">
                 <Link href="/" className="inline-flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card">
                     <Logo className="h-4 w-4 text-foreground" />
@@ -58,8 +58,8 @@ export function AuthShell({
                 </Link>
               </div>
 
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/75 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {eyebrow}
                   </div>
@@ -74,10 +74,10 @@ export function AuthShell({
               </div>
 
               {features.length > 0 ? (
-                <div className="space-y-3">
+                <div className="grid gap-4">
                   {features.map((feature) => (
-                    <div key={feature.title} className="flex items-start gap-4">
-                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-muted text-muted-foreground">
+                    <div key={feature.title} className="flex items-start gap-4 rounded-[18px] border border-border/70 bg-background/70 p-4">
+                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-muted text-muted-foreground">
                         {feature.icon}
                       </div>
                       <div>
@@ -94,7 +94,7 @@ export function AuthShell({
               ) : null}
             </div>
 
-            <div className="mb-2 flex items-center justify-between gap-4 border-t border-border pt-6">
+            <div className="mb-1 flex items-center justify-between gap-4 border-t border-border/80 pt-6">
               <div>
                 <p className="text-sm font-medium text-foreground">Built for operators</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -128,7 +128,7 @@ export function AuthShell({
               </div>
 
               <div className="pt-6 lg:pt-0">
-                <div className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                <div className="inline-flex items-center rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   {eyebrow}
                 </div>
                 <h2 className="mt-4 text-[clamp(2rem,3vw,2.75rem)] font-semibold tracking-tight text-foreground">
@@ -139,7 +139,9 @@ export function AuthShell({
                 </p>
               </div>
 
-              <div className="mt-8">{children}</div>
+              <div className="mt-8 rounded-[28px] border border-border/70 bg-card/72 p-5 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.28)] sm:p-6">
+                {children}
+              </div>
 
               {footerNote ? (
                 <div className="mt-6 border-t border-border pt-4 text-sm leading-6 text-muted-foreground">

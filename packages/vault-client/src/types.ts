@@ -9,6 +9,7 @@ export interface VaultConfig {
   namespace?: string;
   transitMount?: string;
   requestTimeout?: number;
+  skipVerify?: boolean;
   appRole?: {
     roleId: string;
     secretId?: string;

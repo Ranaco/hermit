@@ -10,7 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -45,6 +52,8 @@ const getDefaultSecretValue = (type: SecretValueType) => {
   if (type === "JSON") return "{}";
   return "";
 };
+
+const MASKED_SECRET_PREVIEW = "********";
 
 
 export default function SecretsPage() {
@@ -115,7 +124,7 @@ export default function SecretsPage() {
 
   const getSecretPreview = (key: string) => {
     if (!visibleSecrets.has(key)) {
-      return "••••••••";
+      return MASKED_SECRET_PREVIEW;
     }
 
     return revealedSecrets[key] || "Loading secret value...";
@@ -196,7 +205,7 @@ export default function SecretsPage() {
       } else {
         toast.error("Unable to reveal secret value");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to reveal secret");
     } finally {
       setIsRevealing(null);
@@ -242,7 +251,7 @@ export default function SecretsPage() {
       } else {
         toast.error("Unable to reveal secret version value");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to reveal secret version");
     } finally {
       setIsRevealing(null);
@@ -313,399 +322,443 @@ export default function SecretsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="border-b border-border pb-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-[58ch]">
-              <p className="app-eyebrow">Secrets</p>
-              <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
-                Secrets
-              </h1>
-              <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-                Credentials and versioned values.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 lg:justify-end">
-              <Button variant="secondary" className="h-11 px-5" onClick={() => setShowShareModal(true)}>
-                <LinkIcon className="mr-2 h-4 w-4 text-indigo-500" />
-                Share
-              </Button>
-              {permissions.canCreateSecret ? (
-                <>
-                  <Button variant="secondary" className="h-11 px-5" onClick={() => {
-                    setShowCreateFolderForm((v) => !v);
+        <section className="app-page-header border-b border-border pb-6">
+          <div className="app-page-intro">
+            <p className="app-eyebrow">Secrets</p>
+            <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
+              Secrets
+            </h1>
+            <p className="app-page-copy">Credentials and versioned values.</p>
+          </div>
+          <div className="app-toolbar">
+            <Button variant="secondary" className="h-11 px-5" onClick={() => setShowShareModal(true)}>
+              <LinkIcon className="mr-2 h-4 w-4 text-indigo-500" />
+              Share
+            </Button>
+            {permissions.canCreateSecret ? (
+              <>
+                <Button
+                  variant="secondary"
+                  className="h-11 px-5"
+                  onClick={() => {
+                    setShowCreateFolderForm(true);
                     setShowCreateForm(false);
                     setShowUpdateForm(false);
-                  }}>
-                    <FolderPlus className="mr-2 h-4 w-4 text-primary" />
-                    Create Folder
-                  </Button>
-                  <Button className="h-11 px-6" onClick={() => {
-                    setShowCreateForm((v) => !v);
+                  }}
+                >
+                  <FolderPlus className="mr-2 h-4 w-4 text-primary" />
+                  Create Folder
+                </Button>
+                <Button
+                  className="h-11 px-6"
+                  onClick={() => {
+                    setShowCreateForm(true);
                     setShowCreateFolderForm(false);
                     setShowUpdateForm(false);
-                  }}>
-                    <Plus className="mr-2 h-5 w-5" />
-                    Create Secret
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "overflow-hidden transition-all duration-500 ease-in-out",
-              permissions.canEditSecret && showUpdateForm && activeSecretId ? "opacity-100 mt-6 max-h-[1000px]" : "max-h-0 opacity-0 mt-0"
-            )}
-          >
-            {showUpdateForm && activeSecretId ? (
-              <form onSubmit={handleUpdateSecret} className="grid gap-4 border-t border-border pt-6 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-[16px] font-bold tracking-tight text-foreground">Rotate / Update Secret</h3>
-                    <p className="text-[13px] font-medium text-muted-foreground mt-0.5">Creates a new version.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="update-value-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Value Type</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {SECRET_VALUE_TYPES.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          setUpdateSecretData({
-                            ...updateSecretData,
-                            valueType: type,
-                            value: getDefaultSecretValue(type),
-                          });
-                        }}
-                        className={cn(
-                          "px-4 py-2 text-[13px] font-bold tracking-wider uppercase rounded-xl border transition-all duration-300",
-                          updateSecretData.valueType === type
-                            ? "bg-primary text-primary-foreground border-transparent shadow-md shadow-primary/20 scale-105"
-                            : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-transparent text-muted-foreground"
-                        )}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="update-secret-value" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Value</Label>
-                  {updateSecretData.valueType === "JSON" || updateSecretData.valueType === "MULTILINE" ? (
-                    <div className="relative">
-                      <Textarea
-                        id="update-secret-value"
-                        value={updateSecretData.value}
-                        onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                        placeholder={updateSecretData.valueType === "JSON" ? '{\n  "key": "value"\n}' : "Enter multi-line secret..."}
-                        className="min-h-[120px] font-mono text-[13px] rounded-xl bg-background border-black/5 dark:border-white/5 focus:ring-2 focus:ring-primary/40 transition-all outline-none resize-y shadow-inner p-4"
-                        required
-                      />
-                      {updateSecretData.valueType === "JSON" && updateSecretData.value.length > 0 && (
-                        <div className="absolute right-3 top-3">
-                          {(() => {
-                            try {
-                              JSON.parse(updateSecretData.value);
-                              return <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Valid JSON</Badge>;
-                            } catch (e) {
-                              return <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Invalid JSON</Badge>;
-                            }
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  ) : updateSecretData.valueType === "BOOLEAN" ? (
-                    <Select
-                      value={updateSecretData.value}
-                      onValueChange={(value) => setUpdateSecretData({ ...updateSecretData, value })}
-                    >
-                      <SelectTrigger id="update-secret-value">
-                        <SelectValue placeholder="Select boolean value" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">True</SelectItem>
-                        <SelectItem value="false">False</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : updateSecretData.valueType === "NUMBER" ? (
-                    <Input
-                      id="update-secret-value"
-                      type="number"
-                      value={updateSecretData.value}
-                      onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                      placeholder="12345"
-                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                      required
-                    />
-                  ) : (
-                    <Input
-                      id="update-secret-value"
-                      type="password"
-                      value={updateSecretData.value}
-                      onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
-                      placeholder="••••••••"
-                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                      required
-                    />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="update-secret-desc" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Updated Description</Label>
-                  <Input
-                    id="update-secret-desc"
-                    value={updateSecretData.description}
-                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, description: e.target.value })}
-                    placeholder="Update description..."
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="update-secret-commit" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Commit Message</Label>
-                  <Input
-                    id="update-secret-commit"
-                    value={updateSecretData.commitMessage}
-                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, commitMessage: e.target.value })}
-                    placeholder="e.g. Scheduled 90-day rotation"
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="update-secret-password" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">New Protection Password (Optional)</Label>
-                  <Input
-                    id="update-secret-password"
-                    type="password"
-                    value={updateSecretData.password}
-                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, password: e.target.value })}
-                    placeholder="Leave blank to keep current password state, or provide a new 8+ character string"
-                    minLength={8}
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                  />
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row">
-                  <Button type="submit" className="h-11 rounded-xl px-8" disabled={isUpdating || !updateSecretData.value || (updateSecretData.password && updateSecretData.password?.length < 8 ? true : false)}>
-                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Update Version
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 rounded-xl px-6"
-                    onClick={() => {
-                      setShowUpdateForm(false);
-                      setActiveSecretId(null);
-                      setUpdateSecretData({ value: "", description: "", commitMessage: "", valueType: "STRING", password: "" });
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            ) : null}
-          </div>
-
-          <div
-            className={cn(
-              "overflow-hidden transition-all duration-500 ease-in-out",
-              showCreateFolderForm ? "opacity-100 mt-6 max-h-[500px]" : "max-h-0 opacity-0 mt-0"
-            )}
-          >
-            {showCreateFolderForm ? (
-              <form onSubmit={handleCreateFolder} className="grid gap-4 border-t border-border pt-6 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="folder-name" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Folder Name</Label>
-                  <Input
-                    id="folder-name"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="e.g. Database Credentials"
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row">
-                  <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreatingFolder || !newFolderName}>
-                    {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Create Folder
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 rounded-xl px-6"
-                    onClick={() => {
-                      setShowCreateFolderForm(false);
-                      setNewFolderName("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            ) : null}
-          </div>
-
-          <div
-            className={cn(
-              "overflow-hidden transition-all duration-500 ease-in-out",
-              showCreateForm && !showUpdateForm ? "opacity-100 mt-6 max-h-[1000px]" : "max-h-0 opacity-0 mt-0"
-            )}
-          >
-            {showCreateForm && !showUpdateForm ? (
-              <form onSubmit={handleCreateSecret} className="grid gap-4 border-t border-border pt-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="secret-name" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Name</Label>
-                  <Input
-                    id="secret-name"
-                    value={newSecret.name}
-                    onChange={(e) => setNewSecret({ ...newSecret, name: e.target.value })}
-                    placeholder="DATABASE_PASSWORD"
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secret-key" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Encryption Key</Label>
-                  <Combobox
-                    items={keyItems}
-                    value={newSecret.keyId}
-                    placeholder="Select key..."
-                    searchPlaceholder="Search keys..."
-                    emptyText="No keys found."
-                    onValueChange={(value) => setNewSecret({ ...newSecret, keyId: value })}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="secret-type" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Secret Type</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {SECRET_VALUE_TYPES.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          setNewSecret({
-                            ...newSecret,
-                            valueType: type,
-                            value: getDefaultSecretValue(type),
-                          });
-                        }}
-                        className={cn(
-                          "px-4 py-2 text-[13px] font-bold tracking-wider uppercase rounded-xl border transition-all duration-300",
-                          newSecret.valueType === type
-                            ? "bg-primary text-primary-foreground border-transparent shadow-md shadow-primary/20 scale-105"
-                            : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-transparent text-muted-foreground"
-                        )}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="secret-description" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Description</Label>
-                  <Input
-                    id="secret-description"
-                    value={newSecret.description}
-                    onChange={(e) => setNewSecret({ ...newSecret, description: e.target.value })}
-                    placeholder="Production database password"
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="secret-value" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Value</Label>
-                  {newSecret.valueType === "JSON" || newSecret.valueType === "MULTILINE" ? (
-                    <div className="relative">
-                      <Textarea
-                        id="secret-value"
-                        value={newSecret.value}
-                        onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                        placeholder={newSecret.valueType === "JSON" ? '{\n  "key": "value"\n}' : "Enter multi-line secret..."}
-                        className="min-h-[120px] font-mono text-[13px] rounded-xl bg-background border-black/5 dark:border-white/5 focus:ring-2 focus:ring-primary/40 transition-all outline-none resize-y shadow-inner p-4"
-                        required
-                      />
-                      {newSecret.valueType === "JSON" && newSecret.value.length > 0 && (
-                        <div className="absolute right-3 top-3">
-                          {(() => {
-                            try {
-                              JSON.parse(newSecret.value);
-                              return <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Valid JSON</Badge>;
-                            } catch (e) {
-                              return <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold tracking-wider shadow-none border-none pointer-events-none">Invalid JSON</Badge>;
-                            }
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  ) : newSecret.valueType === "BOOLEAN" ? (
-                    <Select
-                      value={newSecret.value}
-                      onValueChange={(value) => setNewSecret({ ...newSecret, value })}
-                    >
-                      <SelectTrigger id="secret-value">
-                        <SelectValue placeholder="Select boolean value" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">True</SelectItem>
-                        <SelectItem value="false">False</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : newSecret.valueType === "NUMBER" ? (
-                    <Input
-                      id="secret-value"
-                      type="number"
-                      value={newSecret.value}
-                      onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                      placeholder="12345"
-                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                      required
-                    />
-                  ) : (
-                    <Input
-                      id="secret-value"
-                      type="password"
-                      value={newSecret.value}
-                      onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
-                      placeholder="••••••••"
-                      className="h-11 font-mono text-[14px] rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                      required
-                    />
-                  )}
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="secret-password" className="text-[13px] font-bold tracking-wide uppercase text-muted-foreground">Protection Password (Optional)</Label>
-                  <Input
-                    id="secret-password"
-                    type="password"
-                    value={newSecret.password}
-                    onChange={(e) => setNewSecret({ ...newSecret, password: e.target.value })}
-                    placeholder="Leave blank for no password"
-                    minLength={8}
-                    className="h-11 rounded-xl bg-background border-black/5 dark:border-white/5 shadow-inner"
-                  />
-                </div>
-                <div className="md:col-span-2 flex flex-col gap-3 pt-2 sm:flex-row">
-                  <Button type="submit" className="h-11 rounded-xl px-8" disabled={isCreating || !newSecret.name || !newSecret.value || !newSecret.keyId || (newSecret.password.length > 0 && newSecret.password.length < 8)}>
-                    {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Create Secret
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 rounded-xl px-6"
-                    onClick={() => {
-                      setShowCreateForm(false);
-                      setNewSecret({ name: "", description: "", value: "", valueType: "STRING", keyId: "", password: "" });
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+                  }}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Create Secret
+                </Button>
+              </>
             ) : null}
           </div>
         </section>
+
+        <Dialog
+          open={showCreateFolderForm}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowCreateFolderForm(false);
+              setNewFolderName("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-xl p-0">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 sm:px-7">
+              <DialogTitle>Create folder</DialogTitle>
+              <DialogDescription>
+                Organize related secrets without leaving the current vault path.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateFolder} className="app-dialog-body grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="folder-name">Folder name</Label>
+                <Input
+                  id="folder-name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Database credentials"
+                  required
+                />
+              </div>
+              <DialogFooter className="app-dialog-footer">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowCreateFolderForm(false);
+                    setNewFolderName("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isCreatingFolder || !newFolderName}>
+                  {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create folder
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={showCreateForm}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowCreateForm(false);
+              setNewSecret({ name: "", description: "", value: "", valueType: "STRING", keyId: "", password: "" });
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl p-0">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 sm:px-7">
+              <DialogTitle>Create secret</DialogTitle>
+              <DialogDescription>
+                Add a versioned value and bind it to an encryption key in this vault.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateSecret} className="app-dialog-body grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="secret-name">Name</Label>
+                <Input
+                  id="secret-name"
+                  value={newSecret.name}
+                  onChange={(e) => setNewSecret({ ...newSecret, name: e.target.value })}
+                  placeholder="DATABASE_PASSWORD"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="secret-key">Encryption key</Label>
+                <Combobox
+                  items={keyItems}
+                  value={newSecret.keyId}
+                  placeholder="Select key..."
+                  searchPlaceholder="Search keys..."
+                  emptyText="No keys found."
+                  onValueChange={(value) => setNewSecret({ ...newSecret, keyId: value })}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-type">Secret type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SECRET_VALUE_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setNewSecret({
+                          ...newSecret,
+                          valueType: type,
+                          value: getDefaultSecretValue(type),
+                        });
+                      }}
+                      className={cn(
+                        "rounded-xl border px-4 py-2 text-[13px] font-bold tracking-wider uppercase transition-all duration-300",
+                        newSecret.valueType === type
+                          ? "scale-105 border-transparent bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                          : "border-transparent bg-black/5 text-muted-foreground hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10"
+                      )}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-description">Description</Label>
+                <Input
+                  id="secret-description"
+                  value={newSecret.description}
+                  onChange={(e) => setNewSecret({ ...newSecret, description: e.target.value })}
+                  placeholder="Production database password"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-value">Value</Label>
+                {newSecret.valueType === "JSON" || newSecret.valueType === "MULTILINE" ? (
+                  <div className="relative">
+                    <Textarea
+                      id="secret-value"
+                      value={newSecret.value}
+                      onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                      placeholder={newSecret.valueType === "JSON" ? "{\n  \"key\": \"value\"\n}" : "Enter multi-line secret..."}
+                      className="min-h-[140px] resize-y font-mono text-[13px]"
+                      required
+                    />
+                    {newSecret.valueType === "JSON" && newSecret.value.length > 0 ? (
+                      <div className="absolute right-3 top-3">
+                        {(() => {
+                          try {
+                            JSON.parse(newSecret.value);
+                            return <Badge className="pointer-events-none border-none bg-emerald-500/10 font-bold tracking-wider text-emerald-600 shadow-none dark:text-emerald-400">Valid JSON</Badge>;
+                          } catch {
+                            return <Badge className="pointer-events-none border-none bg-rose-500/10 font-bold tracking-wider text-rose-600 shadow-none dark:text-rose-400">Invalid JSON</Badge>;
+                          }
+                        })()}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : newSecret.valueType === "BOOLEAN" ? (
+                  <Select
+                    value={newSecret.value}
+                    onValueChange={(value) => setNewSecret({ ...newSecret, value })}
+                  >
+                    <SelectTrigger id="secret-value">
+                      <SelectValue placeholder="Select boolean value" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">True</SelectItem>
+                      <SelectItem value="false">False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : newSecret.valueType === "NUMBER" ? (
+                  <Input
+                    id="secret-value"
+                    type="number"
+                    value={newSecret.value}
+                    onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                    placeholder="12345"
+                    className="font-mono"
+                    required
+                  />
+                ) : (
+                  <Input
+                    id="secret-value"
+                    type="password"
+                    value={newSecret.value}
+                    onChange={(e) => setNewSecret({ ...newSecret, value: e.target.value })}
+                    placeholder={MASKED_SECRET_PREVIEW}
+                    className="font-mono"
+                    autoComplete="new-password"
+                    required
+                  />
+                )}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="secret-password">Protection password</Label>
+                <Input
+                  id="secret-password"
+                  type="password"
+                  value={newSecret.password}
+                  onChange={(e) => setNewSecret({ ...newSecret, password: e.target.value })}
+                  placeholder="Optional, 8+ characters"
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                {newSecret.password.length > 0 && newSecret.password.length < 8 ? (
+                  <p className="text-xs text-destructive">Protection password must be at least 8 characters.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Add a second reveal challenge for this secret only.</p>
+                )}
+              </div>
+              <DialogFooter className="app-dialog-footer md:col-span-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setNewSecret({ name: "", description: "", value: "", valueType: "STRING", keyId: "", password: "" });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    isCreating ||
+                    !newSecret.name ||
+                    !newSecret.value ||
+                    !newSecret.keyId ||
+                    (newSecret.password.length > 0 && newSecret.password.length < 8)
+                  }
+                >
+                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Create secret
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={permissions.canEditSecret && showUpdateForm && !!activeSecretId}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowUpdateForm(false);
+              setActiveSecretId(null);
+              setUpdateSecretData({ value: "", description: "", commitMessage: "", valueType: "STRING", password: "" });
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl p-0">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 sm:px-7">
+              <DialogTitle>Rotate secret</DialogTitle>
+              <DialogDescription>
+                Create a fresh version and optionally update the description or protection password.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleUpdateSecret} className="app-dialog-body grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="update-value-type">New value type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SECRET_VALUE_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setUpdateSecretData({
+                          ...updateSecretData,
+                          valueType: type,
+                          value: getDefaultSecretValue(type),
+                        });
+                      }}
+                      className={cn(
+                        "rounded-xl border px-4 py-2 text-[13px] font-bold tracking-wider uppercase transition-all duration-300",
+                        updateSecretData.valueType === type
+                          ? "scale-105 border-transparent bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                          : "border-transparent bg-black/5 text-muted-foreground hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10"
+                      )}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="update-secret-value">New value</Label>
+                {updateSecretData.valueType === "JSON" || updateSecretData.valueType === "MULTILINE" ? (
+                  <div className="relative">
+                    <Textarea
+                      id="update-secret-value"
+                      value={updateSecretData.value}
+                      onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                      placeholder={updateSecretData.valueType === "JSON" ? "{\n  \"key\": \"value\"\n}" : "Enter multi-line secret..."}
+                      className="min-h-[140px] resize-y font-mono text-[13px]"
+                      required
+                    />
+                    {updateSecretData.valueType === "JSON" && updateSecretData.value.length > 0 ? (
+                      <div className="absolute right-3 top-3">
+                        {(() => {
+                          try {
+                            JSON.parse(updateSecretData.value);
+                            return <Badge className="pointer-events-none border-none bg-emerald-500/10 font-bold tracking-wider text-emerald-600 shadow-none dark:text-emerald-400">Valid JSON</Badge>;
+                          } catch {
+                            return <Badge className="pointer-events-none border-none bg-rose-500/10 font-bold tracking-wider text-rose-600 shadow-none dark:text-rose-400">Invalid JSON</Badge>;
+                          }
+                        })()}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : updateSecretData.valueType === "BOOLEAN" ? (
+                  <Select
+                    value={updateSecretData.value}
+                    onValueChange={(value) => setUpdateSecretData({ ...updateSecretData, value })}
+                  >
+                    <SelectTrigger id="update-secret-value">
+                      <SelectValue placeholder="Select boolean value" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">True</SelectItem>
+                      <SelectItem value="false">False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : updateSecretData.valueType === "NUMBER" ? (
+                  <Input
+                    id="update-secret-value"
+                    type="number"
+                    value={updateSecretData.value}
+                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                    placeholder="12345"
+                    className="font-mono"
+                    required
+                  />
+                ) : (
+                  <Input
+                    id="update-secret-value"
+                    type="password"
+                    value={updateSecretData.value}
+                    onChange={(e) => setUpdateSecretData({ ...updateSecretData, value: e.target.value })}
+                    placeholder={MASKED_SECRET_PREVIEW}
+                    className="font-mono"
+                    autoComplete="new-password"
+                    required
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="update-secret-desc">Updated description</Label>
+                <Input
+                  id="update-secret-desc"
+                  value={updateSecretData.description}
+                  onChange={(e) => setUpdateSecretData({ ...updateSecretData, description: e.target.value })}
+                  placeholder="Update description..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="update-secret-commit">Commit message</Label>
+                <Input
+                  id="update-secret-commit"
+                  value={updateSecretData.commitMessage}
+                  onChange={(e) => setUpdateSecretData({ ...updateSecretData, commitMessage: e.target.value })}
+                  placeholder="Scheduled 90-day rotation"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="update-secret-password">New protection password</Label>
+                <Input
+                  id="update-secret-password"
+                  type="password"
+                  value={updateSecretData.password}
+                  onChange={(e) => setUpdateSecretData({ ...updateSecretData, password: e.target.value })}
+                  placeholder="Leave blank to keep current protection state"
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                {updateSecretData.password && updateSecretData.password.length < 8 ? (
+                  <p className="text-xs text-destructive">Protection password must be at least 8 characters.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Leave blank to preserve the current password requirements.</p>
+                )}
+              </div>
+              <DialogFooter className="app-dialog-footer md:col-span-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowUpdateForm(false);
+                    setActiveSecretId(null);
+                    setUpdateSecretData({ value: "", description: "", commitMessage: "", valueType: "STRING", password: "" });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    isUpdating ||
+                    !updateSecretData.value ||
+                    (!!updateSecretData.password && updateSecretData.password.length < 8)
+                  }
+                >
+                  {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Save version
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <section className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -831,6 +884,7 @@ export default function SecretsPage() {
                                 type="password"
                                 placeholder="Enter secret password..."
                                 className="h-9 flex-1 bg-background text-[13px] shadow-sm"
+                                autoComplete="current-password"
                                 value={revealPassword}
                                 onChange={(e) => setRevealPassword(e.target.value)}
                                 onKeyDown={(e) => {
@@ -1011,6 +1065,7 @@ export default function SecretsPage() {
                               type="password"
                               placeholder="Password"
                               className="h-9 bg-background text-sm sm:w-40"
+                              autoComplete="current-password"
                               value={revealPassword}
                               onChange={(e) => setRevealPassword(e.target.value)}
                               onKeyDown={(e) => {

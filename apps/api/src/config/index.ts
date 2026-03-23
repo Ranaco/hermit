@@ -7,11 +7,21 @@ const readEnv = (name: string): string | undefined => {
   return value ? value : undefined;
 };
 
+const nodeEnv = process.env.NODE_ENV || "development";
+const readBooleanEnv = (name: string, fallback: boolean): boolean => {
+  const value = readEnv(name);
+  if (!value) {
+    return fallback;
+  }
+
+  return value === "true";
+};
+
 const config = {
   app: {
     name: "Hermit KMS API",
     version: "1.0.0",
-    env: process.env.NODE_ENV || "development",
+    env: nodeEnv,
     port: parseInt(process.env.PORT || "5001", 10),
     apiPrefix: process.env.API_PREFIX || "/api/v1",
   },
@@ -27,7 +37,7 @@ const config = {
     transitMount: readEnv("VAULT_TRANSIT_MOUNT") || "transit",
     requestTimeout: parseInt(process.env.VAULT_REQUEST_TIMEOUT || "5000", 10),
     keyName: process.env.VAULT_KEY_NAME || "hermit-master-key",
-    skipVerify: process.env.VAULT_SKIP_VERIFY === "true",
+    skipVerify: readBooleanEnv("VAULT_SKIP_VERIFY", nodeEnv !== "production"),
     appRole: {
       readRoleId: readEnv("VAULT_APPROLE_ROLE_ID_READ") || "",
       readSecretId: readEnv("VAULT_APPROLE_SECRET_ID_READ") || "",

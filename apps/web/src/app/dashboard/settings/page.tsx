@@ -103,6 +103,7 @@ export default function SettingsPage() {
                       id="firstName"
                       placeholder="Jane"
                       value={firstName}
+                      autoComplete="given-name"
                       onChange={(e) => setFirstName(e.target.value)}
                     />
                   </div>
@@ -112,6 +113,7 @@ export default function SettingsPage() {
                       id="lastName"
                       placeholder="Doe"
                       value={lastName}
+                      autoComplete="family-name"
                       onChange={(e) => setLastName(e.target.value)}
                     />
                   </div>
@@ -123,6 +125,7 @@ export default function SettingsPage() {
                     id="email"
                     type="email"
                     value={user?.email || ""}
+                    autoComplete="email"
                     disabled
                     className="opacity-60"
                   />
@@ -140,12 +143,25 @@ export default function SettingsPage() {
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">Reveal prompts stay separate.</p>
                 </div>
 
+                <input
+                  type="email"
+                  name="account-email"
+                  value={user?.email || ""}
+                  autoComplete="username"
+                  readOnly
+                  hidden
+                  aria-hidden="true"
+                  tabIndex={-1}
+                />
+
                 <div className="space-y-2">
                   <Label htmlFor="current-password">Current password</Label>
                   <Input
                     id="current-password"
+                    name="current-password"
                     type="password"
                     value={currentPassword}
+                    autoComplete="current-password"
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     required
                   />
@@ -156,10 +172,12 @@ export default function SettingsPage() {
                     <Label htmlFor="new-password">New password</Label>
                     <Input
                       id="new-password"
+                      name="new-password"
                       type="password"
                       minLength={8}
                       placeholder="Min 8 characters"
                       value={newPassword}
+                      autoComplete="new-password"
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
                     />
@@ -168,8 +186,10 @@ export default function SettingsPage() {
                     <Label htmlFor="confirm-password">Confirm password</Label>
                     <Input
                       id="confirm-password"
+                      name="confirm-password"
                       type="password"
                       value={confirmPassword}
+                      autoComplete="new-password"
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
                     />

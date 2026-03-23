@@ -94,6 +94,16 @@ services:
     networks:
       - hermit
 
+  docs:
+    build:
+      context: .
+      dockerfile: apps/docs/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - hermit
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

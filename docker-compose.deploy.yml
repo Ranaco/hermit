@@ -93,6 +93,15 @@ services:
     networks:
       - hermit
 
+  docs:
+    image: ghcr.io/ranaco/hermit-docs:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - hermit
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

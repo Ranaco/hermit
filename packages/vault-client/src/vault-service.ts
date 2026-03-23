@@ -34,21 +34,36 @@ export class VaultService {
     this.config = config;
     this.transitMount = config.transitMount || "transit";
 
-    this.client = vault({
-      apiVersion: "v1",
-      endpoint: config.endpoint,
-      token: config.token,
-      namespace: config.namespace,
-      requestOptions: {
-        timeout: config.requestTimeout || 5000,
-      },
-    });
+    this.client = this.createClient({ token: config.token });
 
     log.info("VaultService initialized", {
       endpoint: config.endpoint,
       transitMount: this.transitMount,
       namespace: config.namespace,
     });
+  }
+
+  private createClient(options?: { token?: string }): vault.client {
+    type ExtendedVaultOptions = NonNullable<Parameters<typeof vault>[0]> & {
+      rpDefaults?: {
+        strictSSL: boolean;
+      };
+    };
+
+    const clientConfig: ExtendedVaultOptions = {
+      apiVersion: "v1",
+      endpoint: this.config.endpoint,
+      token: options?.token,
+      namespace: this.config.namespace,
+      requestOptions: {
+        timeout: this.config.requestTimeout || 5000,
+      },
+      rpDefaults: {
+        strictSSL: !this.config.skipVerify,
+      },
+    };
+
+    return vault(clientConfig);
   }
 
   async initialize(): Promise<void> {
@@ -75,14 +90,8 @@ export class VaultService {
     }
 
     if (this.config.appRole.wrappedSecretId) {
-      const unwrapClient = vault({
-        apiVersion: "v1",
-        endpoint: this.config.endpoint,
+      const unwrapClient = this.createClient({
         token: this.config.appRole.wrappedSecretId,
-        namespace: this.config.namespace,
-        requestOptions: {
-          timeout: this.config.requestTimeout || 5000,
-        },
       });
 
       const unwrapResponse = await unwrapClient.write("sys/wrapping/unwrap", {});
@@ -121,15 +130,7 @@ export class VaultService {
         secret_id: secretId,
       });
 
-      this.client = vault({
-        apiVersion: "v1",
-        endpoint: this.config.endpoint,
-        token: response.auth.client_token,
-        namespace: this.config.namespace,
-        requestOptions: {
-          timeout: this.config.requestTimeout || 5000,
-        },
-      });
+      this.client = this.createClient({ token: response.auth.client_token });
 
       log.info("Successfully authenticated with Vault via AppRole");
       await this.scheduleTokenRenewal(response.auth);

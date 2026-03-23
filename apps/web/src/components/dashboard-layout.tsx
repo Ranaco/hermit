@@ -88,7 +88,7 @@ export function DashboardLayout({
 
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 flex h-screen w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:transition-[width]",
+            "fixed inset-y-0 left-0 z-40 flex h-screen w-[248px] shrink-0 flex-col border-r border-sidebar-border/85 bg-sidebar/96 backdrop-blur-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:transition-[width]",
             sidebarOpen ? "translate-x-0 lg:w-[248px]" : "-translate-x-full lg:translate-x-0 lg:w-[76px]",
           )}
         >
@@ -104,11 +104,11 @@ export function DashboardLayout({
               <Link
                 href="/dashboard"
                 className={cn(
-                  "flex min-w-0 items-center gap-3",
-                  !sidebarOpen && "justify-center",
-                )}
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-border bg-background">
+                    "flex min-w-0 items-center gap-3",
+                    !sidebarOpen && "justify-center",
+                  )}
+                >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-border/80 bg-background shadow-[0_10px_24px_-20px_rgba(15,23,42,0.3)]">
                   <Logo className="h-4 w-4 text-foreground" />
                 </span>
                 {sidebarOpen ? (
@@ -176,9 +176,9 @@ export function DashboardLayout({
                       key={item.name}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-colors",
                         isActive
-                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          ? "bg-sidebar-accent text-sidebar-foreground shadow-[0_12px_24px_-22px_rgba(15,23,42,0.4)]"
                           : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
                         !sidebarOpen && "justify-center px-0",
                       )}
@@ -230,13 +230,13 @@ export function DashboardLayout({
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/92 backdrop-blur-sm">
-            <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-20 border-b border-border/80 bg-background/88 backdrop-blur-xl">
+            <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex items-center gap-2 lg:hidden">
                   <Link
                     href="/dashboard"
-                    className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-background"
+                    className="flex h-9 w-9 items-center justify-center rounded-[12px] border border-border/80 bg-background"
                     aria-label="Go to dashboard"
                   >
                     <Logo className="h-4 w-4 text-foreground" />
@@ -244,7 +244,7 @@ export function DashboardLayout({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-9 w-9 rounded-[12px]"
                     onClick={toggleSidebar}
                     aria-label="Toggle navigation"
                   >
@@ -276,12 +276,12 @@ export function DashboardLayout({
                   </kbd>
                 </button>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-[12px]"
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  >
                   {theme === "dark" ? (
                     <Sun className="h-4 w-4" />
                   ) : (
@@ -295,7 +295,7 @@ export function DashboardLayout({
           <main
             className={cn(
               "w-full px-4 py-8 sm:px-6 lg:px-8",
-              fullWidth ? "mx-0 max-w-none" : "mx-auto max-w-[1180px]",
+              fullWidth ? "mx-0 max-w-none" : "mx-auto max-w-[1240px]",
               contentClassName,
             )}
           >

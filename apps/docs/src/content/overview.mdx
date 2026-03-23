@@ -1,0 +1,62 @@
+## Why Hermit exists {#why-hermit-exists}
+
+Hermit exists because secret operations tend to fail in two ways at once:
+
+1. the cryptographic backend is strong, but the operator workflow around it stays vague
+2. access control gets simplified into static roles that stop matching the actual shape of the system
+
+Hermit is designed to keep both sides explicit. It combines **HashiCorp Vault transit** for encryption and key
+operations with a metadata and policy layer that preserves the real hierarchy of the workspace.
+
+<Callout title="The core premise">
+  Hermit is not trying to hide complexity. It is trying to organize it so operators can reason about it safely.
+</Callout>
+
+## What Hermit contains {#what-hermit-contains}
+
+At a platform level, Hermit combines several concerns that are often split across separate tools:
+
+- **Organizations** as the top-level tenant boundary
+- **Vaults** scoped under organizations
+- **Keys** scoped under vaults
+- **Secrets** and **secret versions** protected by transit-backed encryption
+- **Custom IAM policies** evaluated against URN-addressed resources
+- **Invite flows** and member onboarding
+- **Audit logging** for sensitive operations
+- **One-time secret sharing** for controlled external handoff
+- **CLI workflows** for terminal-native operation
+
+The result is a system where secret storage, permission evaluation, reveal controls, and day-to-day operator work
+all live in one model instead of being spread across unrelated layers.
+
+## Core ideas {#core-ideas}
+
+Three ideas drive most of Hermit’s architecture:
+
+### 1. Organization-first hierarchy
+
+Every protected resource belongs to an organization, directly or indirectly. That hierarchy is important enough
+that the platform does not treat it as an implementation detail.
+
+### 2. Policy is evaluated at the point of action
+
+Hermit does not rely only on static roles. The API evaluates access against **resource URNs**, attached policies,
+team role assignments, and managed defaults when a request is actually made.
+
+### 3. Secret protection has layers
+
+Some actions only require authentication. Some require a vault password. Some require a secret-specific password.
+The platform preserves those distinctions all the way through the reveal flow.
+
+## When to use it {#when-to-use-it}
+
+Hermit is a fit when teams need a platform that can explain:
+
+- where a secret belongs
+- which key or vault protects it
+- who can act on it
+- what password challenge is required
+- what was revealed, rotated, invited, or shared
+
+That is especially useful for multi-team environments where a generic secrets UI is no longer enough to express the
+real architecture or security model.

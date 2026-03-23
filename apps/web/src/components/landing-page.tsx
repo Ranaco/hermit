@@ -2,382 +2,435 @@
 
 import Link from "next/link";
 import {
+  ArrowRight,
   ArrowUpRight,
-  Building2,
   CheckCircle2,
+  ChevronRight,
   Fingerprint,
   KeyRound,
   Lock,
   ShieldCheck,
-  Sparkles,
-  Vault,
+  TerminalSquare,
+  Waypoints,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { ShaderAnimation } from "@/components/ui/shader-lines";
 
-const useCases = [
+const navigation = [
+  { label: "Features", href: "#features" },
+  { label: "Workflow", href: "#workflow" },
+  { label: "Security", href: "#security" },
+  { label: "Docs", href: "/docs" },
+];
+
+const platformFeatures = [
   {
-    title: "Platform teams",
-    body: "Secrets, credentials, and rotation policy in one auditable control plane.",
+    title: "Policy-aware access",
+    body: "Evaluate custom IAM policy against resource URNs at the moment a user tries to read, reveal, rotate, or manage.",
+    icon: <Fingerprint className="h-4 w-4" />,
   },
   {
-    title: "Security teams",
-    body: "Custom IAM roles, deny rules, and team assignments instead of static RBAC.",
+    title: "Transit-backed protection",
+    body: "Keep key operations and secret encryption wired through HashiCorp Vault transit instead of application-local shortcuts.",
+    icon: <ShieldCheck className="h-4 w-4" />,
   },
   {
-    title: "Developers",
-    body: "Dashboard and CLI keep secrets out of source control and local files.",
+    title: "Three-tier reveal control",
+    body: "Authentication, vault passwords, and secret passwords protect different actions without flattening everything into one prompt.",
+    icon: <Lock className="h-4 w-4" />,
+  },
+  {
+    title: "Operator tooling",
+    body: "Use the web dashboard, official CLI enrollment, invite flows, and one-time shares without losing audit continuity.",
+    icon: <TerminalSquare className="h-4 w-4" />,
   },
 ];
 
-const features = [
+const workflowItems = [
   {
-    icon: <Building2 className="h-5 w-5" />,
-    title: "Organization hierarchy",
-    body: "Vaults, keys, and secrets scoped to tenant boundaries you can audit and switch.",
+    title: "Model the workspace the way it actually exists",
+    body: "Organizations own vaults. Vaults own keys, groups, and secrets. The hierarchy stays visible in the UI, policy layer, and reveal path.",
   },
   {
-    icon: <KeyRound className="h-5 w-5" />,
-    title: "Transit-backed crypto",
-    body: "HashiCorp Vault transit handles encryption, decryption, and key rotation.",
+    title: "Grant access with real scope",
+    body: "Create custom roles, attach policies, assign teams, and scope access to the workspace, a vault, a folder subtree, or specific secrets.",
   },
   {
-    icon: <Lock className="h-5 w-5" />,
-    title: "Three-tier protection",
-    body: "Auth, vault passwords, and secret passwords — each with a distinct purpose.",
-  },
-  {
-    icon: <Fingerprint className="h-5 w-5" />,
-    title: "Runtime IAM",
-    body: "Policies checked against resource URNs in real time. No coarse role collapse.",
+    title: "Operate without ambiguity",
+    body: "Audit logs, reveal prompts, invite return URLs, and secret sharing are all first-class product workflows rather than side features.",
   },
 ];
 
-const principles = [
-  "Hierarchy is explicit. Organizations, vaults, keys, and secrets are visible at every level.",
-  "Access is deliberate. Permissions and reveal flows explain themselves without friction.",
-  "Built for trust. Controlled, legible, production-ready under pressure.",
+const securityPoints = [
+  "Custom roles and deny precedence instead of static RBAC",
+  "Versioned secrets with auditable reveal operations",
+  "Vault and secret password challenge flows",
+  "CLI and dashboard surfaces that preserve control",
 ];
+
+const sdkPills = [
+  "Node.js",
+  "Next.js",
+  "Express",
+  "CLI",
+  "REST",
+  "Vault",
+  "PostgreSQL",
+  "Prisma",
+];
+
+function NavLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="text-sm text-white/60 transition-colors hover:text-white">
+      {label}
+    </Link>
+  );
+}
+
+function FooterLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="text-sm text-white/68 transition-colors hover:text-white">
+      {label}
+    </Link>
+  );
+}
 
 export function LandingPage() {
   return (
-    <div className="dark relative min-h-screen overflow-hidden bg-background font-sans text-foreground selection:bg-primary/30">
-      <ShaderAnimation />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_0%,#000_68%,transparent_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-primary/8 via-transparent to-transparent" />
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-white/15">
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.16),transparent_18%),radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.08),transparent_24%),linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:auto,auto,52px_52px,52px_52px]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_42%)]" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-16 pt-4 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between gap-6 rounded-full border border-white/10 bg-black/25 px-6 py-4 backdrop-blur-xl">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 ring-1 ring-white/10">
-              <Logo className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black tracking-tight text-foreground">Hermit</span>
-              <span className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                Secret Operations
-              </span>
-            </div>
-          </Link>
-
-          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
-            <Link href="#use-cases" className="transition-colors hover:text-foreground">
-              Use Cases
+        <header className="relative z-20 px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl sm:px-5">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                <Logo className="h-6 w-6 text-white" />
+              </div>
+              <div className="leading-none">
+                <p className="text-sm font-semibold tracking-[-0.02em]">Hermit</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-white/38">secret operations</p>
+              </div>
             </Link>
-            <Link href="#features" className="transition-colors hover:text-foreground">
-              Features
-            </Link>
-            <Link href="#about" className="transition-colors hover:text-foreground">
-              About
-            </Link>
-          </nav>
 
-          <Link
-            href="/login"
-            className="hidden h-10 items-center justify-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-transform hover:scale-[1.03] md:inline-flex"
-          >
-            Enter Workspace
-            <ArrowUpRight className="ml-2 h-4 w-4" />
-          </Link>
-        </header>
+            <nav className="hidden items-center gap-7 md:flex">
+              {navigation.map((item) => (
+                <NavLink key={item.label} href={item.href} label={item.label} />
+              ))}
+            </nav>
 
-        <main className="flex-1">
-          <section className="flex flex-col items-center px-2 pb-16 pt-24 text-center">
-            <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-foreground backdrop-blur-md">
-              <Sparkles className="mr-2 h-4 w-4 text-primary" />
-              Multi-tenant KMS with policy-aware operations
-            </div>
-
-            <h1 className="mt-8 max-w-5xl bg-gradient-to-b from-foreground via-foreground to-muted-foreground bg-clip-text text-5xl font-bold leading-[1.04] tracking-tight text-transparent md:text-7xl">
-              Turn Secrets
-              <br />
-              Into Security.
-            </h1>
-
-            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-              Key rotation, access policy, and secret protection — one control plane.
-            </p>
-
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
+            <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-base font-medium text-background shadow-[0_0_30px_-5px_var(--color-primary)] ring-1 ring-foreground/20 transition-all hover:scale-105 hover:shadow-[0_0_45px_-5px_var(--color-primary)]"
+                className="hidden rounded-xl border border-white/10 px-4 py-2 text-sm text-white/70 transition-colors hover:bg-white/[0.04] hover:text-white md:inline-flex"
               >
-                Get Started
-                <ArrowUpRight className="ml-2 h-4 w-4" />
+                Log in
               </Link>
               <Link
-                href="#demo"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/10 bg-white/5 px-8 text-base font-medium text-foreground backdrop-blur-md transition-all hover:scale-105 hover:bg-white/10"
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition-transform duration-300 hover:-translate-y-0.5"
               >
-                See It in Action
-                <ArrowUpRight className="ml-2 h-4 w-4" />
+                Get started
+                <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
+          </div>
+        </header>
 
-            <div className="mt-24 grid w-full max-w-4xl gap-4 sm:grid-cols-3">
-              {[
-                { label: "Protection", value: "3-tier" },
-                { label: "Policy model", value: "URN IAM" },
-                { label: "Operator surfaces", value: "Web + CLI" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-[24px] border border-white/10 bg-white/[0.04] px-5 py-5 text-left backdrop-blur-xl"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                    {item.label}
-                  </p>
-                  <p className="mt-3 text-2xl font-black tracking-tight text-foreground">
-                    {item.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div id="demo" className="relative mt-20 w-full max-w-6xl">
-              <div className="pointer-events-none absolute left-1/2 top-1/2 h-[44%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-[100%] bg-primary/40 blur-[120px]" />
-
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a101c]/90 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl transition-transform duration-500 hover:scale-[1.01]">
-                <div className="flex h-12 items-center border-b border-white/5 bg-[#0a101c] px-4">
-                  <div className="flex gap-2">
-                    <div className="h-3 w-3 rounded-full bg-white/20" />
-                    <div className="h-3 w-3 rounded-full bg-white/20" />
-                    <div className="h-3 w-3 rounded-full bg-white/20" />
-                  </div>
-                  <div className="mx-auto flex h-6 w-64 items-center justify-center rounded bg-white/5 text-xs text-white/40">
-                    hermit.com/dashboard
-                  </div>
+        <main className="relative z-10">
+          <section className="px-4 pb-18 pt-20 sm:px-6 lg:px-8 lg:pb-24 lg:pt-24">
+            <div className="mx-auto max-w-7xl">
+              <div className="mx-auto max-w-3xl text-center">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-white/56">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Multi-tenant kms and secret operations
                 </div>
 
-                <div className="grid gap-6 p-6 lg:grid-cols-[1.08fr_0.92fr] lg:p-8">
-                  <div className="space-y-4">
+                <h1 className="mt-8 text-[clamp(3.7rem,9vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-white">
+                  Secrets for
+                  <br />
+                  modern teams
+                </h1>
+
+                <p className="mx-auto mt-6 max-w-2xl text-[clamp(1.05rem,1.8vw,1.22rem)] leading-8 text-white/62">
+                  The cleanest way to manage vaults, keys, policies, reveal flows, invites, and audit logs without
+                  hiding the security model underneath.
+                </p>
+
+                <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-black transition-transform duration-300 hover:-translate-y-0.5"
+                  >
+                    Start building
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="#features"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/80 transition-colors hover:bg-white/[0.05] hover:text-white"
+                  >
+                    Explore the product
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="mt-14 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.8)]">
+                  <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
+                    </div>
+                    <span className="text-[11px] uppercase tracking-[0.24em] text-white/38">sdk example</span>
+                  </div>
+
+                  <div className="grid gap-8 px-5 py-6 lg:grid-cols-[16rem_1fr]">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">integrate</p>
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        {sdkPills.map((pill) => (
+                          <span
+                            key={pill}
+                            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/74"
+                          >
+                            {pill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <pre className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-5 text-sm leading-7 text-white/80">
+                      <code>{`const hermit = new Hermit({
+  baseUrl: process.env.HERMIT_URL,
+  token: process.env.HERMIT_TOKEN,
+});
+
+await hermit.secrets.create({
+  vaultId: "production-vault",
+  keyId: "payments-master-key",
+  name: "STRIPE_API_KEY",
+  value: process.env.STRIPE_API_KEY,
+});`}</code>
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.8)]">
+                  <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                    <span className="text-[11px] uppercase tracking-[0.24em] text-white/38">dashboard preview</span>
+                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-emerald-300">
+                      healthy
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 px-5 py-6">
                     {[
-                      {
-                        icon: <Building2 className="h-5 w-5" />,
-                        label: "Organization",
-                        title: "Acme Security",
-                        detail: "Roles, teams, and invite flow.",
-                      },
-                      {
-                        icon: <Vault className="h-5 w-5" />,
-                        label: "Vault",
-                        title: "Production Vault",
-                        detail: "Credentials and secrets, isolated by partition.",
-                      },
-                      {
-                        icon: <KeyRound className="h-5 w-5" />,
-                        label: "Key",
-                        title: "payments-master-key",
-                        detail: "Transit-backed with auditable rotation.",
-                      },
-                      {
-                        icon: <Lock className="h-5 w-5" />,
-                        label: "Secret",
-                        title: "STRIPE_API_KEY",
-                        detail: "Password-protected with audit on reveal.",
-                      },
-                    ].map((item) => (
+                      { label: "Organization", value: "Acme Security" },
+                      { label: "Vault", value: "Production Vault" },
+                      { label: "Key", value: "payments-master-key" },
+                      { label: "Secret", value: "STRIPE_API_KEY" },
+                    ].map((row) => (
                       <div
-                        key={item.label}
-                        className="rounded-[24px] border border-white/8 bg-white/[0.04] px-5 py-4 text-left backdrop-blur-xl"
+                        key={row.label}
+                        className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
                       >
-                        <div className="flex items-start gap-4">
-                          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] text-primary">
-                            {item.icon}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/40">
-                              {item.label}
-                            </p>
-                            <p className="mt-1.5 text-lg font-bold tracking-tight text-white">
-                              {item.title}
-                            </p>
-                            <p className="mt-1.5 text-sm leading-6 text-white/60">
-                              {item.detail}
-                            </p>
-                          </div>
-                        </div>
+                        <span className="text-[11px] uppercase tracking-[0.22em] text-white/42">{row.label}</span>
+                        <span className="text-sm font-medium text-white/86">{row.value}</span>
                       </div>
                     ))}
-                  </div>
 
-                  <div className="space-y-4 text-left">
-                    <div className="rounded-[24px] border border-white/8 bg-white/[0.04] px-5 py-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/40">
-                        Policy engine
-                      </p>
-                      <div className="mt-4 space-y-3">
-                        {[
-                          "organizations:read",
-                          "vaults:create",
-                          "keys:use",
-                          "secrets:use",
-                        ].map((action) => (
-                          <div
-                            key={action}
-                            className="flex items-center justify-between rounded-2xl border border-white/8 bg-slate-950/40 px-4 py-3"
-                          >
-                            <span className="font-mono text-sm text-white/76">{action}</span>
-                            <span className="rounded-full bg-emerald-400/12 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                              Allow
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-[24px] border border-white/8 bg-white/[0.04] px-5 py-5">
+                    <div className="rounded-2xl border border-white/10 bg-black/45 p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/40">
-                          Audit flow
-                        </p>
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/34">
-                          Last 24h
-                        </span>
+                        <span className="text-[11px] uppercase tracking-[0.22em] text-white/38">Policy evaluation</span>
+                        <Waypoints className="h-4 w-4 text-white/46" />
                       </div>
-                      <div className="mt-4 space-y-3">
-                        {[
-                          "Secret revealed with vault password",
-                          "Transit key rotated",
-                          "Invite accepted",
-                        ].map((event) => (
-                          <div key={event} className="flex gap-3">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                            <p className="text-sm leading-6 text-white/62">{event}</p>
+                      <div className="mt-4 space-y-2.5">
+                        {["vaults:create", "keys:use", "secrets:use"].map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-3"
+                          >
+                            <span className="font-mono text-xs text-white/76">{item}</span>
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-white/46">Allow</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0a101c] to-transparent" />
+              <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.025] px-6 py-5">
+                <p className="text-center text-sm text-white/42">
+                  Built for teams that want explicit hierarchy, audited reveals, custom IAM, CLI workflows, and
+                  first-class operator tooling.
+                </p>
               </div>
             </div>
           </section>
 
-          <section id="use-cases" className="scroll-mt-28 pt-8">
-            <div className="max-w-[720px]">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                Use Cases
-              </p>
-              <h2 className="mt-3 text-4xl font-black tracking-tight text-foreground">
-                Structure under pressure.
-              </h2>
-              <p className="mt-4 text-lg leading-8 text-muted-foreground">
-                Explicit, reviewable secret handling for fast-moving teams.
-              </p>
-            </div>
-
-            <div className="mt-8 grid gap-5 lg:grid-cols-3">
-              {useCases.map((item) => (
-                <article
-                  key={item.title}
-                  className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
-                >
-                  <p className="text-2xl font-black tracking-tight text-foreground">{item.title}</p>
-                  <p className="mt-4 text-[15px] leading-7 text-muted-foreground">{item.body}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section id="features" className="scroll-mt-28 pt-18">
-            <div className="grid gap-10 lg:grid-cols-[0.88fr_minmax(0,1.12fr)]">
-              <div className="max-w-[560px]">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                  Features
-                </p>
-                <h2 className="mt-3 text-4xl font-black tracking-tight text-foreground">
-                  Security in the workflow.
+          <section id="features" className="border-t border-white/10 px-4 py-20 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl">
+              <div className="max-w-2xl">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/40">Features</p>
+                <h2 className="mt-4 text-[clamp(2.5rem,5vw,4.6rem)] font-semibold leading-[0.96] tracking-[-0.07em] text-white">
+                  A cleaner control plane
+                  <br />
+                  for secret operations
                 </h2>
-                <p className="mt-4 text-lg leading-8 text-muted-foreground">
-                  The interface follows the system model — no shortcuts hiding the security layer.
+                <p className="mt-5 max-w-xl text-lg leading-8 text-white/58">
+                  Every part of the surface is meant to reduce ambiguity: what you can access, what is protected,
+                  and how secrets move through the system.
                 </p>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                {features.map((item) => (
+              <div className="mt-12 grid gap-5 md:grid-cols-2">
+                {platformFeatures.map((feature) => (
                   <article
-                    key={item.title}
-                    className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
+                    key={feature.title}
+                    className="rounded-[26px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_30px_100px_-70px_rgba(0,0,0,0.9)]"
                   >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-                      {item.icon}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/76">
+                      {feature.icon}
                     </div>
-                    <p className="mt-5 text-xl font-black tracking-tight text-foreground">
-                      {item.title}
-                    </p>
-                    <p className="mt-3 text-[15px] leading-7 text-muted-foreground">
-                      {item.body}
-                    </p>
+                    <h3 className="mt-5 text-2xl font-semibold tracking-[-0.04em] text-white">{feature.title}</h3>
+                    <p className="mt-3 max-w-[36ch] text-[15px] leading-7 text-white/58">{feature.body}</p>
                   </article>
                 ))}
               </div>
             </div>
           </section>
 
-          <section id="about" className="scroll-mt-28 pt-18">
-            <div className="rounded-[36px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl sm:p-8 lg:p-10">
-              <div className="max-w-[680px]">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                  About
-                </p>
-                <h2 className="mt-3 text-4xl font-black tracking-tight text-foreground">
-                  Mirror the system, not obscure it.
+          <section id="workflow" className="border-t border-white/10 px-4 py-20 sm:px-6 lg:px-8">
+            <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[18rem_1fr] lg:gap-16">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/40">Workflow</p>
+                <h2 className="mt-4 text-[clamp(2.4rem,5vw,4.2rem)] font-semibold leading-[0.98] tracking-[-0.07em] text-white">
+                  Built for
+                  <br />
+                  operational clarity
                 </h2>
               </div>
 
-              <div className="mt-8 grid gap-5 lg:grid-cols-3">
-                {principles.map((principle, index) => (
-                  <div
-                    key={principle}
-                    className="rounded-[28px] border border-white/8 bg-slate-950/28 px-5 py-5"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/34">
-                      Principle {index + 1}
-                    </p>
-                    <p className="mt-3 text-[15px] leading-7 text-white/68">{principle}</p>
-                  </div>
+              <div className="space-y-0">
+                {workflowItems.map((item, index) => (
+                  <article key={item.title} className="grid gap-5 border-b border-white/10 py-8 md:grid-cols-[4rem_1fr]">
+                    <div className="text-[11px] uppercase tracking-[0.24em] text-white/34">0{index + 1}</div>
+                    <div>
+                      <h3 className="text-[1.8rem] font-semibold leading-[1.02] tracking-[-0.05em] text-white">
+                        {item.title}
+                      </h3>
+                      <p className="mt-4 max-w-[44ch] text-[15px] leading-8 text-white/58">{item.body}</p>
+                    </div>
+                  </article>
                 ))}
               </div>
+            </div>
+          </section>
 
-              <div className="mt-8 flex flex-col gap-4 border-t border-white/8 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <p className="max-w-[44ch] text-sm leading-6 text-muted-foreground">
-                  Dashboard first, CLI when you need it.
+          <section id="security" className="border-t border-white/10 px-4 py-20 sm:px-6 lg:px-8">
+            <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+              <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-7">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/40">Security posture</p>
+                <h2 className="mt-4 max-w-[12ch] text-[clamp(2.4rem,4.8vw,4rem)] font-semibold leading-[0.98] tracking-[-0.07em] text-white">
+                  Everything in your control
+                </h2>
+                <p className="mt-5 max-w-[42ch] text-[15px] leading-8 text-white/58">
+                  Manage access, protection, reveal behavior, and audit visibility without relying on vague
+                  workspace abstractions.
                 </p>
-                <Link
-                  href="/login"
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-6 text-sm font-semibold text-background transition-transform hover:scale-[1.02]"
-                >
-                  Enter Hermit
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Link>
+              </div>
+
+              <div className="rounded-[28px] border border-white/10 bg-black/40 p-7">
+                <div className="space-y-4">
+                  {securityPoints.map((point) => (
+                    <div key={point} className="flex gap-3 border-b border-white/8 pb-4 last:border-b-0 last:pb-0">
+                      <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-white/72" />
+                      <p className="text-sm leading-7 text-white/62">{point}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
         </main>
+
+        <footer className="mt-12 border-t border-white/10 bg-[linear-gradient(180deg,#0b0b0d_0%,#11131a_100%)] px-4 pb-0 pt-10 sm:px-6 lg:px-8 lg:pt-8">
+          <div className="mx-auto max-w-7xl overflow-hidden min-h-[40rem] lg:min-h-[46rem]">
+            <div className="grid gap-12 lg:grid-cols-[1.1fr_1.3fr] lg:gap-16">
+              <div className="space-y-8">
+                <div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                    <Logo className="h-7 w-7 text-white" />
+                  </div>
+                  <p className="mt-6 text-[11px] uppercase tracking-[0.28em] text-white/38">Start now</p>
+                  <h2 className="mt-4 max-w-[11ch] text-[clamp(2.8rem,5vw,5.6rem)] font-semibold leading-[0.94] tracking-[-0.08em] text-white">
+                    Operate secrets with less friction
+                  </h2>
+                </div>
+
+                <div className="space-y-5">
+                  <p className="max-w-[34ch] text-[15px] leading-8 text-white/58">
+                    Hermit brings policy, hierarchy, reveal control, and audit together in a product surface that
+                    developers and operators can actually reason about.
+                  </p>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Link
+                      href="/login"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-black transition-transform duration-300 hover:-translate-y-0.5"
+                    >
+                      Get started
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href="#features"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/78 transition-colors hover:bg-white/[0.05] hover:text-white"
+                    >
+                      Learn more
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-10 sm:grid-cols-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/36">Product</p>
+                  <div className="mt-5 flex flex-col gap-4">
+                    <FooterLink href="#features" label="Features" />
+                    <FooterLink href="#workflow" label="Workflow" />
+                    <FooterLink href="#security" label="Security" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/36">Platform</p>
+                  <div className="mt-5 flex flex-col gap-4">
+                    <FooterLink href="/login" label="Dashboard" />
+                    <FooterLink href="/docs" label="Docs" />
+                    <FooterLink href="/invite" label="Invites" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/36">Company</p>
+                  <div className="mt-5 flex flex-col gap-4">
+                    <FooterLink href="/" label="Home" />
+                    <FooterLink href="/login" label="Get Started" />
+                    <FooterLink href="/dashboard" label="Workspace" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 flex min-h-[11rem] items-end pt-0 lg:min-h-[15rem]">
+              <p className="text-center text-[clamp(7rem,29vw,26rem)] font-semibold leading-none tracking-[-0.05em] text-white/95">
+                Hermit
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

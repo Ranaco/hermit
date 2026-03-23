@@ -1,0 +1,65 @@
+## IAM policy engine {#iam-policy-engine}
+
+Hermit uses a dynamic IAM policy engine instead of relying on fixed RBAC alone.
+
+Resources are identified by URNs such as:
+
+```text
+urn:hermit:org:{orgId}:vault:{vaultId}:secret:{secretId}
+```
+
+At request time, the API evaluates:
+
+- the action being attempted
+- the candidate resource URN
+- custom roles
+- attached policy documents
+- team role assignments
+- managed defaults
+
+Two rules are especially important:
+
+- **explicit `DENY` overrides `ALLOW`**
+- organization **`OWNER` bypasses policy evaluation**
+
+That makes the policy layer expressive enough for narrow vault-, folder-, or secret-scoped grants without turning
+the whole platform into a matrix of hardcoded role checks.
+
+## Three-tier protection {#three-tier-protection}
+
+Hermit protects secret material with three distinct levels:
+
+1. **Authentication only**
+2. **Vault-level password**
+3. **Secret-level password**
+
+The backend distinguishes these levels natively. The reveal route returns whether the caller needs the `vault` or
+`secret` password, and the web UI surfaces the correct challenge instead of a generic error.
+
+This model is important because it allows a vault to carry a broader protection rule while still letting an
+individual secret require stronger protection of its own.
+
+## Audit behavior {#audit-behavior}
+
+Auditability is part of the core platform, not an afterthought. Sensitive operations should leave a trail that makes
+operator behavior explainable later.
+
+Examples of important audited actions include:
+
+- secret reveal
+- key rotation
+- invitation and membership changes
+- one-time share creation
+
+The goal is not just compliance logging. It is to preserve operational context around sensitive activity.
+
+## Important constraints {#important-constraints}
+
+The current implementation carries a few architectural constraints that the docs should make explicit:
+
+- secret and key handling should not bypass the encryption service
+- Zod validation errors should be passed downstream correctly in Express rather than thrown in ways that crash async flow
+- vault and key creation flows should preserve **explicit parent selection**
+- reveal flows must preserve the distinction between vault and secret password requirements
+
+Those constraints are part of how Hermit stays correct under more complicated tenant and policy scenarios.

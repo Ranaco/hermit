@@ -21,16 +21,27 @@ const vaultService = createVaultService({
   token: config.vault.token,
   namespace: config.vault.namespace,
   transitMount: config.vault.transitMount,
+  requestTimeout: config.vault.requestTimeout,
+  skipVerify: config.vault.skipVerify,
   appRole: writeAppRole,
-} as any);
-
-const initializationPromise = (vaultService as any).initialize().catch((err: any) => {
-  console.error("Failed to initialize VaultService (AppRole token fetch)", err);
-  throw err;
 });
 
+let initializationPromise: Promise<void> | null = null;
+
+function getInitializationPromise(): Promise<void> {
+  if (!initializationPromise) {
+    initializationPromise = vaultService.initialize().catch((err: unknown) => {
+      initializationPromise = null;
+      console.error("Failed to initialize VaultService (AppRole token fetch)", err);
+      throw err;
+    });
+  }
+
+  return initializationPromise;
+}
+
 async function ensureVaultReady(): Promise<void> {
-  await initializationPromise;
+  await getInitializationPromise();
 }
 
 export async function encrypt(keyName: string, plaintext: string): Promise<string> {

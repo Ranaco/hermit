@@ -1,0 +1,81 @@
+## System boundaries {#system-boundaries}
+
+Hermit is a monorepo with a few clear responsibilities:
+
+- `apps/api`: the Express 4.x control plane API
+- `apps/web`: the main Next.js dashboard and public product surface
+- `apps/cli`: terminal-native workflows for operators and developers
+- `apps/hcv_engine`: Vault runtime integration
+- `packages/prisma`: schema and database client
+- `packages/vault-client`: Vault client abstraction
+
+The important system split is between **metadata/control** and **cryptographic execution**:
+
+- PostgreSQL + Prisma hold metadata, relationships, policy documents, memberships, and audit references
+- HashiCorp Vault transit handles encryption, decryption, and key rotation behavior
+
+<ArchitectureDiagram />
+
+## Entity model {#entity-model}
+
+Hermit’s main hierarchy is:
+
+```text
+Organization
+  -> Vault
+    -> Key
+    -> SecretGroup
+    -> Secret
+      -> SecretVersion
+```
+
+That hierarchy is not cosmetic. It affects:
+
+- UI creation flows
+- policy evaluation
+- CLI path resolution
+- auditability
+- secret sharing and reveal handling
+
+Important examples from the current implementation:
+
+- a **Vault** belongs to an organization
+- a **Key** belongs to a vault
+- a **Secret** belongs to a vault and is associated with a key
+- a **SecretVersion** stores encrypted value material and encryption context
+
+## Request flow {#request-flow}
+
+One of the most important request paths is secret reveal:
+
+1. user authenticates with the dashboard or CLI
+2. the API resolves the target resource and evaluates policy against the matching URN
+3. if access is allowed, the wrapper checks whether the secret requires:
+   - auth only
+   - vault password
+   - secret password
+4. password validation runs before any decrypt operation
+5. the API calls the encryption service and transit-backed wrapper logic
+6. the reveal is returned to the caller
+7. the operation is written to the audit stream
+
+This matters because the platform is built to preserve the reason something succeeded or failed, rather than
+collapsing every denied or challenged operation into the same experience.
+
+## Deployment shape {#deployment-shape}
+
+The production deploy stack is path-routed behind nginx:
+
+- `/` -> main web app
+- `/api/` -> Express API
+- `/health`, `/status` -> API health and status endpoints
+- `/docs/` -> dedicated docs app
+
+The API depends on:
+
+- PostgreSQL for metadata
+- HCV / Vault transit for crypto operations
+- mounted TLS assets in production
+
+Hermit’s production guidance also keeps Vault bootstrap and provisioning outside normal container startup. That split
+is deliberate: initialization, unseal, and credential provisioning are operator actions, not routine app boot steps.

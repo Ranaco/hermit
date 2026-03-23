@@ -1,0 +1,61 @@
+## Dashboard flows {#dashboard-flows}
+
+The dashboard is where most users experience the system hierarchy directly.
+
+Important current flows include:
+
+- onboarding and first organization creation
+- organization switching
+- vault creation with explicit organization selection
+- key creation with explicit vault selection
+- secret creation, versioning, and reveal
+- policy and custom role authoring
+- invitation creation and acceptance
+- one-time sharing
+
+The dashboard should mirror the system model rather than hiding it behind a single abstract workspace surface.
+
+## CLI role {#cli-role}
+
+The CLI exists for terminal-native workflows and automation. It is not a second-class wrapper around the web app.
+
+Current docs and update notes describe support for:
+
+- organization, vault, key, and secret commands
+- secret path and group-aware lookup
+- bulk injection with `hermit run`
+- CLI device enrollment and authenticated runtime use
+
+The CLI is especially important when teams need secrets in the runtime environment without writing them to disk.
+
+## Sharing and invites {#sharing-and-invites}
+
+Hermit supports two important collaboration paths:
+
+### Invitations
+
+Organization invitations are token-driven. If a user opens an invite while unauthenticated, the web app routes them
+through login and returns them to invite acceptance afterward.
+
+### One-time sharing
+
+Hermit can create externally consumable one-time share links for existing secrets or custom payloads. Shares can:
+
+- expire
+- require a passphrase
+- self-destruct after use
+- emit audit records when created
+
+This gives operators a controlled handoff path when the recipient should not need a normal account.
+
+## Runtime and deploy {#runtime-and-deploy}
+
+The runtime split matters in production:
+
+- Vault runtime startup should stay runtime-only
+- bootstrap and provisioning are separate operator workflows
+- wrapped AppRole inputs are preferred for production auth handoff
+- nginx fronts the public services and routes path-based traffic
+
+That split exists to keep deployment convenience from bleeding into the security model. The platform is easier to
+operate safely when bootstrap material, wrapped secrets, and runtime traffic are treated as different concerns.

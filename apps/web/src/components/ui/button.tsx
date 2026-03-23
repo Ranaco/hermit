@@ -5,24 +5,24 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border text-sm font-medium ring-offset-background transition-[color,background-color,border-color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-ring)_18%,transparent)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border-primary bg-primary text-primary-foreground hover:opacity-92",
+        default: "border-primary/90 bg-primary text-primary-foreground shadow-[0_12px_30px_-18px_color-mix(in_oklab,var(--color-primary)_55%,transparent)] hover:-translate-y-px hover:opacity-95",
         destructive:
-          "border-destructive bg-destructive text-primary-foreground hover:opacity-92",
+          "border-destructive bg-destructive text-primary-foreground shadow-[0_12px_30px_-18px_rgba(220,38,38,0.45)] hover:-translate-y-px hover:opacity-95",
         outline:
-          "border-border bg-background text-foreground hover:bg-muted",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-muted",
-        ghost: "border-transparent bg-transparent text-foreground hover:bg-muted",
+          "border-border bg-background/92 text-foreground shadow-[0_8px_24px_-20px_rgba(15,23,42,0.22)] hover:bg-muted/55",
+        secondary: "border-border/70 bg-secondary text-secondary-foreground shadow-[0_8px_24px_-20px_rgba(15,23,42,0.2)] hover:bg-muted/70",
+        ghost: "border-transparent bg-transparent text-foreground hover:bg-muted/70",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-8 rounded-[8px] px-3 text-xs",
-        lg: "h-11 rounded-[12px] px-6 text-base",
-        icon: "h-10 w-10 rounded-[10px]",
+        sm: "h-9 rounded-[10px] px-3.5 text-xs",
+        lg: "h-11 rounded-[14px] px-6 text-base",
+        icon: "h-10 w-10 rounded-[12px]",
       },
     },
     defaultVariants: {

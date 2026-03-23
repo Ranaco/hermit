@@ -79,7 +79,7 @@ function Combobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-10 w-full justify-between rounded-[10px] border-input bg-background px-3 text-left text-sm font-medium text-foreground transition focus-visible:ring-2 focus-visible:ring-ring",
+            "h-11 w-full justify-between rounded-[14px] border-input/85 bg-background/92 px-3.5 text-left text-sm font-medium text-foreground",
             !selectedItem && "text-muted-foreground",
             triggerClassName
           )}

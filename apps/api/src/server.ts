@@ -165,6 +165,7 @@ async function checkVaultConnection(): Promise<boolean> {
       namespace: config.vault.namespace,
       transitMount: config.vault.transitMount,
       requestTimeout: config.vault.requestTimeout,
+      skipVerify: config.vault.skipVerify,
       appRole: createWriteAppRoleConfig(),
     });
 
