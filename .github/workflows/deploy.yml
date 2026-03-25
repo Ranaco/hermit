@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   detect-changes:
@@ -203,11 +203,12 @@ jobs:
           WEB_CHANGED: ${{ needs.detect-changes.outputs.web_changed }}
           DOCS_CHANGED: ${{ needs.detect-changes.outputs.docs_changed }}
           DEPLOY_ASSETS_CHANGED: ${{ needs.detect-changes.outputs.deploy_assets_changed }}
+          GHCR_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: API_CHANGED,WEB_CHANGED,DOCS_CHANGED,DEPLOY_ASSETS_CHANGED
+          envs: API_CHANGED,WEB_CHANGED,DOCS_CHANGED,DEPLOY_ASSETS_CHANGED,GHCR_TOKEN
           script: |
             set -euo pipefail
             cd /deploy/hermit
@@ -221,7 +222,7 @@ jobs:
             touch .env.runtime
             chmod 600 .env.runtime
 
-            echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
 
             if [ "${API_CHANGED}" = "true" ]; then
               changed_services+=(api)
@@ -322,7 +323,7 @@ jobs:
             docker compose "${compose_args[@]}" up -d certbot
 
             health_attempts=0
-            until curl -kfsS https://127.0.0.1/health > /dev/null; do
+            until curl -fsS http://127.0.0.1/health > /dev/null; do
               health_attempts=$((health_attempts + 1))
               if [ "$health_attempts" -ge 12 ]; then
                 echo "HTTPS health check did not succeed in time." >&2
