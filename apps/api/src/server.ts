@@ -18,7 +18,7 @@ import {
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
-import { createVaultService } from "@hermit/vault-client";
+import { checkHealth as checkEncryptionHealth } from "./services/encryption.service";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -31,16 +31,6 @@ import secretGroupRoutes from "./routes/secret-group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
-
-const createWriteAppRoleConfig = (): any =>
-  config.vault.appRole.writeRoleId &&
-  (config.vault.appRole.writeSecretId || config.vault.appRole.writeWrappedSecretId)
-    ? {
-        roleId: config.vault.appRole.writeRoleId,
-        secretId: config.vault.appRole.writeSecretId || undefined,
-        wrappedSecretId: config.vault.appRole.writeWrappedSecretId || undefined,
-      }
-    : undefined;
 
 /**
  * Create and configure Express application
@@ -159,17 +149,8 @@ export const createServer = (): Express => {
  */
 async function checkVaultConnection(): Promise<boolean> {
   try {
-    const vaultService = createVaultService({
-      endpoint: config.vault.endpoint,
-      token: config.vault.token,
-      namespace: config.vault.namespace,
-      transitMount: config.vault.transitMount,
-      requestTimeout: config.vault.requestTimeout,
-      skipVerify: config.vault.skipVerify,
-      appRole: createWriteAppRoleConfig(),
-    });
-
-    return await vaultService.testConnection();
+    await checkEncryptionHealth();
+    return true;
   } catch (error) {
     log.error("Vault connection check failed", { error });
     return false;
