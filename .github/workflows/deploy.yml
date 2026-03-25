@@ -28,6 +28,10 @@ jobs:
             image: ghcr.io/ranaco/hermit-web
             context: .
             dockerfile: ./apps/web/Dockerfile
+          - service: docs
+            image: ghcr.io/ranaco/hermit-docs
+            context: .
+            dockerfile: ./apps/docs/Dockerfile
           - service: hcv
             image: ghcr.io/ranaco/hermit-hcv
             context: ./apps/hcv_engine
