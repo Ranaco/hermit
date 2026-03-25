@@ -1,5 +1,11 @@
 # @hermit-kms/cli
 
+## 0.5.2
+
+### Patch Changes
+
+- c9f0cd7: Prevent the CLI from crashing on startup when the local encrypted auth store is corrupted, and add regression coverage for default invocation startup behavior.
+
 ## 0.5.1
 
 ### Patch Changes
