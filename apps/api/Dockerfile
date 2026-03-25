@@ -71,4 +71,4 @@ RUN ln -s /app/node_modules ./node_modules
 
 EXPOSE 5001
 
-CMD ["sh", "-c", "npx prisma migrate deploy --schema /app/packages/prisma/schema.prisma && node dist/index.cjs"]
+CMD ["node", "dist/index.cjs"]
