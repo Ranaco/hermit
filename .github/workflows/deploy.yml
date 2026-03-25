@@ -31,23 +31,34 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Detect changed paths
         id: changes
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
           target_sha='${{ github.event.workflow_run.head_sha || github.sha }}'
 
-          if ! git rev-parse "${target_sha}^" >/dev/null 2>&1; then
+          # Find the SHA of the last successful deploy so we diff all commits
+          # since then, not just the single HEAD commit. This handles batched pushes
+          # where multiple commits land in one CI run.
+          prev_sha="$(gh api "repos/${{ github.repository }}/actions/workflows/deploy.yml/runs" \
+            --jq --arg sha "$target_sha" \
+            '[.workflow_runs[] | select(.conclusion == "success" and .head_sha != $sha)] | .[0].head_sha' \
+            2>/dev/null || true)"
+
+          if [[ -z "$prev_sha" || "$prev_sha" == "null" ]]; then
+            # No previous successful deploy — treat as first run, list all files
             changed_files="$(git ls-tree -r --name-only "$target_sha")"
           else
-            changed_files="$(git diff --name-only "${target_sha}^" "$target_sha")"
+            changed_files="$(git diff --name-only "$prev_sha" "$target_sha")"
           fi
 
-          printf 'Changed files for %s:\n%s\n' "$target_sha" "$changed_files"
+          printf 'Changed files for %s (since %s):\n%s\n' "$target_sha" "${prev_sha:-<none>}" "$changed_files"
 
           matches() {
             local path
