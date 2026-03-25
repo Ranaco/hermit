@@ -79,6 +79,9 @@ jobs:
           script: |
             set -euo pipefail
             cd /deploy/hermit
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
 
             image_tag='${{ github.event.workflow_run.head_sha || github.sha }}'
             compose_args=(--env-file .env.production --env-file .env.release -f docker-compose.deploy.yml)
