@@ -12,9 +12,128 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: Detect Changed Services
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    outputs:
+      build_matrix: ${{ steps.changes.outputs.build_matrix }}
+      requires_deploy: ${{ steps.changes.outputs.requires_deploy }}
+      api_changed: ${{ steps.changes.outputs.api_changed }}
+      web_changed: ${{ steps.changes.outputs.web_changed }}
+      docs_changed: ${{ steps.changes.outputs.docs_changed }}
+      hcv_changed: ${{ steps.changes.outputs.hcv_changed }}
+      deploy_assets_changed: ${{ steps.changes.outputs.deploy_assets_changed }}
+
+    steps:
+      - name: Checkout the exact commit that passed CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Detect changed paths
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          target_sha='${{ github.event.workflow_run.head_sha || github.sha }}'
+
+          if ! git rev-parse "${target_sha}^" >/dev/null 2>&1; then
+            changed_files="$(git ls-tree -r --name-only "$target_sha")"
+          else
+            changed_files="$(git diff --name-only "${target_sha}^" "$target_sha")"
+          fi
+
+          printf 'Changed files for %s:\n%s\n' "$target_sha" "$changed_files"
+
+          matches() {
+            local path
+            while IFS= read -r path; do
+              [[ -z "$path" ]] && continue
+              if printf '%s\n' "$changed_files" | grep -Eq "$path"; then
+                return 0
+              fi
+            done <<'EOF'
+          ^package\.json$
+          ^package-lock\.json$
+          ^turbo\.json$
+          ^apps/api/
+          ^packages/
+          EOF
+            return 1
+          }
+
+          api_changed=false
+          web_changed=false
+          docs_changed=false
+          hcv_changed=false
+          deploy_assets_changed=false
+
+          if matches; then
+            api_changed=true
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(package\.json|package-lock\.json|turbo\.json|apps/web/|packages/)'; then
+            web_changed=true
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(package\.json|package-lock\.json|turbo\.json|apps/docs/|packages/)'; then
+            docs_changed=true
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^apps/hcv_engine/'; then
+            hcv_changed=true
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(docker-compose\.deploy\.yml|deploy\.sh|nginx/conf\.d/hermit\.conf\.template)$'; then
+            deploy_assets_changed=true
+          fi
+
+          entries=()
+
+          if [[ "$api_changed" == "true" ]]; then
+            entries+=('{"service":"api","image":"ghcr.io/ranaco/hermit-api","context":".","dockerfile":"./apps/api/Dockerfile"}')
+          fi
+
+          if [[ "$web_changed" == "true" ]]; then
+            entries+=('{"service":"web","image":"ghcr.io/ranaco/hermit-web","context":".","dockerfile":"./apps/web/Dockerfile"}')
+          fi
+
+          if [[ "$docs_changed" == "true" ]]; then
+            entries+=('{"service":"docs","image":"ghcr.io/ranaco/hermit-docs","context":".","dockerfile":"./apps/docs/Dockerfile"}')
+          fi
+
+          if [[ "$hcv_changed" == "true" ]]; then
+            entries+=('{"service":"hcv","image":"ghcr.io/ranaco/hermit-hcv","context":"./apps/hcv_engine","dockerfile":"./apps/hcv_engine/Dockerfile"}')
+          fi
+
+          build_matrix='[]'
+          if [[ ${#entries[@]} -gt 0 ]]; then
+            build_matrix="$(printf '%s\n' "${entries[@]}" | jq -s -c '.')"
+          fi
+
+          requires_deploy=false
+          if [[ "$api_changed" == "true" || "$web_changed" == "true" || "$docs_changed" == "true" || "$deploy_assets_changed" == "true" ]]; then
+            requires_deploy=true
+          fi
+
+          {
+            echo "build_matrix=$build_matrix"
+            echo "requires_deploy=$requires_deploy"
+            echo "api_changed=$api_changed"
+            echo "web_changed=$web_changed"
+            echo "docs_changed=$docs_changed"
+            echo "hcv_changed=$hcv_changed"
+            echo "deploy_assets_changed=$deploy_assets_changed"
+          } >> "$GITHUB_OUTPUT"
+
   build-images:
     name: Build and Push Images
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.build_matrix != '[]' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -23,23 +142,7 @@ jobs:
 
     strategy:
       matrix:
-        include:
-          - service: api
-            image: ghcr.io/ranaco/hermit-api
-            context: .
-            dockerfile: ./apps/api/Dockerfile
-          - service: web
-            image: ghcr.io/ranaco/hermit-web
-            context: .
-            dockerfile: ./apps/web/Dockerfile
-          - service: docs
-            image: ghcr.io/ranaco/hermit-docs
-            context: .
-            dockerfile: ./apps/docs/Dockerfile
-          - service: hcv
-            image: ghcr.io/ranaco/hermit-hcv
-            context: ./apps/hcv_engine
-            dockerfile: ./apps/hcv_engine/Dockerfile
+        include: ${{ fromJSON(needs.detect-changes.outputs.build_matrix) }}
 
     steps:
       - name: Checkout the exact commit that passed CI
@@ -71,7 +174,10 @@ jobs:
   deploy:
     name: Deploy on VPS
     runs-on: ubuntu-latest
-    needs: build-images
+    needs:
+      - detect-changes
+      - build-images
+    if: ${{ always() && needs.detect-changes.outputs.requires_deploy == 'true' && (needs.build-images.result == 'success' || needs.build-images.result == 'skipped') }}
 
     steps:
       - name: Checkout the exact commit that passed CI
@@ -92,10 +198,16 @@ jobs:
 
       - name: Deploy release
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          API_CHANGED: ${{ needs.detect-changes.outputs.api_changed }}
+          WEB_CHANGED: ${{ needs.detect-changes.outputs.web_changed }}
+          DOCS_CHANGED: ${{ needs.detect-changes.outputs.docs_changed }}
+          DEPLOY_ASSETS_CHANGED: ${{ needs.detect-changes.outputs.deploy_assets_changed }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: API_CHANGED,WEB_CHANGED,DOCS_CHANGED,DEPLOY_ASSETS_CHANGED
           script: |
             set -euo pipefail
             cd /deploy/hermit
@@ -103,6 +215,7 @@ jobs:
             image_tag='${{ github.event.workflow_run.head_sha || github.sha }}'
             compose_args=(--project-name hermit --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml)
             vault_status=""
+            changed_services=()
 
             printf 'IMAGE_TAG=%s\n' "$image_tag" > .env.release
             touch .env.runtime
@@ -110,74 +223,102 @@ jobs:
 
             echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
 
+            if [ "${API_CHANGED}" = "true" ]; then
+              changed_services+=(api)
+            fi
+            if [ "${WEB_CHANGED}" = "true" ]; then
+              changed_services+=(web)
+            fi
+            if [ "${DOCS_CHANGED}" = "true" ]; then
+              changed_services+=(docs)
+            fi
+
             vault_status_attempts=0
             hcv_container_id="$(docker compose "${compose_args[@]}" ps -q hcv || true)"
 
-            pull_attempts=0
-            until docker compose "${compose_args[@]}" pull api web docs; do
-              pull_attempts=$((pull_attempts + 1))
-              if [ "$pull_attempts" -ge 3 ]; then
-                echo "Docker pull failed after ${pull_attempts} attempts." >&2
-                docker info >&2 || true
-                docker system df >&2 || true
-                exit 1
-              fi
-              echo "Docker pull failed; retrying in 5 seconds (attempt $((pull_attempts + 1))/3)..." >&2
-              sleep 5
-            done
+            if [ "${#changed_services[@]}" -gt 0 ]; then
+              pull_attempts=0
+              until docker compose "${compose_args[@]}" pull "${changed_services[@]}"; do
+                pull_attempts=$((pull_attempts + 1))
+                if [ "$pull_attempts" -ge 3 ]; then
+                  echo "Docker pull failed after ${pull_attempts} attempts." >&2
+                  docker info >&2 || true
+                  docker system df >&2 || true
+                  exit 1
+                fi
+                echo "Docker pull failed; retrying in 5 seconds (attempt $((pull_attempts + 1))/3)..." >&2
+                sleep 5
+              done
+            fi
 
             docker compose "${compose_args[@]}" up -d db
             if [ -z "$hcv_container_id" ]; then
               docker compose "${compose_args[@]}" up -d hcv
             fi
 
-            until vault_status="$(docker compose "${compose_args[@]}" exec -T hcv vault status -format=json 2>/dev/null || true)"; [ -n "$vault_status" ]; do
-              vault_status_attempts=$((vault_status_attempts + 1))
-              if [ "$vault_status_attempts" -ge 24 ]; then
+            if [ "${API_CHANGED}" = "true" ]; then
+              until vault_status="$(docker compose "${compose_args[@]}" exec -T hcv vault status -format=json 2>/dev/null || true)"; [ -n "$vault_status" ]; do
+                vault_status_attempts=$((vault_status_attempts + 1))
+                if [ "$vault_status_attempts" -ge 24 ]; then
+                  echo "Unable to query Vault status after startup" >&2
+                  docker compose "${compose_args[@]}" logs --tail=100 hcv >&2 || true
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              if [ -z "$vault_status" ]; then
                 echo "Unable to query Vault status after startup" >&2
-                docker compose "${compose_args[@]}" logs --tail=100 hcv >&2 || true
                 exit 1
               fi
-              sleep 5
-            done
-
-            if [ -z "$vault_status" ]; then
-              echo "Unable to query Vault status after startup" >&2
-              exit 1
-            fi
-            if ! printf '%s' "$vault_status" | jq -e '.initialized == true' >/dev/null; then
-              echo "Vault is not initialized. Run operator bootstrap on the VPS before automatic deployments continue." >&2
-              exit 1
-            fi
-            if printf '%s' "$vault_status" | jq -e '.sealed == true' >/dev/null; then
-              echo "Vault is sealed. Unseal it or enable auto-unseal before automatic deployments continue." >&2
-              exit 1
-            fi
-
-            bash ./deploy.sh --refresh-runtime-vault-env
-            docker compose "${compose_args[@]}" rm -sf api || true
-            docker compose "${compose_args[@]}" up -d --no-deps api
-            api_container_id="$(docker compose "${compose_args[@]}" ps -q api)"
-            if [ -z "$api_container_id" ]; then
-              echo "API container was not created." >&2
-              exit 1
-            fi
-
-            api_wait_attempts=0
-            until [ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$api_container_id")" = "healthy" ]; do
-              api_wait_attempts=$((api_wait_attempts + 1))
-              if [ "$api_wait_attempts" -ge 24 ]; then
-                echo "API container did not become healthy in time." >&2
-                docker compose "${compose_args[@]}" logs --tail=200 api >&2 || true
+              if ! printf '%s' "$vault_status" | jq -e '.initialized == true' >/dev/null; then
+                echo "Vault is not initialized. Run operator bootstrap on the VPS before automatic deployments continue." >&2
                 exit 1
               fi
-              sleep 5
-            done
+              if printf '%s' "$vault_status" | jq -e '.sealed == true' >/dev/null; then
+                echo "Vault is sealed. Unseal it or enable auto-unseal before automatic deployments continue." >&2
+                exit 1
+              fi
 
-            docker compose "${compose_args[@]}" rm -sf web docs || true
-            docker compose "${compose_args[@]}" up -d --no-deps web docs
-            docker compose "${compose_args[@]}" exec -T nginx nginx -s reload || docker compose "${compose_args[@]}" up -d --force-recreate --no-deps nginx
-            docker compose "${compose_args[@]}" exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
+              bash ./deploy.sh --refresh-runtime-vault-env
+              docker compose "${compose_args[@]}" rm -sf api || true
+              docker compose "${compose_args[@]}" up -d --no-deps api
+              api_container_id="$(docker compose "${compose_args[@]}" ps -q api)"
+              if [ -z "$api_container_id" ]; then
+                echo "API container was not created." >&2
+                exit 1
+              fi
+
+              api_wait_attempts=0
+              until [ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$api_container_id")" = "healthy" ]; do
+                api_wait_attempts=$((api_wait_attempts + 1))
+                if [ "$api_wait_attempts" -ge 24 ]; then
+                  echo "API container did not become healthy in time." >&2
+                  docker compose "${compose_args[@]}" logs --tail=200 api >&2 || true
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              docker compose "${compose_args[@]}" exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
+            fi
+
+            if [ "${WEB_CHANGED}" = "true" ] || [ "${DOCS_CHANGED}" = "true" ]; then
+              restart_services=()
+              if [ "${WEB_CHANGED}" = "true" ]; then
+                restart_services+=(web)
+              fi
+              if [ "${DOCS_CHANGED}" = "true" ]; then
+                restart_services+=(docs)
+              fi
+              docker compose "${compose_args[@]}" rm -sf "${restart_services[@]}" || true
+              docker compose "${compose_args[@]}" up -d --no-deps "${restart_services[@]}"
+            fi
+
+            if [ "${DEPLOY_ASSETS_CHANGED}" = "true" ] || [ "${#changed_services[@]}" -gt 0 ]; then
+              docker compose "${compose_args[@]}" exec -T nginx nginx -s reload || docker compose "${compose_args[@]}" up -d --force-recreate --no-deps nginx
+            fi
+
             docker compose "${compose_args[@]}" up -d certbot
 
             health_attempts=0
