@@ -313,6 +313,34 @@ await test("cli integration", { concurrency: 1 }, async (t) => {
     await fs.rm(isolatedRoot, { recursive: true, force: true });
   });
 
+  await t.test("default invocation does not depend on a readable auth store", async () => {
+    const isolatedRoot = await fs.mkdtemp(path.join(os.tmpdir(), "hermit-cli-default-test-"));
+    const isolatedEnv = {
+      ...baseEnv,
+      APPDATA: isolatedRoot,
+      LOCALAPPDATA: isolatedRoot,
+      USERPROFILE: isolatedRoot,
+      HOME: isolatedRoot,
+    };
+
+    const bootstrapResult = await runCli(
+      ["login", "-s", fakeServer.baseUrl, "-e", "bootstrap2@example.com", "-p", "secret", "--json"],
+      { env: isolatedEnv },
+    );
+    assert.equal(bootstrapResult.code, 0, bootstrapResult.stderr);
+
+    const resolvedConfigFiles = await findFiles(isolatedRoot, "config.json");
+    assert.equal(resolvedConfigFiles.length >= 1, true);
+    await fs.writeFile(resolvedConfigFiles[0], "not-json-and-not-decryptable", "utf8");
+
+    const result = await runCli([], { env: isolatedEnv });
+    assert.equal([0, 1].includes(result.code), true, result.stderr);
+    assert.match(result.stdout || result.stderr, /Usage: hermit/i);
+    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /SyntaxError: Unexpected token/i);
+
+    await fs.rm(isolatedRoot, { recursive: true, force: true });
+  });
+
   await t.test("nested auth login also succeeds and persists authenticated status", async () => {
     const loginResult = await runCli(
       ["auth", "login", "-s", fakeServer.baseUrl, "-e", "user2@example.com", "-p", "secret", "--json"],

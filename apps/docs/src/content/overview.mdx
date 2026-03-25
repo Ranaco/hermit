@@ -1,4 +1,4 @@
-## Why Hermit exists {#why-hermit-exists}
+<h2 id="why-hermit-exists">Why Hermit exists</h2>
 
 Hermit exists because secret operations tend to fail in two ways at once:
 
@@ -12,7 +12,7 @@ operations with a metadata and policy layer that preserves the real hierarchy of
   Hermit is not trying to hide complexity. It is trying to organize it so operators can reason about it safely.
 </Callout>
 
-## What Hermit contains {#what-hermit-contains}
+<h2 id="what-hermit-contains">What Hermit contains</h2>
 
 At a platform level, Hermit combines several concerns that are often split across separate tools:
 
@@ -29,9 +29,9 @@ At a platform level, Hermit combines several concerns that are often split acros
 The result is a system where secret storage, permission evaluation, reveal controls, and day-to-day operator work
 all live in one model instead of being spread across unrelated layers.
 
-## Core ideas {#core-ideas}
+<h2 id="core-ideas">Core ideas</h2>
 
-Three ideas drive most of Hermit’s architecture:
+Three ideas drive most of Hermit's architecture:
 
 ### 1. Organization-first hierarchy
 
@@ -48,7 +48,7 @@ team role assignments, and managed defaults when a request is actually made.
 Some actions only require authentication. Some require a vault password. Some require a secret-specific password.
 The platform preserves those distinctions all the way through the reveal flow.
 
-## When to use it {#when-to-use-it}
+<h2 id="when-to-use-it">When to use it</h2>
 
 Hermit is a fit when teams need a platform that can explain:
 

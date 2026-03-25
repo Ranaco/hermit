@@ -1,0 +1,561 @@
+openapi: 3.1.0
+info:
+  title: Hermit API
+  version: 1.0.0
+  summary: Current Hermit control-plane API surface.
+servers:
+  - url: https://hermit.ranax.co
+tags:
+  - { name: System }
+  - { name: Authentication }
+  - { name: Users }
+  - { name: Organizations }
+  - { name: Vaults }
+  - { name: Secret Groups }
+  - { name: Keys }
+  - { name: Secrets }
+  - { name: Shares }
+  - { name: Onboarding }
+  - { name: Audit }
+paths:
+  /health:
+    get: { tags: [System], summary: Get basic API health. }
+  /status:
+    get: { tags: [System], summary: Get detailed API, database, and Vault status. }
+  /api/info:
+    get: { tags: [System], summary: Get API metadata and feature flags. }
+  /api/auth/register:
+    post: { tags: [Authentication], summary: Register a user. }
+  /api/auth/login:
+    post: { tags: [Authentication], summary: Log in and issue access and refresh tokens. }
+  /api/auth/refresh:
+    post: { tags: [Authentication], summary: Refresh an access token. }
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Log out and invalidate the current refresh token.
+      security: [{ bearerAuth: [] }]
+  /api/auth/mfa/setup:
+    post:
+      tags: [Authentication]
+      summary: Start MFA setup.
+      security: [{ bearerAuth: [] }]
+  /api/auth/mfa/enable:
+    post:
+      tags: [Authentication]
+      summary: Enable MFA with a verification token.
+      security: [{ bearerAuth: [] }]
+  /api/auth/mfa/disable:
+    post:
+      tags: [Authentication]
+      summary: Disable MFA.
+      security: [{ bearerAuth: [] }]
+  /api/auth/devices:
+    get:
+      tags: [Authentication]
+      summary: List trusted devices for the current user.
+      security: [{ bearerAuth: [] }]
+  /api/auth/devices/{id}:
+    delete:
+      tags: [Authentication]
+      summary: Remove a trusted device.
+      security: [{ bearerAuth: [] }]
+  /api/auth/cli/enroll:
+    post:
+      tags: [Authentication]
+      summary: Enroll the current authenticated device as an official CLI device.
+      security: [{ bearerAuth: [] }]
+  /api/users/password/reset-request:
+    post: { tags: [Users], summary: Request a password reset. }
+  /api/users/password/reset:
+    post: { tags: [Users], summary: Reset a password with a token. }
+  /api/users/verify-email:
+    post: { tags: [Users], summary: Verify an email token. }
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get the current user profile.
+      security: [{ bearerAuth: [] }]
+    patch:
+      tags: [Users]
+      summary: Update the current user profile.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Users]
+      summary: Delete the current user account.
+      security: [{ bearerAuth: [] }]
+  /api/users/me/password:
+    post:
+      tags: [Users]
+      summary: Change the current password.
+      security: [{ bearerAuth: [] }]
+  /api/users/resend-verification:
+    post:
+      tags: [Users]
+      summary: Resend verification email for the current user.
+      security: [{ bearerAuth: [] }]
+  /api/organizations:
+    get:
+      tags: [Organizations]
+      summary: List organizations.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Organizations]
+      summary: Create an organization.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/invitations/mine:
+    get:
+      tags: [Organizations]
+      summary: List invitations for the current user.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/invitations/accept:
+    post:
+      tags: [Organizations]
+      summary: Accept an invitation token.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}:
+    get:
+      tags: [Organizations]
+      summary: Get an organization.
+      security: [{ bearerAuth: [] }]
+    patch:
+      tags: [Organizations]
+      summary: Update an organization.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Organizations]
+      summary: Delete an organization.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/members:
+    get:
+      tags: [Organizations]
+      summary: List organization members.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/invitations:
+    get:
+      tags: [Organizations]
+      summary: List organization invitations.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Organizations]
+      summary: Create an organization invitation.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/invitations/{invitationId}:
+    delete:
+      tags: [Organizations]
+      summary: Revoke an invitation.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/members/{userId}:
+    patch:
+      tags: [Organizations]
+      summary: Update a member role.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Organizations]
+      summary: Remove a member.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/teams:
+    get:
+      tags: [Organizations]
+      summary: List teams.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Organizations]
+      summary: Create a team.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/teams/{teamId}:
+    patch:
+      tags: [Organizations]
+      summary: Update a team.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Organizations]
+      summary: Delete a team.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/teams/{teamId}/members:
+    post:
+      tags: [Organizations]
+      summary: Add a team member.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/teams/{teamId}/members/{userId}:
+    delete:
+      tags: [Organizations]
+      summary: Remove a team member.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/graph:
+    get:
+      tags: [Organizations]
+      summary: Get the organization access graph.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{id}/graph/access:
+    get:
+      tags: [Organizations]
+      summary: Query graph-derived access.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/policies:
+    get:
+      tags: [Organizations]
+      summary: List IAM policies.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Organizations]
+      summary: Create an IAM policy.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/policies/{policyId}:
+    put:
+      tags: [Organizations]
+      summary: Update an IAM policy.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Organizations]
+      summary: Delete an IAM policy.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/roles:
+    get:
+      tags: [Organizations]
+      summary: List custom roles.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Organizations]
+      summary: Create a custom role.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/roles/{roleId}:
+    put:
+      tags: [Organizations]
+      summary: Update a custom role.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/members/{memberId}/roles:
+    put:
+      tags: [Organizations]
+      summary: Assign roles to a member.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/teams/{teamId}/roles:
+    get:
+      tags: [Organizations]
+      summary: List team role attachments.
+      security: [{ bearerAuth: [] }]
+    put:
+      tags: [Organizations]
+      summary: Assign roles to a team.
+      security: [{ bearerAuth: [] }]
+  /api/organizations/{orgId}/teams/{teamId}/roles/{roleId}:
+    delete:
+      tags: [Organizations]
+      summary: Remove a role from a team.
+      security: [{ bearerAuth: [] }]
+  /api/vaults:
+    get:
+      tags: [Vaults]
+      summary: List vaults.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Vaults]
+      summary: Create a vault.
+      security: [{ bearerAuth: [] }]
+  /api/vaults/{id}:
+    get:
+      tags: [Vaults]
+      summary: Get a vault.
+      security: [{ bearerAuth: [] }]
+    patch:
+      tags: [Vaults]
+      summary: Update a vault.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Vaults]
+      summary: Delete a vault.
+      security: [{ bearerAuth: [] }]
+  /api/vaults/{vaultId}/groups:
+    get:
+      tags: [Secret Groups]
+      summary: List secret groups in a vault.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Secret Groups]
+      summary: Create a secret group.
+      security: [{ bearerAuth: [] }]
+  /api/vaults/{vaultId}/groups/{groupId}:
+    put:
+      tags: [Secret Groups]
+      summary: Update a secret group.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Secret Groups]
+      summary: Delete a secret group.
+      security: [{ bearerAuth: [] }]
+  /api/keys:
+    get:
+      tags: [Keys]
+      summary: List keys in a vault.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Keys]
+      summary: Create a key.
+      security: [{ bearerAuth: [] }]
+  /api/keys/{id}:
+    get:
+      tags: [Keys]
+      summary: Get a key.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Keys]
+      summary: Delete a key.
+      security: [{ bearerAuth: [] }]
+  /api/keys/{id}/rotate:
+    post:
+      tags: [Keys]
+      summary: Rotate a key.
+      security: [{ bearerAuth: [] }]
+  /api/keys/{id}/encrypt:
+    post:
+      tags: [Keys]
+      summary: Encrypt data with a key.
+      security: [{ bearerAuth: [] }]
+  /api/keys/{id}/decrypt:
+    post:
+      tags: [Keys]
+      summary: Decrypt data with a key.
+      security: [{ bearerAuth: [] }]
+  /api/keys/{id}/encrypt/batch:
+    post:
+      tags: [Keys]
+      summary: Batch-encrypt values with a key.
+      security: [{ bearerAuth: [] }]
+  /api/keys/{id}/decrypt/batch:
+    post:
+      tags: [Keys]
+      summary: Batch-decrypt values with a key.
+      security: [{ bearerAuth: [] }]
+  /api/secrets:
+    get:
+      tags: [Secrets]
+      summary: List secrets.
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Secrets]
+      summary: Create a secret.
+      security: [{ bearerAuth: [] }]
+  /api/secrets/bulk-reveal:
+    post:
+      tags: [Secrets]
+      summary: Reveal multiple secrets.
+      security: [{ bearerAuth: [] }]
+  /api/secrets/cli/bulk-reveal:
+    post:
+      tags: [Secrets]
+      summary: Reveal multiple secrets through the official CLI path.
+      security:
+        - bearerAuth: []
+          cliSignature: []
+  /api/secrets/{id}:
+    get:
+      tags: [Secrets]
+      summary: Get secret metadata.
+      security: [{ bearerAuth: [] }]
+    put:
+      tags: [Secrets]
+      summary: Update a secret and create a new version.
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Secrets]
+      summary: Delete a secret.
+      security: [{ bearerAuth: [] }]
+  /api/secrets/{id}/reveal:
+    options:
+      tags: [Secrets]
+      summary: Preflight support for reveal clients.
+    post:
+      tags: [Secrets]
+      summary: Reveal a secret.
+      security: [{ bearerAuth: [] }]
+  /api/secrets/{id}/cli-reveal:
+    post:
+      tags: [Secrets]
+      summary: Reveal a secret through the official CLI path.
+      security:
+        - bearerAuth: []
+          cliSignature: []
+  /api/secrets/{id}/versions:
+    get:
+      tags: [Secrets]
+      summary: List secret versions.
+      security: [{ bearerAuth: [] }]
+  /api/secrets/{id}/current-version:
+    post:
+      tags: [Secrets]
+      summary: Update the current secret version pointer.
+      security: [{ bearerAuth: [] }]
+  /api/onboarding/status:
+    get:
+      tags: [Onboarding]
+      summary: Get onboarding status.
+      security: [{ bearerAuth: [] }]
+  /api/onboarding/organization:
+    post:
+      tags: [Onboarding]
+      summary: Create the first organization.
+      security: [{ bearerAuth: [] }]
+  /api/onboarding/complete:
+    post:
+      tags: [Onboarding]
+      summary: Mark onboarding complete.
+      security: [{ bearerAuth: [] }]
+  /api/audit:
+    get:
+      tags: [Audit]
+      summary: Query audit logs.
+      security: [{ bearerAuth: [] }]
+  /api/shares:
+    post:
+      tags: [Shares]
+      summary: Create a one-time share.
+      security: [{ bearerAuth: [] }]
+  /api/shares/{token}:
+    get:
+      tags: [Shares]
+      summary: Get public share metadata.
+  /api/shares/{token}/consume:
+    post:
+      tags: [Shares]
+      summary: Consume a one-time share.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cliSignature:
+      type: apiKey
+      in: header
+      name: X-Hermit-Signature
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    OrgIdPath:
+      name: orgId
+      in: path
+      required: true
+      schema: { type: string }
+    VaultIdPath:
+      name: vaultId
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    GenericSuccess:
+      description: Successful response envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SuccessEnvelope"
+    CreatedSuccess:
+      description: Successful creation envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SuccessEnvelope"
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: array
+              items: {}
+        message:
+          type: string
+      required: [success]
+    ErrorEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+        error: { type: string }
+        code: { type: string }
+        message: { type: string }
+      required: [success]
+    RevealChallengeEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+        error: { type: string }
+        requiresPassword:
+          type: string
+          enum: [vault, secret]
+      required: [success, error, requiresPassword]
+    RegisterRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    LoginRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken: { type: string }
+    CliEnrollRequest:
+      type: object
+      properties:
+        cliPublicKey: { type: string }
+        hardwareFingerprint: { type: string }
+    KeyCreateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        vaultId: { type: string }
+        description: { type: string }
+        valueType: { type: string }
+    SecretCreateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        vaultId: { type: string }
+        keyId: { type: string }
+        value:
+          oneOf:
+            - { type: string }
+            - type: object
+              additionalProperties: true
+    RevealRequest:
+      type: object
+      properties:
+        password: { type: string }
+        vaultPassword: { type: string }
+        versionNumber: { type: integer }
+    BulkRevealRequest:
+      type: object
+      properties:
+        vaultId: { type: string }
+        secretGroupId: { type: string }
+        secretIds:
+          type: array
+          items: { type: string }
+        includeDescendants: { type: boolean }
+        password: { type: string }
+        vaultPassword: { type: string }
+    CreateShareRequest:
+      type: object
+      properties:
+        keyId: { type: string }
+        secretId: { type: string }
+        payload:
+          oneOf:
+            - { type: string }
+            - type: object
+              additionalProperties: true
+        passphrase: { type: string }

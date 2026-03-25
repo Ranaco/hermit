@@ -5,6 +5,16 @@ const nextConfig = {
   output: "standalone",
   basePath: "/docs",
   pageExtensions: ["ts", "tsx", "md", "mdx"],
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/docs",
+        permanent: false,
+        basePath: false,
+      },
+    ];
+  },
 };
 
 const withMDX = createMDX();

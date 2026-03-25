@@ -1,18 +1,24 @@
-import { DocsPage } from "@/components/docs-page";
+import Link from "next/link";
+import { DocsSectionPage } from "@/components/docs-page";
 import { docsPages } from "@/lib/docs";
 
 export default function Page() {
   return (
-    <DocsPage page={docsPages.cliOverview}>
+    <DocsSectionPage page={docsPages.cliOverview}>
+      <p>
+        The CLI reference is intentionally staged as a section landing page for now. It establishes the role of the
+        official terminal workflow and leaves room for command-level leaf pages as the surface expands.
+      </p>
+
       <h2 id="planned-scope">Planned scope</h2>
       <p>
         The CLI reference will cover device enrollment, login and refresh, organization and vault selection, secret
         operations, and the <code>hermit run</code> injection workflow.
       </p>
       <p>
-        The operator workflows page already explains where the CLI fits in the current platform. This section is
-        reserved for fuller command-level documentation in the next phase.
+        For current operational context, see <Link href="/operator-workflows">Operator workflows</Link>. For the
+        request model behind signed secret access, see <Link href="/api/authentication">API authentication</Link>.
       </p>
-    </DocsPage>
+    </DocsSectionPage>
   );
 }

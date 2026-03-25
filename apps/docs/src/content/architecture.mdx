@@ -1,4 +1,4 @@
-## System boundaries {#system-boundaries}
+<h2 id="system-boundaries">System boundaries</h2>
 
 Hermit is a monorepo with a few clear responsibilities:
 
@@ -16,9 +16,9 @@ The important system split is between **metadata/control** and **cryptographic e
 
 <ArchitectureDiagram />
 
-## Entity model {#entity-model}
+<h2 id="entity-model">Entity model</h2>
 
-Hermit’s main hierarchy is:
+Hermit's main hierarchy is:
 
 ```text
 Organization
@@ -44,7 +44,7 @@ Important examples from the current implementation:
 - a **Secret** belongs to a vault and is associated with a key
 - a **SecretVersion** stores encrypted value material and encryption context
 
-## Request flow {#request-flow}
+<h2 id="request-flow">Request flow</h2>
 
 One of the most important request paths is secret reveal:
 
@@ -62,7 +62,7 @@ One of the most important request paths is secret reveal:
 This matters because the platform is built to preserve the reason something succeeded or failed, rather than
 collapsing every denied or challenged operation into the same experience.
 
-## Deployment shape {#deployment-shape}
+<h2 id="deployment-shape">Deployment shape</h2>
 
 The production deploy stack is path-routed behind nginx:
 
@@ -77,5 +77,5 @@ The API depends on:
 - HCV / Vault transit for crypto operations
 - mounted TLS assets in production
 
-Hermit’s production guidance also keeps Vault bootstrap and provisioning outside normal container startup. That split
+Hermit's production guidance also keeps Vault bootstrap and provisioning outside normal container startup. That split
 is deliberate: initialization, unseal, and credential provisioning are operator actions, not routine app boot steps.

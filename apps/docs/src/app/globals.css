@@ -1,14 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --docs-bg: #0a0b0d;
-  --docs-panel: rgba(255, 255, 255, 0.03);
-  --docs-panel-strong: rgba(255, 255, 255, 0.05);
-  --docs-border: rgba(255, 255, 255, 0.08);
-  --docs-text: rgba(255, 255, 255, 0.94);
-  --docs-muted: rgba(255, 255, 255, 0.6);
-  --docs-soft: rgba(255, 255, 255, 0.38);
-  --docs-accent: #8ab4ff;
+  --docs-bg: #090d13;
+  --docs-panel: #101722;
+  --docs-panel-elevated: #151f2d;
+  --docs-border: #1d2a3b;
+  --docs-border-strong: #2c3f57;
+  --docs-text: #eef4ff;
+  --docs-muted: #b4bfd0;
+  --docs-soft: #6e7f96;
+  --docs-accent: #7ab6ff;
+}
+
+:root[data-theme="light"] {
+  --docs-bg: #f3f6fb;
+  --docs-panel: #ffffff;
+  --docs-panel-elevated: #eef3fa;
+  --docs-border: #d7e0ec;
+  --docs-border-strong: #b3c4d8;
+  --docs-text: #0f1726;
+  --docs-muted: #445469;
+  --docs-soft: #72829a;
+  --docs-accent: #1f6fe5;
 }
 
 @layer base {
@@ -22,19 +35,29 @@
     margin: 0;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background:
-      radial-gradient(circle at top, rgba(138, 180, 255, 0.08), transparent 18%),
-      linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      radial-gradient(circle at top, rgba(122, 182, 255, 0.12), transparent 18rem),
+      linear-gradient(color-mix(in oklab, var(--docs-text) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--docs-text) 6%, transparent) 1px, transparent 1px),
       var(--docs-bg);
-    background-size: auto, 52px 52px, 52px 52px, auto;
+    background-size: auto, 32px 32px, 32px 32px, auto;
     color: var(--docs-text);
     font-family:
-      "Aptos", "IBM Plex Sans", "Segoe UI Variable Text", "Helvetica Neue",
-      sans-serif;
-    letter-spacing: -0.012em;
+      "Aptos", "IBM Plex Sans", "Segoe UI Variable Text", "Trebuchet MS", sans-serif;
     text-rendering: optimizeLegibility;
+  }
+
+  :root {
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
   }
 
   a {
@@ -43,43 +66,82 @@
   }
 
   code,
-  pre {
+  pre,
+  textarea,
+  input {
     font-family:
-      "Berkeley Mono", "SF Mono", "IBM Plex Mono", Consolas, monospace;
+      "Cascadia Code", "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
   }
 }
 
 @layer components {
-  .docs-panel {
-    @apply rounded-2xl border border-white/8 bg-white/[0.03];
+  .docs-kicker {
+    @apply text-[11px] font-semibold uppercase tracking-[0.32em];
+    color: var(--docs-accent);
+  }
+
+  .docs-page-title {
+    font-family:
+      "Bahnschrift", "Aptos Display", "IBM Plex Sans", sans-serif;
+    @apply mt-3 text-[clamp(2.4rem,5vw,4.6rem)] font-semibold leading-[0.96] tracking-[-0.07em];
+    color: var(--docs-text);
+  }
+
+  .docs-page-description {
+    @apply mt-4 max-w-[66ch] text-[15px] leading-7;
+    color: var(--docs-muted);
+  }
+
+  .docs-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--docs-border);
+    background:
+      radial-gradient(circle at 18% 18%, rgba(122, 182, 255, 0.15), transparent 14rem),
+      radial-gradient(circle, rgba(122, 182, 255, 0.22) 1px, transparent 1.2px),
+      color-mix(in oklab, var(--docs-panel-elevated) 82%, var(--docs-bg));
+    background-size: auto, 16px 16px, auto;
+    @apply px-6 py-8 sm:px-8 sm:py-10;
+  }
+
+  .docs-hero--compact {
+    @apply py-7;
   }
 
   .docs-prose {
-    @apply text-[15px] leading-8 text-white/60;
+    color: var(--docs-muted);
+    @apply text-[15px] leading-7;
   }
 
-  .docs-prose h1,
   .docs-prose h2,
   .docs-prose h3 {
-    @apply scroll-mt-24 text-white;
-  }
-
-  .docs-prose h1 {
-    @apply text-[clamp(2.4rem,4vw,4rem)] font-semibold leading-[1] tracking-[-0.06em];
+    color: var(--docs-text);
+    @apply scroll-mt-24;
   }
 
   .docs-prose h2 {
-    @apply mt-14 text-[clamp(1.65rem,2.4vw,2.3rem)] font-semibold leading-[1.06] tracking-[-0.045em];
+    border-top: 1px solid var(--docs-border);
+    @apply mt-14 pt-7 text-[clamp(1.55rem,2.4vw,2rem)] font-semibold leading-[1.06] tracking-[-0.05em];
   }
 
   .docs-prose h3 {
-    @apply mt-8 text-xl font-semibold tracking-[-0.03em];
+    @apply mt-8 text-[1.08rem] font-semibold tracking-[-0.03em];
   }
 
   .docs-prose p,
   .docs-prose ul,
-  .docs-prose ol {
+  .docs-prose ol,
+  .docs-prose table {
     @apply mt-4;
+  }
+
+  .docs-prose a {
+    color: var(--docs-accent);
+    @apply transition-colors hover:text-white;
   }
 
   .docs-prose ul {
@@ -95,18 +157,58 @@
   }
 
   .docs-prose strong {
-    @apply font-semibold text-white;
+    color: var(--docs-text);
+    @apply font-semibold;
   }
 
   .docs-prose code:not(pre code) {
-    @apply rounded-md border border-white/8 bg-white/[0.05] px-1.5 py-0.5 text-[0.92em] text-white;
+    border: 1px solid var(--docs-border);
+    background: color-mix(in oklab, var(--docs-panel) 70%, var(--docs-bg));
+    color: var(--docs-text);
+    @apply rounded-sm px-1.5 py-0.5 text-[0.92em];
   }
 
   .docs-prose pre {
-    @apply mt-6 overflow-x-auto rounded-2xl border border-white/8 bg-black/40 p-5 text-sm leading-7 text-white;
+    @apply mt-6 overflow-x-auto;
   }
 
   .docs-prose blockquote {
-    @apply mt-6 border-l-2 border-[#8ab4ff] pl-4 text-white;
+    border-left: 2px solid var(--docs-accent);
+    color: var(--docs-muted);
+    @apply mt-6 pl-4;
+  }
+
+  .docs-input {
+    width: 100%;
+    border: 1px solid var(--docs-border);
+    background: var(--docs-panel);
+    color: var(--docs-text);
+    @apply rounded-md px-3 py-3 text-[14px] outline-none transition-colors;
+  }
+
+  .docs-input:focus {
+    border-color: var(--docs-border-strong);
+  }
+
+  .docs-code-block {
+    overflow: hidden;
+    border: 1px solid var(--docs-border);
+    background: #0b1018;
+    @apply mt-6;
+  }
+
+  .docs-code-block__header {
+    border-bottom: 1px solid var(--docs-border);
+    background: rgba(255, 255, 255, 0.02);
+    @apply flex items-center justify-between gap-3 px-4 py-3;
+  }
+
+  .docs-code-block__label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.24em];
+    color: var(--docs-soft);
+  }
+
+  .docs-code-block pre {
+    @apply m-0 overflow-x-auto p-4 text-[13px] leading-6 text-[#d8e2f4];
   }
 }

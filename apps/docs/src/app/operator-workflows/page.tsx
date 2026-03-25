@@ -1,11 +1,11 @@
 import WorkflowsDoc from "@/content/operator-workflows.mdx";
-import { DocsPage } from "@/components/docs-page";
+import { DocsArticlePage } from "@/components/docs-page";
 import { docsPages } from "@/lib/docs";
 
 export default function Page() {
   return (
-    <DocsPage page={docsPages.operatorWorkflows}>
+    <DocsArticlePage page={docsPages.operatorWorkflows}>
       <WorkflowsDoc />
-    </DocsPage>
+    </DocsArticlePage>
   );
 }

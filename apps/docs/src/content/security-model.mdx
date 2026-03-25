@@ -1,4 +1,4 @@
-## IAM policy engine {#iam-policy-engine}
+<h2 id="iam-policy-engine">IAM policy engine</h2>
 
 Hermit uses a dynamic IAM policy engine instead of relying on fixed RBAC alone.
 
@@ -25,7 +25,7 @@ Two rules are especially important:
 That makes the policy layer expressive enough for narrow vault-, folder-, or secret-scoped grants without turning
 the whole platform into a matrix of hardcoded role checks.
 
-## Three-tier protection {#three-tier-protection}
+<h2 id="three-tier-protection">Three-tier protection</h2>
 
 Hermit protects secret material with three distinct levels:
 
@@ -39,7 +39,7 @@ The backend distinguishes these levels natively. The reveal route returns whethe
 This model is important because it allows a vault to carry a broader protection rule while still letting an
 individual secret require stronger protection of its own.
 
-## Audit behavior {#audit-behavior}
+<h2 id="audit-behavior">Audit behavior</h2>
 
 Auditability is part of the core platform, not an afterthought. Sensitive operations should leave a trail that makes
 operator behavior explainable later.
@@ -53,7 +53,7 @@ Examples of important audited actions include:
 
 The goal is not just compliance logging. It is to preserve operational context around sensitive activity.
 
-## Important constraints {#important-constraints}
+<h2 id="important-constraints">Important constraints</h2>
 
 The current implementation carries a few architectural constraints that the docs should make explicit:
 
