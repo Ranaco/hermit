@@ -40,7 +40,7 @@ server {
     # API routes - proxy to Express API
     location /api/ {
         set $api_upstream http://api:5001;
-        proxy_pass $api_upstream/api/;
+        proxy_pass $api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -69,7 +69,15 @@ server {
     }
 
     location = /docs {
-        return 301 /docs/;
+        set $docs_upstream http://docs:3000;
+        proxy_pass $docs_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 
     location /docs/ {

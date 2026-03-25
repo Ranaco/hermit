@@ -2,6 +2,8 @@
 
 A production-ready Key Management System API built with Express, TypeScript, Prisma, and HashiCorp Vault.
 
+Deployment note: production serves the API behind the `/api/v1` prefix.
+
 ## 🏗️ Architecture
 
 ### Technology Stack
