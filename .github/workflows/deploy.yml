@@ -90,8 +90,11 @@ jobs:
 
             echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
 
+            vault_status_attempts=0
+            hcv_container_id="$(docker compose "${compose_args[@]}" ps -q hcv || true)"
+
             pull_attempts=0
-            until docker compose "${compose_args[@]}" pull; do
+            until docker compose "${compose_args[@]}" pull api web docs; do
               pull_attempts=$((pull_attempts + 1))
               if [ "$pull_attempts" -ge 3 ]; then
                 echo "Docker pull failed after ${pull_attempts} attempts." >&2
@@ -103,8 +106,21 @@ jobs:
               sleep 5
             done
 
-            docker compose "${compose_args[@]}" up -d db hcv
-            vault_status="$(docker compose "${compose_args[@]}" exec -T hcv vault status -format=json 2>/dev/null || true)"
+            docker compose "${compose_args[@]}" up -d db
+            if [ -z "$hcv_container_id" ]; then
+              docker compose "${compose_args[@]}" up -d hcv
+            fi
+
+            until vault_status="$(docker compose "${compose_args[@]}" exec -T hcv vault status -format=json 2>/dev/null || true)"; [ -n "$vault_status" ]; do
+              vault_status_attempts=$((vault_status_attempts + 1))
+              if [ "$vault_status_attempts" -ge 24 ]; then
+                echo "Unable to query Vault status after startup" >&2
+                docker compose "${compose_args[@]}" logs --tail=100 hcv >&2 || true
+                exit 1
+              fi
+              sleep 5
+            done
+
             if [ -z "$vault_status" ]; then
               echo "Unable to query Vault status after startup" >&2
               exit 1
@@ -137,7 +153,7 @@ jobs:
               sleep 5
             done
 
-            docker compose "${compose_args[@]}" up -d --force-recreate --no-deps web
+            docker compose "${compose_args[@]}" up -d --force-recreate --no-deps web docs
             docker compose "${compose_args[@]}" exec -T nginx nginx -s reload || docker compose "${compose_args[@]}" up -d --force-recreate --no-deps nginx
             docker compose "${compose_args[@]}" exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
             docker compose "${compose_args[@]}" up -d certbot
