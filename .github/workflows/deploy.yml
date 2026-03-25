@@ -70,6 +70,19 @@ jobs:
     needs: build-images
 
     steps:
+      - name: Sync deploy assets
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: |
+            docker-compose.deploy.yml
+            deploy.sh
+            nginx/conf.d/hermit.conf.template
+          target: /deploy/hermit
+          overwrite: true
+
       - name: Deploy release
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -79,9 +92,6 @@ jobs:
           script: |
             set -euo pipefail
             cd /deploy/hermit
-            git fetch origin main
-            git checkout main
-            git pull --ff-only origin main
 
             image_tag='${{ github.event.workflow_run.head_sha || github.sha }}'
             compose_args=(--env-file .env.production --env-file .env.release -f docker-compose.deploy.yml)
