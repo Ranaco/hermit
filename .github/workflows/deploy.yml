@@ -7,6 +7,10 @@ on:
     types:
       - completed
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-images:
     name: Build and Push Images
@@ -97,7 +101,7 @@ jobs:
             cd /deploy/hermit
 
             image_tag='${{ github.event.workflow_run.head_sha || github.sha }}'
-            compose_args=(--env-file .env.production --env-file .env.release -f docker-compose.deploy.yml)
+            compose_args=(--project-name hermit --env-file .env.production --env-file .env.release -f docker-compose.deploy.yml)
             vault_status=""
 
             printf 'IMAGE_TAG=%s\n' "$image_tag" > .env.release
@@ -151,7 +155,8 @@ jobs:
             fi
 
             bash ./deploy.sh --refresh-runtime-vault-env
-            docker compose "${compose_args[@]}" up -d --force-recreate --no-deps api
+            docker compose "${compose_args[@]}" rm -sf api || true
+            docker compose "${compose_args[@]}" up -d --no-deps api
             api_container_id="$(docker compose "${compose_args[@]}" ps -q api)"
             if [ -z "$api_container_id" ]; then
               echo "API container was not created." >&2
@@ -169,7 +174,8 @@ jobs:
               sleep 5
             done
 
-            docker compose "${compose_args[@]}" up -d --force-recreate --no-deps web docs
+            docker compose "${compose_args[@]}" rm -sf web docs || true
+            docker compose "${compose_args[@]}" up -d --no-deps web docs
             docker compose "${compose_args[@]}" exec -T nginx nginx -s reload || docker compose "${compose_args[@]}" up -d --force-recreate --no-deps nginx
             docker compose "${compose_args[@]}" exec -T api npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
             docker compose "${compose_args[@]}" up -d certbot
