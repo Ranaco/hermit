@@ -179,7 +179,17 @@ if ! cert_exists; then
   render_http_only_nginx_config
 
   docker compose -f "$COMPOSE_FILE" --env-file .env.production up -d nginx
-  sleep 3
+
+  nginx_ready_attempts=0
+  until curl -sS http://127.0.0.1/ >/dev/null 2>&1; do
+    nginx_ready_attempts=$((nginx_ready_attempts + 1))
+    if [ "$nginx_ready_attempts" -ge 10 ]; then
+      echo "nginx did not become ready in time." >&2
+      docker compose -f "$COMPOSE_FILE" --env-file .env.production logs --tail=50 nginx >&2 || true
+      exit 1
+    fi
+    sleep 2
+  done
 
   docker compose -f "$COMPOSE_FILE" --env-file .env.production run --rm \
     --entrypoint certbot certbot certonly --webroot \
@@ -232,7 +242,15 @@ docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.rel
   npx prisma migrate deploy --schema=/app/packages/prisma/schema.prisma
 
 echo "Checking health..."
-curl -fsS "http://127.0.0.1/health" > /dev/null
+health_attempts=0
+until curl -fsS http://127.0.0.1/health > /dev/null; do
+  health_attempts=$((health_attempts + 1))
+  if [ "$health_attempts" -ge 12 ]; then
+    echo "Health check did not succeed in time." >&2
+    exit 1
+  fi
+  sleep 5
+done
 
 echo ""
 echo "============================================"
