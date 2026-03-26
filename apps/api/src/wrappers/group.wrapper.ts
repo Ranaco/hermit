@@ -225,8 +225,8 @@ export const groupWrapper = {
 
     await createAuditLog({
       userId,
-      action: "CREATE" as any,
-      resourceType: "SECRET" as any,
+      action: "CREATE_GROUP" as any,
+      resourceType: "GROUP" as any,
       resourceId: group.id,
       details: {
         groupName: name,
@@ -525,8 +525,8 @@ export const groupWrapper = {
 
     await createAuditLog({
       userId,
-      action: "UPDATE" as any,
-      resourceType: "SECRET" as any,
+      action: "UPDATE_GROUP" as any,
+      resourceType: "GROUP" as any,
       resourceId: group.id,
       details: {
         changes: { name, description },
@@ -601,8 +601,8 @@ export const groupWrapper = {
 
     await createAuditLog({
       userId,
-      action: "DELETE" as any,
-      resourceType: "SECRET" as any,
+      action: "DELETE_GROUP" as any,
+      resourceType: "GROUP" as any,
       resourceId: group.id,
       details: {
         groupName: group.name,

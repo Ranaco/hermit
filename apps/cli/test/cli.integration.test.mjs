@@ -363,7 +363,7 @@ await test("cli integration", { concurrency: 1 }, async (t) => {
   });
 
   await t.test("env export emits mapped environment variables as JSON", async () => {
-    const result = await runCli(["env", "--vault", "app-vault", "--format", "json"], { env: baseEnv });
+    const result = await runCli(["export", "--vault", "app-vault", "--format", "json"], { env: baseEnv });
     assert.equal(result.code, 0, result.stderr);
     const payload = JSON.parse(result.stdout);
     assert.deepEqual(payload, {
