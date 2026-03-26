@@ -41,7 +41,7 @@ export const createSecretSchema = z.object({
     .string()
     .uuid('Invalid key ID format'),
   
-  secretGroupId: z
+  groupId: z
     .string()
     .uuid('Invalid secret group ID format')
     .optional(),
@@ -112,7 +112,7 @@ export const bulkRevealSecretsSchema = z.object({
     .string()
     .uuid('Invalid vault ID format'),
 
-  secretGroupId: z
+  groupId: z
     .string()
     .uuid('Invalid secret group ID format')
     .optional(),
@@ -188,7 +188,7 @@ export const updateSecretSchema = z.object({
     .max(500, 'Commit message must be less than 500 characters')
     .optional(),
   
-  secretGroupId: z
+  groupId: z
     .string()
     .uuid('Invalid secret group ID format')
     .nullable()
@@ -203,7 +203,7 @@ export const getSecretsSchema = z.object({
     .string()
     .uuid('Invalid vault ID format'),
   
-  secretGroupId: z
+  groupId: z
     .string()
     .uuid('Invalid secret group ID format')
     .optional(),

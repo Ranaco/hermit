@@ -9,7 +9,7 @@ export interface GroupTreeParams {
 }
 
 async function renderGroupTree(vaultId: string, parentId?: string | null): Promise<ui.NestedTreeItem[]> {
-  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
+  const groups = await sdk.getGroups(vaultId, parentId ? { parentId } : {});
   const nodes: ui.NestedTreeItem[] = [];
   for (const group of groups) {
     nodes.push({
@@ -24,7 +24,7 @@ async function renderGroupTree(vaultId: string, parentId?: string | null): Promi
 }
 
 async function renderGroupLines(vaultId: string, parentId?: string | null, prefix = ""): Promise<string[]> {
-  const groups = await sdk.getSecretGroups(vaultId, parentId ? { parentId } : {});
+  const groups = await sdk.getGroups(vaultId, parentId ? { parentId } : {});
   const lines: string[] = [];
   for (const group of groups) {
     lines.push(`${prefix}${group.name}`);
@@ -42,7 +42,7 @@ export async function handleGroupTree(params: GroupTreeParams): Promise<void> {
     const lines = await renderGroupLines(vault.id, rootGroup?.id);
     renderData({ vault, tree: lines });
     if (lines.length === 0) {
-      ui.warn("No secret groups found");
+      ui.warn("No groups found");
       ui.newline();
       return;
     }
@@ -55,7 +55,7 @@ export async function handleGroupTree(params: GroupTreeParams): Promise<void> {
   const nodes = await renderGroupTree(vault.id);
   renderData({ vault, tree: nodes });
   if (nodes.length === 0) {
-    ui.warn("No secret groups found");
+    ui.warn("No groups found");
     ui.newline();
     return;
   }

@@ -39,6 +39,11 @@ export interface CliDeviceInfo {
   clientType: "CLI";
 }
 
+export interface GroupInfo {
+  id: string;
+  name: string;
+}
+
 export interface StoreSchema {
   schemaVersion: number;
   accessToken: string;
@@ -46,6 +51,7 @@ export interface StoreSchema {
   user: UserInfo | null;
   org: OrgInfo | null;
   vault: VaultInfo | null;
+  group: GroupInfo | null;
   serverUrl: string;
   cliDevice: CliDeviceInfo | null;
 }
@@ -56,7 +62,7 @@ const STORE_CONFIG_NAME = "config";
 const STORE_FILE_EXTENSION = "json";
 const LEGACY_ENCRYPTION_KEY = "hermit-cli-encryption-key-v1";
 const ENCRYPTION_KEY_FILE = "store-key";
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 const DEFAULT_SERVER_URL = "https://hermit.ranax.co/api/v1";
 
 const configDirectory = envPaths(PROJECT_NAME, { suffix: PROJECT_SUFFIX }).config;
@@ -76,6 +82,7 @@ function createStore(encryptionKey: string): Conf<StoreSchema> {
       user: { type: ["object", "null"] as never, default: null },
       org: { type: ["object", "null"] as never, default: null },
       vault: { type: ["object", "null"] as never, default: null },
+      group: { type: ["object", "null"] as never, default: null },
       serverUrl: {
         type: "string",
         default: DEFAULT_SERVER_URL,
@@ -197,6 +204,7 @@ export function clearTokens(): void {
   store.set("user", null);
   store.set("org", null);
   store.set("vault", null);
+  store.set("group", null);
 }
 
 export function saveCliDevice(device: CliDeviceInfo): void {
@@ -297,4 +305,19 @@ export function getStoreKeyPath(): string {
 
 export function getStoreDirectory(): string {
   return dirname(storePath);
+}
+
+export function saveGroup(group: GroupInfo): void {
+  const store = getStore();
+  store.set("group", group);
+}
+
+export function getGroup(): GroupInfo | null {
+  const store = getStore();
+  return store.get("group");
+}
+
+export function clearGroup(): void {
+  const store = getStore();
+  store.set("group", null);
 }

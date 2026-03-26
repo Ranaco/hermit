@@ -55,7 +55,7 @@ export const getSecrets = asyncHandler(async (req: Request, res: Response) => {
 
   const result = await secretWrapper.getSecrets(req.user.id, {
     vaultId: req.query.vaultId as string,
-    secretGroupId: req.query.secretGroupId as string | undefined,
+    groupId: req.query.groupId as string | undefined,
     page: req.query.page ? Number(req.query.page) : undefined,
     limit: req.query.limit ? Number(req.query.limit) : undefined,
     search: req.query.search as string | undefined,
@@ -249,7 +249,7 @@ export const bulkRevealSecrets = asyncHandler(
       req.user.id,
       {
         vaultId: req.body.vaultId,
-        secretGroupId: req.body.secretGroupId,
+        groupId: req.body.groupId,
         secretIds: req.body.secretIds,
         includeDescendants: req.body.includeDescendants,
         password: req.body.password,

@@ -254,7 +254,7 @@ model Vault {
     createdBy      User          @relation("VaultCreator", fields: [createdById], references: [id])
     keys           Key[]
     secrets        Secret[]
-    secretGroups   SecretGroup[]
+    groups         Group[]
 
     @@unique([organizationId, name])
 }
@@ -307,7 +307,7 @@ model KeyShare {
     id               String    @id @default(uuid())
     keyId            String
     userId           String?
-    teamId           String?   @map("groupId")
+    teamId           String?
     encryptedDataKey String
     algorithm        String
     createdAt        DateTime  @default(now())
@@ -391,19 +391,17 @@ model Team {
     roleAssignments TeamRoleAssignment[]
 
     @@unique([organizationId, name])
-    @@map("Group")
 }
 
 model TeamMember {
     id        String   @id @default(uuid())
-    teamId    String   @map("groupId")
+    teamId    String
     userId    String
     createdAt DateTime @default(now())
     team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([teamId, userId])
-    @@map("GroupMember")
 }
 
 model AuditLog {
@@ -459,7 +457,7 @@ enum ResourceType {
     DEVICE
     ONBOARDING
     TEMPORARY_KEY
-    SECRET_GROUP
+    GROUP
     ORGANIZATION_ROLE
 }
 
@@ -492,9 +490,9 @@ enum AuditAction {
     UPDATE_SECRET
     DELETE_SECRET
     ROTATE_SECRET
-    CREATE_SECRET_GROUP
-    UPDATE_SECRET_GROUP
-    DELETE_SECRET_GROUP
+    CREATE_GROUP
+    UPDATE_GROUP
+    DELETE_GROUP
     CREATE_ORG_ROLE
     UPDATE_ORG_ROLE
     DELETE_ORG_ROLE
@@ -505,7 +503,7 @@ model Secret {
     name             String
     description      String?
     vaultId          String
-    secretGroupId    String?
+    groupId          String?
     keyId            String
     valueType        KeyValueType    @default(STRING)
     currentVersionId String?
@@ -519,7 +517,7 @@ model Secret {
     createdAt        DateTime        @default(now())
     updatedAt        DateTime        @updatedAt
     vault            Vault           @relation(fields: [vaultId], references: [id], onDelete: Cascade)
-    secretGroup      SecretGroup?    @relation(fields: [secretGroupId], references: [id], onDelete: SetNull)
+    group            Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
     key              Key             @relation(fields: [keyId], references: [id], onDelete: Restrict)
     createdBy        User            @relation("SecretCreator", fields: [createdById], references: [id])
     versions         SecretVersion[]
@@ -529,7 +527,7 @@ model Secret {
     @@index([keyId])
     @@index([createdById])
     @@index([expiresAt])
-    @@index([vaultId, secretGroupId])
+    @@index([vaultId, groupId])
 }
 
 model SecretVersion {
@@ -569,19 +567,19 @@ model OrganizationRole {
     @@unique([organizationId, name])
 }
 
-model SecretGroup {
-    id          String        @id @default(uuid())
+model Group {
+    id          String   @id @default(uuid())
     name        String
     description String?
     vaultId     String
     parentId    String?
     path        String
     depth       Int
-    createdAt   DateTime      @default(now())
-    updatedAt   DateTime      @updatedAt
-    vault       Vault         @relation(fields: [vaultId], references: [id], onDelete: Cascade)
-    parent      SecretGroup?  @relation("SecretGroupHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-    children    SecretGroup[] @relation("SecretGroupHierarchy")
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    vault       Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+    parent      Group?   @relation("GroupHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+    children    Group[]  @relation("GroupHierarchy")
     secrets     Secret[]
 
     @@unique([vaultId, parentId, name])
@@ -615,7 +613,7 @@ model RolePolicyAttachment {
 
 model TeamRoleAssignment {
     id     String           @id @default(uuid())
-    teamId String           @map("groupId")
+    teamId String
     roleId String
     team   Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
     role   OrganizationRole @relation(fields: [roleId], references: [id], onDelete: Cascade)

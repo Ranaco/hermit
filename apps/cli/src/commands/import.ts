@@ -76,7 +76,7 @@ export const secretImportCommand = new Command("import")
         : await resolveGroup(vault.id, opts.group);
       const targetLabel = group ? `${vault.name} / ${group.name}` : vault.name;
       const existingSecrets = await sdk.getSecrets(vault.id, {
-        secretGroupId: group?.id,
+        groupId: group?.id,
         cliScope: true,
       });
       const existingByName = new Map(existingSecrets.map((secret) => [secret.name.toLowerCase(), secret]));
@@ -145,7 +145,7 @@ export const secretImportCommand = new Command("import")
           await sdk.updateSecret(existing.id, {
             value,
             valueType,
-            secretGroupId: group?.id || null,
+            groupId: group?.id || null,
           });
           updated += 1;
           continue;
@@ -157,7 +157,7 @@ export const secretImportCommand = new Command("import")
           vaultId: vault.id,
           keyId,
           valueType,
-          secretGroupId: group?.id,
+          groupId: group?.id,
         });
         created += 1;
       }

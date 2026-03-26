@@ -128,7 +128,7 @@ export async function resolveSecretScope(params: {
   pathQuery?: string;
 }): Promise<{
   vault: sdk.VaultSummary;
-  group: sdk.SecretGroupSummary | undefined;
+  group: sdk.GroupSummary | undefined;
 }> {
   const vault = params.vaultQuery ? await resolveVault(params.vaultQuery) : await requireActiveVault();
   const group = params.pathQuery

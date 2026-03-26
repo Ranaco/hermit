@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api";
 
-export interface SecretGroup {
+export interface Group {
   id: string;
   name: string;
   description: string | null;
@@ -16,26 +16,26 @@ export interface SecretGroup {
   };
 }
 
-export interface CreateSecretGroupData {
+export interface CreateGroupData {
   name: string;
   description?: string;
   vaultId: string;
   parentId?: string;
 }
 
-export interface UpdateSecretGroupData {
+export interface UpdateGroupData {
   name?: string;
   description?: string;
 }
 
 
-class SecretGroupService {
+class GroupService {
   async getAll(
     vaultId: string,
     parentId?: string,
     includeChildren?: boolean,
     forPolicyBuilder?: boolean,
-  ): Promise<{ success: boolean; data: SecretGroup[] }> {
+  ): Promise<{ success: boolean; data: Group[] }> {
     const params = new URLSearchParams({ vaultId });
     if (parentId) {
       params.append("parentId", parentId);
@@ -50,12 +50,12 @@ class SecretGroupService {
     return data;
   }
 
-  async create(vaultId: string, data: CreateSecretGroupData): Promise<{ success: boolean; data: SecretGroup }> {
+  async create(vaultId: string, data: CreateGroupData): Promise<{ success: boolean; data: Group }> {
     const { data: response } = await apiClient.post(`/vaults/${vaultId}/groups`, data);
     return response;
   }
 
-  async update(vaultId: string, groupId: string, data: UpdateSecretGroupData): Promise<{ success: boolean; data: SecretGroup }> {
+  async update(vaultId: string, groupId: string, data: UpdateGroupData): Promise<{ success: boolean; data: Group }> {
     const { data: response } = await apiClient.put(`/vaults/${vaultId}/groups/${groupId}`, data);
     return response;
   }
@@ -67,4 +67,4 @@ class SecretGroupService {
 
 }
 
-export const secretGroupService = new SecretGroupService();
+export const groupService = new GroupService();

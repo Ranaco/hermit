@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import { asyncHandler, AuthenticationError, ErrorCode } from "@hermit/error-handling";
-import { secretGroupWrapper } from "../wrappers/secret-group.wrapper";
+import { groupWrapper } from "../wrappers/group.wrapper";
 
 /**
- * Create a new Secret Group
+ * Create a new Group
  * POST /api/v1/vaults/:vaultId/groups
  */
 export const createGroup = asyncHandler(
@@ -12,7 +12,7 @@ export const createGroup = asyncHandler(
       throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
     }
 
-    const result = await secretGroupWrapper.createGroup(
+    const result = await groupWrapper.createGroup(
       req.user.id,
       {
         vaultId: req.params.vaultId || req.body.vaultId,
@@ -27,13 +27,13 @@ export const createGroup = asyncHandler(
     res.status(201).json({
       success: true,
       data: result,
-      message: "Secret Group created successfully",
+      message: "Group created successfully",
     });
   }
 );
 
 /**
- * Get all Secret Groups in a vault
+ * Get all Groups in a vault
  * GET /api/v1/vaults/:vaultId/groups
  */
 export const getGroups = asyncHandler(
@@ -42,7 +42,7 @@ export const getGroups = asyncHandler(
       throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
     }
 
-    const result = await secretGroupWrapper.getGroups(
+    const result = await groupWrapper.getGroups(
       req.user.id,
       {
         vaultId: req.params.vaultId || req.query.vaultId as string,
@@ -61,7 +61,7 @@ export const getGroups = asyncHandler(
 );
 
 /**
- * Update a Secret Group
+ * Update a Group
  * PUT /api/v1/vaults/:vaultId/groups/:groupId
  */
 export const updateGroup = asyncHandler(
@@ -70,7 +70,7 @@ export const updateGroup = asyncHandler(
       throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
     }
 
-    const result = await secretGroupWrapper.updateGroup(
+    const result = await groupWrapper.updateGroup(
       req.user.id,
       {
         groupId: req.params.groupId,
@@ -85,13 +85,13 @@ export const updateGroup = asyncHandler(
     res.json({
       success: true,
       data: result,
-      message: "Secret Group updated successfully",
+      message: "Group updated successfully",
     });
   }
 );
 
 /**
- * Delete a Secret Group
+ * Delete a Group
  * DELETE /api/v1/vaults/:vaultId/groups/:groupId
  */
 export const deleteGroup = asyncHandler(
@@ -100,7 +100,7 @@ export const deleteGroup = asyncHandler(
       throw new AuthenticationError(ErrorCode.UNAUTHORIZED);
     }
 
-    await secretGroupWrapper.deleteGroup(
+    await groupWrapper.deleteGroup(
       req.user.id,
       { groupId: req.params.groupId },
       {
@@ -111,9 +111,7 @@ export const deleteGroup = asyncHandler(
 
     res.json({
       success: true,
-      message: "Secret Group deleted successfully",
+      message: "Group deleted successfully",
     });
   }
 );
-
-

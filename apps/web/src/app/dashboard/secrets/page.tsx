@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSecrets, useCreateSecret, useDeleteSecret, useUpdateSecret, useSecretVersions } from "@/hooks/use-secrets";
-import { useSecretGroups, useCreateSecretGroup, useDeleteSecretGroup } from "@/hooks/use-secret-groups";
+import { useGroups, useCreateGroup, useDeleteGroup } from "@/hooks/use-groups";
 import { secretService } from "@/services/secret.service";
 import { useKeys } from "@/hooks/use-keys";
 import { useRBAC } from "@/hooks/use-rbac";
@@ -109,14 +109,14 @@ export default function SecretsPage() {
     password: "",
   });
 
-  const { data: groups, isLoading: groupsLoading } = useSecretGroups(currentVault?.id, currentGroupId);
+  const { data: groups, isLoading: groupsLoading } = useGroups(currentVault?.id, currentGroupId);
   const { data: secrets, isLoading: secretsLoading } = useSecrets(currentVault?.id, currentGroupId);
   const { data: keys } = useKeys(currentVault?.id);
   const { mutate: createSecret, isPending: isCreating } = useCreateSecret();
   const { mutate: updateSecret, isPending: isUpdating } = useUpdateSecret();
   const { mutate: deleteSecret } = useDeleteSecret();
-  const { mutate: createFolder, isPending: isCreatingFolder } = useCreateSecretGroup();
-  const { mutate: deleteFolder } = useDeleteSecretGroup();
+  const { mutate: createFolder, isPending: isCreatingFolder } = useCreateGroup();
+  const { mutate: deleteFolder } = useDeleteGroup();
 
   const { data: secretVersionsData, isLoading: versionsLoading } = useSecretVersions(
     showVersionsModal && activeSecretId ? activeSecretId : ""
@@ -275,7 +275,7 @@ export default function SecretsPage() {
         ...newSecret,
         password: newSecret.password || undefined,
         vaultId: currentVault.id,
-        secretGroupId: currentGroupId,
+        groupId: currentGroupId,
       },
       {
         onSuccess: () => {

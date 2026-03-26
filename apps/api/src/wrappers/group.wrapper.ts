@@ -112,9 +112,9 @@ function canAccessSecretAction(
   );
 }
 
-export const secretGroupWrapper = {
+export const groupWrapper = {
   /**
-   * Create a new Secret Group
+   * Create a new Group
    */
   async createGroup(
     userId: string,
@@ -147,7 +147,7 @@ export const secretGroupWrapper = {
     const groupId = randomUUID();
 
     if (parentId) {
-      const parent = await prisma.secretGroup.findUnique({
+      const parent = await prisma.group.findUnique({
         where: { id: parentId },
         select: {
           id: true,
@@ -159,7 +159,7 @@ export const secretGroupWrapper = {
       if (!parent || parent.vaultId !== vaultId) {
         throw new ValidationError(
           ErrorCode.VALIDATION_ERROR,
-          "Parent Secret Group not found in this vault",
+          "Parent Group not found in this vault",
         );
       }
 
@@ -196,7 +196,7 @@ export const secretGroupWrapper = {
     }
 
     // Check for duplicate name in the same hierarchy level
-    const existing = await prisma.secretGroup.findFirst({
+    const existing = await prisma.group.findFirst({
       where: {
         vaultId,
         parentId: parentId ?? null,
@@ -211,7 +211,7 @@ export const secretGroupWrapper = {
       );
     }
 
-    const group = await prisma.secretGroup.create({
+    const group = await prisma.group.create({
       data: {
         id: groupId,
         name,
@@ -241,7 +241,7 @@ export const secretGroupWrapper = {
   },
 
   /**
-   * Get all Secret Groups in a vault, optionally filtered by parentId
+   * Get all Groups in a vault, optionally filtered by parentId
    */
   async getGroups(
     userId: string,
@@ -260,7 +260,7 @@ export const secretGroupWrapper = {
       where: { id: vaultId },
       select: { organizationId: true }
     });
-    
+
     if (!vault) {
       throw new NotFoundError(ErrorCode.VAULT_NOT_FOUND, "Vault not found");
     }
@@ -276,7 +276,7 @@ export const secretGroupWrapper = {
       where.parentId = null;
     }
 
-    const groups = await prisma.secretGroup.findMany({
+    const groups = await prisma.group.findMany({
       where,
       orderBy: { name: "asc" },
       include: {
@@ -310,7 +310,7 @@ export const secretGroupWrapper = {
     }
 
     const [descendantGroups, descendantSecrets] = await Promise.all([
-      prisma.secretGroup.findMany({
+      prisma.group.findMany({
         where: {
           vaultId,
           OR: groupPaths.map((path) => ({
@@ -327,16 +327,16 @@ export const secretGroupWrapper = {
       prisma.secret.findMany({
         where: {
           vaultId,
-          secretGroupId: { not: null },
+          groupId: { not: null },
           OR: groupPaths.map((path) => ({
             OR: [
               {
-                secretGroup: {
+                group: {
                   path: path,
                 },
               },
               {
-                secretGroup: {
+                group: {
                   path: {
                     startsWith: `${path}/`,
                   },
@@ -347,7 +347,7 @@ export const secretGroupWrapper = {
         },
         select: {
           id: true,
-          secretGroup: {
+          group: {
             select: {
               path: true,
             },
@@ -429,27 +429,27 @@ export const secretGroupWrapper = {
 
       return descendantSecrets.some(
         (secret) =>
-          (secret.secretGroup?.path === group.path ||
-            secret.secretGroup?.path?.startsWith(`${group.path}/`)) &&
+          (secret.group?.path === group.path ||
+            secret.group?.path?.startsWith(`${group.path}/`)) &&
           (canAccessSecretAction(accessContext, "secrets:read", {
             orgId: vault.organizationId,
             vaultId,
             secretId: secret.id,
-            groupPath: secret.secretGroup?.path,
+            groupPath: secret.group?.path,
           }) ||
             (cliScope &&
               canAccessSecretAction(accessContext, "secrets:cli-use", {
                 orgId: vault.organizationId,
                 vaultId,
                 secretId: secret.id,
-                groupPath: secret.secretGroup?.path,
+                groupPath: secret.group?.path,
               }))),
       );
     });
   },
 
   /**
-   * Update a Secret Group
+   * Update a Group
    */
   async updateGroup(
     userId: string,
@@ -466,12 +466,12 @@ export const secretGroupWrapper = {
     const { groupId, name, description } = data;
     const prisma = getPrismaClient();
 
-    let group = await prisma.secretGroup.findUnique({
+    let group = await prisma.group.findUnique({
       where: { id: groupId },
     });
 
     if (!group) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Secret Group not found");
+      throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Group not found");
     }
 
     const vault = await prisma.vault.findUnique({
@@ -499,7 +499,7 @@ export const secretGroupWrapper = {
     }
 
     if (name && name !== group.name) {
-      const existing = await prisma.secretGroup.findFirst({
+      const existing = await prisma.group.findFirst({
         where: {
           vaultId: group.vaultId,
           parentId: group.parentId,
@@ -515,7 +515,7 @@ export const secretGroupWrapper = {
       }
     }
 
-    group = await prisma.secretGroup.update({
+    group = await prisma.group.update({
       where: { id: groupId },
       data: {
         name: name ?? group.name,
@@ -539,7 +539,7 @@ export const secretGroupWrapper = {
   },
 
   /**
-   * Delete a Secret Group
+   * Delete a Group
    */
   async deleteGroup(
     userId: string,
@@ -551,7 +551,7 @@ export const secretGroupWrapper = {
   ) {
     const prisma = getPrismaClient();
 
-    const group = await prisma.secretGroup.findUnique({
+    const group = await prisma.group.findUnique({
       where: { id: data.groupId },
       include: {
         _count: {
@@ -561,7 +561,7 @@ export const secretGroupWrapper = {
     });
 
     if (!group) {
-      throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Secret Group not found");
+      throw new ValidationError(ErrorCode.VALIDATION_ERROR, "Group not found");
     }
 
     const vault = await prisma.vault.findUnique({
@@ -591,11 +591,11 @@ export const secretGroupWrapper = {
     if (group._count.children > 0 || group._count.secrets > 0) {
       throw new ValidationError(
         ErrorCode.VALIDATION_ERROR,
-        "Cannot delete a Secret Group that contains secrets or subgroups. Empty it first.",
+        "Cannot delete a Group that contains secrets or subgroups. Empty it first.",
       );
     }
 
-    await prisma.secretGroup.delete({
+    await prisma.group.delete({
       where: { id: data.groupId },
     });
 

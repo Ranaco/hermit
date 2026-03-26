@@ -94,7 +94,7 @@ export interface SecretSummary {
   key?: { id: string; name: string };
 }
 
-export interface SecretGroupSummary {
+export interface GroupSummary {
   id: string;
   name: string;
   description?: string | null;
@@ -287,10 +287,10 @@ export async function deleteKey(keyId: string): Promise<void> {
   await api.del(`/keys/${keyId}`);
 }
 
-export async function getSecretGroups(
+export async function getGroups(
   vaultId: string,
   params: { parentId?: string | null; cliScope?: boolean } = {},
-): Promise<SecretGroupSummary[]> {
+): Promise<GroupSummary[]> {
   const search = new URLSearchParams({ vaultId });
   if (params.parentId) {
     search.set("parentId", params.parentId);
@@ -298,41 +298,41 @@ export async function getSecretGroups(
   if (params.cliScope) {
     search.set("cliScope", "true");
   }
-  const result = await api.get<SecretGroupSummary[]>(
+  const result = await api.get<GroupSummary[]>(
     `/vaults/${vaultId}/groups?${search.toString()}`,
     params.cliScope ? { signedCli: true } : undefined,
   );
   return result;
 }
 
-export async function createSecretGroup(payload: {
+export async function createGroup(payload: {
   vaultId: string;
   name: string;
   description?: string;
   parentId?: string;
-}): Promise<SecretGroupSummary> {
+}): Promise<GroupSummary> {
   return api.post(`/vaults/${payload.vaultId}/groups`, payload);
 }
 
-export async function updateSecretGroup(
+export async function updateGroup(
   vaultId: string,
   groupId: string,
   payload: { name?: string; description?: string },
-): Promise<SecretGroupSummary> {
+): Promise<GroupSummary> {
   return api.put(`/vaults/${vaultId}/groups/${groupId}`, payload);
 }
 
-export async function deleteSecretGroup(vaultId: string, groupId: string): Promise<void> {
+export async function deleteGroup(vaultId: string, groupId: string): Promise<void> {
   await api.del(`/vaults/${vaultId}/groups/${groupId}`);
 }
 
 export async function getSecrets(
   vaultId: string,
-  params: { secretGroupId?: string; search?: string; page?: number; limit?: number; cliScope?: boolean } = {},
+  params: { groupId?: string; search?: string; page?: number; limit?: number; cliScope?: boolean } = {},
 ): Promise<SecretSummary[]> {
   const search = new URLSearchParams({ vaultId });
-  if (params.secretGroupId) {
-    search.set("secretGroupId", params.secretGroupId);
+  if (params.groupId) {
+    search.set("groupId", params.groupId);
   }
   if (params.search) {
     search.set("search", params.search);
@@ -359,7 +359,7 @@ export async function createSecret(payload: {
   vaultId: string;
   keyId: string;
   valueType?: string;
-  secretGroupId?: string;
+  groupId?: string;
   password?: string;
   description?: string;
 }): Promise<{ secret: SecretSummary }> {
@@ -373,7 +373,7 @@ export async function updateSecret(
     valueType?: string;
     description?: string;
     password?: string | null;
-    secretGroupId?: string | null;
+    groupId?: string | null;
     commitMessage?: string;
   },
 ): Promise<{ secret: SecretSummary }> {
@@ -400,7 +400,7 @@ export async function deleteSecret(secretId: string): Promise<void> {
 
 export async function bulkRevealSecrets(payload: {
   vaultId: string;
-  secretGroupId?: string;
+  groupId?: string;
   secretIds?: string[];
   includeDescendants?: boolean;
   password?: string;
@@ -411,7 +411,7 @@ export async function bulkRevealSecrets(payload: {
 
 export async function bulkRevealSecretsCli(payload: {
   vaultId: string;
-  secretGroupId?: string;
+  groupId?: string;
   secretIds?: string[];
   includeDescendants?: boolean;
   password?: string;
