@@ -1,17 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
   CheckCircle2,
   ChevronRight,
   Fingerprint,
-  KeyRound,
   Lock,
   ShieldCheck,
   TerminalSquare,
-  Waypoints,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
@@ -22,65 +22,75 @@ const navigation = [
   { label: "Docs", href: "/docs" },
 ];
 
+const proofPoints = [
+  "Custom IAM policies with deny precedence",
+  "Vault transit-backed encryption paths",
+  "Audited reveal flows across the product",
+  "Operator-friendly invites and hierarchy",
+];
+
 const platformFeatures = [
   {
     title: "Policy-aware access",
-    body: "Evaluate custom IAM policy against resource URNs at the moment a user tries to read, reveal, rotate, or manage.",
+    body: "Evaluate custom IAM policies against scoped resource URNs when users try to read, reveal, rotate, or manage secrets.",
     icon: <Fingerprint className="h-4 w-4" />,
   },
   {
     title: "Transit-backed protection",
-    body: "Keep key operations and secret encryption wired through HashiCorp Vault transit instead of application-local shortcuts.",
+    body: "Keep key operations and secret encryption wired through Vault transit so the security model stays explicit end to end.",
     icon: <ShieldCheck className="h-4 w-4" />,
   },
   {
     title: "Three-tier reveal control",
-    body: "Authentication, vault passwords, and secret passwords protect different actions without flattening everything into one prompt.",
+    body: "Use authentication, vault passwords, and secret passwords without collapsing every reveal path into a single prompt.",
     icon: <Lock className="h-4 w-4" />,
   },
   {
     title: "Operator tooling",
-    body: "Use the web dashboard, official CLI enrollment, invite flows, and one-time shares without losing audit continuity.",
+    body: "Work from the dashboard, invite flows, and one-time secret surfaces without losing audit continuity or product clarity.",
     icon: <TerminalSquare className="h-4 w-4" />,
   },
 ];
 
 const workflowItems = [
   {
-    title: "Model the workspace the way it actually exists",
-    body: "Organizations own vaults. Vaults own keys, groups, and secrets. The hierarchy stays visible in the UI, policy layer, and reveal path.",
+    title: "Model the hierarchy the way teams actually work",
+    body: "Organizations own vaults. Vaults own keys and secrets. Hermit keeps that structure visible in the UI, access model, and reveal path.",
   },
   {
     title: "Grant access with real scope",
-    body: "Create custom roles, attach policies, assign teams, and scope access to the workspace, a vault, a folder subtree, or specific secrets.",
+    body: "Attach policies to custom roles, assign team access, and constrain permissions to the organization, vault, or specific secret surface.",
   },
   {
-    title: "Operate without ambiguity",
-    body: "Audit logs, reveal prompts, invite return URLs, and secret sharing are all first-class product workflows rather than side features.",
+    title: "Operate with auditable confidence",
+    body: "Invites, reveals, secret protection, and ongoing changes stay understandable because the product treats those flows as first-class operations.",
   },
 ];
 
 const securityPoints = [
-  "Custom roles and deny precedence instead of static RBAC",
-  "Versioned secrets with auditable reveal operations",
-  "Vault and secret password challenge flows",
-  "CLI and dashboard surfaces that preserve control",
+  "Explicit deny precedence across dynamic IAM policies",
+  "Versioned secret history and auditable reveal operations",
+  "Vault-level and secret-level password challenge flows",
+  "A dashboard that exposes security posture instead of hiding it",
 ];
 
-const sdkPills = [
-  "Node.js",
-  "Next.js",
-  "Express",
-  "CLI",
-  "REST",
-  "Vault",
-  "PostgreSQL",
-  "Prisma",
-];
+type TiltState = {
+  rotateX: number;
+  rotateY: number;
+  shadowX: number;
+  shadowY: number;
+};
+
+const neutralTilt: TiltState = {
+  rotateX: 0,
+  rotateY: 0,
+  shadowX: 0,
+  shadowY: 0,
+};
 
 function NavLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="text-sm text-white/60 transition-colors hover:text-white">
+    <Link href={href} className="text-sm text-white/68 transition-colors hover:text-white">
       {label}
     </Link>
   );
@@ -95,11 +105,51 @@ function FooterLink({ href, label }: { href: string; label: string }) {
 }
 
 export function LandingPage() {
+  const [tilt, setTilt] = useState<TiltState>(neutralTilt);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => {
+      const prefersReducedMotion = mediaQuery.matches;
+      setReducedMotion(prefersReducedMotion);
+      if (prefersReducedMotion) {
+        setTilt(neutralTilt);
+      }
+    };
+
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updatePreference);
+    };
+  }, []);
+
+  const handlePreviewMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (reducedMotion) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+
+    setTilt({
+      rotateX: Number((-y * 4.5).toFixed(2)),
+      rotateY: Number((x * 6.5).toFixed(2)),
+      shadowX: Number((x * 18).toFixed(2)),
+      shadowY: Number((y * 24).toFixed(2)),
+    });
+  };
+
+  const resetPreviewTilt = () => setTilt(neutralTilt);
+
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-white/15">
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.16),transparent_18%),radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.08),transparent_24%),linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:auto,auto,52px_52px,52px_52px]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.14),transparent_18%),radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.08),transparent_24%),linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:auto,auto,52px_52px,52px_52px]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_42%)]" />
 
         <header className="relative z-20 px-4 pt-4 sm:px-6 lg:px-8">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl sm:px-5">
@@ -108,7 +158,7 @@ export function LandingPage() {
                 <Logo className="h-6 w-6 text-white" />
               </div>
               <div className="leading-none">
-                <p className="text-sm font-semibold tracking-[-0.02em]">Hermit</p>
+                <p className="text-sm font-semibold tracking-[-0.02em] text-white">Hermit</p>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-white/38">secret operations</p>
               </div>
             </Link>
@@ -138,23 +188,23 @@ export function LandingPage() {
         </header>
 
         <main className="relative z-10">
-          <section className="px-4 pb-18 pt-20 sm:px-6 lg:px-8 lg:pb-24 lg:pt-24">
-            <div className="mx-auto max-w-7xl">
+          <section className="px-4 pb-18 pt-18 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
+            <div className="mx-auto max-w-6xl">
               <div className="mx-auto max-w-3xl text-center">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-white/56">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Multi-tenant kms and secret operations
+                  Security-first secret operations
                 </div>
 
-                <h1 className="mt-8 text-[clamp(3.7rem,9vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-white">
-                  Secrets for
+                <h1 className="mt-8 text-[clamp(3.35rem,8.7vw,7rem)] font-semibold leading-[0.92] tracking-[-0.08em] text-white">
+                  Secrets with
                   <br />
-                  modern teams
+                  operational clarity
                 </h1>
 
-                <p className="mx-auto mt-6 max-w-2xl text-[clamp(1.05rem,1.8vw,1.22rem)] leading-8 text-white/62">
-                  The cleanest way to manage vaults, keys, policies, reveal flows, invites, and audit logs without
-                  hiding the security model underneath.
+                <p className="mx-auto mt-6 max-w-2xl text-[clamp(1.02rem,1.8vw,1.16rem)] leading-8 text-white/62">
+                  Manage vaults, keys, policies, invites, and audited reveal flows in one calm control plane built for
+                  teams that want the security model to stay visible.
                 </p>
 
                 <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -167,7 +217,7 @@ export function LandingPage() {
                   </Link>
                   <Link
                     href="#features"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/80 transition-colors hover:bg-white/[0.05] hover:text-white"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/88 transition-colors hover:bg-white/[0.06] hover:text-white"
                   >
                     Explore the product
                     <ChevronRight className="h-4 w-4" />
@@ -175,98 +225,57 @@ export function LandingPage() {
                 </div>
               </div>
 
-              <div className="mt-14 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-                <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.8)]">
-                  <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-white/20" />
-                    </div>
-                    <span className="text-[11px] uppercase tracking-[0.24em] text-white/38">sdk example</span>
-                  </div>
+              <div className="mt-14">
+                <div
+                  onPointerMove={handlePreviewMove}
+                  onPointerLeave={resetPreviewTilt}
+                  className="group relative mx-auto max-w-6xl [perspective:1800px]"
+                >
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-[8%] -bottom-8 h-20 rounded-full bg-[radial-gradient(circle,rgba(0,0,0,0.38),transparent_72%)] blur-2xl transition-transform duration-300 ease-out"
+                    style={{
+                      transform: reducedMotion
+                        ? "translate3d(0,0,0)"
+                        : `translate3d(${tilt.shadowX}px, ${tilt.shadowY}px, 0)`,
+                    }}
+                  />
 
-                  <div className="grid gap-8 px-5 py-6 lg:grid-cols-[16rem_1fr]">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">integrate</p>
-                      <div className="mt-5 flex flex-wrap gap-2">
-                        {sdkPills.map((pill) => (
-                          <span
-                            key={pill}
-                            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/74"
-                          >
-                            {pill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <pre className="overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-5 text-sm leading-7 text-white/80">
-                      <code>{`const hermit = new Hermit({
-  baseUrl: process.env.HERMIT_URL,
-  token: process.env.HERMIT_TOKEN,
-});
-
-await hermit.secrets.create({
-  vaultId: "production-vault",
-  keyId: "payments-master-key",
-  name: "STRIPE_API_KEY",
-  value: process.env.STRIPE_API_KEY,
-});`}</code>
-                    </pre>
-                  </div>
-                </div>
-
-                <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.8)]">
-                  <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                    <span className="text-[11px] uppercase tracking-[0.24em] text-white/38">dashboard preview</span>
-                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-emerald-300">
-                      healthy
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 px-5 py-6">
-                    {[
-                      { label: "Organization", value: "Acme Security" },
-                      { label: "Vault", value: "Production Vault" },
-                      { label: "Key", value: "payments-master-key" },
-                      { label: "Secret", value: "STRIPE_API_KEY" },
-                    ].map((row) => (
+                  <div
+                    className="relative overflow-hidden rounded-[2.2rem] bg-transparent p-0 shadow-[0_55px_120px_-55px_rgba(0,0,0,0.75)] transition-transform duration-300 ease-out will-change-transform"
+                    style={{
+                      transform: reducedMotion
+                        ? "rotateX(0deg) rotateY(0deg)"
+                        : `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`,
+                    }}
+                  >
+                    <div className="relative overflow-hidden rounded-[1.9rem] bg-[#111319]">
                       <div
-                        key={row.label}
-                        className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
-                      >
-                        <span className="text-[11px] uppercase tracking-[0.22em] text-white/42">{row.label}</span>
-                        <span className="text-sm font-medium text-white/86">{row.value}</span>
-                      </div>
-                    ))}
-
-                    <div className="rounded-2xl border border-white/10 bg-black/45 p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] uppercase tracking-[0.22em] text-white/38">Policy evaluation</span>
-                        <Waypoints className="h-4 w-4 text-white/46" />
-                      </div>
-                      <div className="mt-4 space-y-2.5">
-                        {["vaults:create", "keys:use", "secrets:use"].map((item) => (
-                          <div
-                            key={item}
-                            className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-3"
-                          >
-                            <span className="font-mono text-xs text-white/76">{item}</span>
-                            <span className="text-[10px] uppercase tracking-[0.18em] text-white/46">Allow</span>
-                          </div>
-                        ))}
-                      </div>
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.2),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.08),transparent_28%)]"
+                      />
+                      <Image
+                        src="/landing/hermit-dashboard-overview.png"
+                        alt="Hermit dashboard overview showing vault, secret, and audit workspace panels"
+                        width={1600}
+                        height={1030}
+                        priority
+                        className="relative h-auto w-full rounded-[1.9rem] object-cover"
+                      />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.025] px-6 py-5">
-                <p className="text-center text-sm text-white/42">
-                  Built for teams that want explicit hierarchy, audited reveals, custom IAM, CLI workflows, and
-                  first-class operator tooling.
-                </p>
+              <div className="mt-8 grid gap-3 md:grid-cols-4">
+                {proofPoints.map((point) => (
+                  <div
+                    key={point}
+                    className="rounded-[1.65rem] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm leading-6 text-white/62 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.5)]"
+                  >
+                    {point}
+                  </div>
+                ))}
               </div>
             </div>
           </section>
@@ -281,8 +290,8 @@ await hermit.secrets.create({
                   for secret operations
                 </h2>
                 <p className="mt-5 max-w-xl text-lg leading-8 text-white/58">
-                  Every part of the surface is meant to reduce ambiguity: what you can access, what is protected,
-                  and how secrets move through the system.
+                  Every part of the surface is designed to reduce ambiguity about access, protection, and how secrets
+                  move through your system.
                 </p>
               </div>
 
@@ -316,13 +325,16 @@ await hermit.secrets.create({
 
               <div className="space-y-0">
                 {workflowItems.map((item, index) => (
-                  <article key={item.title} className="grid gap-5 border-b border-white/10 py-8 md:grid-cols-[4rem_1fr]">
+                  <article
+                    key={item.title}
+                    className="grid gap-5 border-b border-white/10 py-8 md:grid-cols-[4rem_1fr]"
+                  >
                     <div className="text-[11px] uppercase tracking-[0.24em] text-white/34">0{index + 1}</div>
                     <div>
                       <h3 className="text-[1.8rem] font-semibold leading-[1.02] tracking-[-0.05em] text-white">
                         {item.title}
                       </h3>
-                      <p className="mt-4 max-w-[44ch] text-[15px] leading-8 text-white/58">{item.body}</p>
+                      <p className="mt-4 max-w-[46ch] text-[15px] leading-8 text-white/58">{item.body}</p>
                     </div>
                   </article>
                 ))}
@@ -338,8 +350,8 @@ await hermit.secrets.create({
                   Everything in your control
                 </h2>
                 <p className="mt-5 max-w-[42ch] text-[15px] leading-8 text-white/58">
-                  Manage access, protection, reveal behavior, and audit visibility without relying on vague
-                  workspace abstractions.
+                  Manage access, protection, reveal behavior, and audit visibility without falling back to vague
+                  workspace abstractions or invisible privilege rules.
                 </p>
               </div>
 
@@ -386,7 +398,7 @@ await hermit.secrets.create({
                     </Link>
                     <Link
                       href="#features"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/78 transition-colors hover:bg-white/[0.05] hover:text-white"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/88 transition-colors hover:bg-white/[0.06] hover:text-white"
                     >
                       Learn more
                     </Link>
