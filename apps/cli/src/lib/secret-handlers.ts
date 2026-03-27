@@ -39,7 +39,7 @@ export async function handleSecretList(params: ListSecretsParams): Promise<void>
   const { vault, group } = await resolveSecretScope(params);
   const childGroups = params.search ? [] : await getAccessibleGroupChildren(vault.id, group?.id);
   const secrets = await sdk.getSecrets(vault.id, {
-    secretGroupId: group?.id,
+    groupId: group?.id,
     search: params.search,
     cliScope: true,
   });
@@ -52,7 +52,7 @@ export async function handleSecretSet(params: SetSecretParams): Promise<void> {
   requireAuth();
 
   const { vault, group } = await resolveSecretScope(params);
-  const secrets = await sdk.getSecrets(vault.id, { secretGroupId: group?.id, cliScope: true });
+  const secrets = await sdk.getSecrets(vault.id, { groupId: group?.id, cliScope: true });
   const name =
     params.name ||
     (await promptInput(
@@ -131,7 +131,7 @@ export async function handleSecretSet(params: SetSecretParams): Promise<void> {
       valueType,
       description: params.description,
       password,
-      secretGroupId: group?.id || null,
+      groupId: group?.id || null,
     });
     renderData({ secret: result.secret, mode: "updated" });
     ui.success(`Secret "${name}" updated`);
@@ -146,7 +146,7 @@ export async function handleSecretSet(params: SetSecretParams): Promise<void> {
     vaultId: vault.id,
     keyId,
     valueType,
-    secretGroupId: group?.id,
+    groupId: group?.id,
     password,
     description: params.description,
   });

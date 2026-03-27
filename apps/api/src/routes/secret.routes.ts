@@ -40,7 +40,7 @@ const router = express.Router();
 
 const getSecretUrn = async (req: Request & { organizationId?: string }) => {
   const secretId = req.params.id || req.body.secretId || req.query.secretId;
-  const secretGroupId = req.body.secretGroupId || req.query.secretGroupId;
+  const groupId = req.body.groupId || req.query.groupId;
   const secretIds = Array.isArray(req.body.secretIds) ? req.body.secretIds : [];
   const vaultId = req.body.vaultId || req.query.vaultId || req.params.vaultId;
   const search = req.body.search || req.query.search;
@@ -52,7 +52,7 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
       where: { id: secretId as string },
       include: {
         vault: { select: { organizationId: true, id: true } },
-        secretGroup: { select: { path: true } },
+        group: { select: { path: true } },
       },
     });
     if (!secret || !secret.vault) {
@@ -63,7 +63,7 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
   }
 
@@ -72,7 +72,7 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
       where: { id: { in: secretIds } },
       include: {
         vault: { select: { organizationId: true, id: true } },
-        secretGroup: { select: { path: true } },
+        group: { select: { path: true } },
       },
     });
 
@@ -89,16 +89,16 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
             orgId: secret.vault.organizationId,
             vaultId: secret.vault.id,
             secretId: secret.id,
-            groupPath: secret.secretGroup?.path,
+            groupPath: secret.group?.path,
           }),
         ),
       ),
     );
   }
 
-  if (secretGroupId) {
-    const group = await prisma.secretGroup.findUnique({
-      where: { id: secretGroupId as string },
+  if (groupId) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId as string },
       include: { vault: { select: { organizationId: true, id: true } } },
     });
     if (!group || !group.vault) {
@@ -141,7 +141,7 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
       },
       select: {
         id: true,
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -157,7 +157,7 @@ const getSecretUrn = async (req: Request & { organizationId?: string }) => {
             orgId: vault.organizationId,
             vaultId: vaultId as string,
             secretId: secret.id,
-            groupPath: secret.secretGroup?.path,
+            groupPath: secret.group?.path,
           }),
         ),
       ]),

@@ -211,7 +211,7 @@ export async function buildOrganizationGraph(organizationId: string) {
       },
       vaults: {
         include: {
-          secretGroups: {
+          groups: {
             select: {
               id: true,
               name: true,
@@ -231,7 +231,7 @@ export async function buildOrganizationGraph(organizationId: string) {
             select: {
               id: true,
               name: true,
-              secretGroupId: true,
+              groupId: true,
               keyId: true,
               valueType: true,
             },
@@ -272,7 +272,7 @@ export async function buildOrganizationGraph(organizationId: string) {
       type: "contains",
     });
 
-    for (const group of vault.secretGroups) {
+    for (const group of vault.groups) {
       nodes.push({
         id: `group:${group.id}`,
         type: "group",
@@ -313,11 +313,11 @@ export async function buildOrganizationGraph(organizationId: string) {
         entityId: secret.id,
         label: secret.name,
         subtitle: secret.valueType,
-        parentId: secret.secretGroupId || vault.id,
+        parentId: secret.groupId || vault.id,
       });
       edges.push({
-        id: `${secret.secretGroupId ? `group:${secret.secretGroupId}` : `vault:${vault.id}`}->secret:${secret.id}`,
-        from: secret.secretGroupId ? `group:${secret.secretGroupId}` : `vault:${vault.id}`,
+        id: `${secret.groupId ? `group:${secret.groupId}` : `vault:${vault.id}`}->secret:${secret.id}`,
+        from: secret.groupId ? `group:${secret.groupId}` : `vault:${vault.id}`,
         to: `secret:${secret.id}`,
         type: "contains",
       });
@@ -442,7 +442,7 @@ export async function buildOrganizationGraph(organizationId: string) {
     edges,
     counts: {
       vaults: organization.vaults.length,
-      groups: organization.vaults.reduce((total, vault) => total + vault.secretGroups.length, 0),
+      groups: organization.vaults.reduce((total, vault) => total + vault.groups.length, 0),
       keys: organization.vaults.reduce((total, vault) => total + vault.keys.length, 0),
       secrets: organization.vaults.reduce((total, vault) => total + vault.secrets.length, 0),
       teams: organization.teams.length,
@@ -506,11 +506,11 @@ export async function buildOrganizationGraphAccess(
       policies: true,
       vaults: {
         include: {
-          secretGroups: true,
+          groups: true,
           keys: true,
           secrets: {
             include: {
-              secretGroup: true,
+              group: true,
             },
           },
         },
@@ -524,7 +524,7 @@ export async function buildOrganizationGraphAccess(
 
   const allVaults = organization.vaults;
   const allGroups = allVaults.flatMap((vault) =>
-    vault.secretGroups.map((group) => ({ ...group, organizationId })),
+    vault.groups.map((group) => ({ ...group, organizationId })),
   );
   const allSecrets = allVaults.flatMap((vault) =>
     vault.secrets.map((secret) => ({
@@ -604,7 +604,7 @@ export async function buildOrganizationGraphAccess(
                 orgId: organizationId,
                 vaultId: secret.vaultId,
                 secretId: secret.id,
-                groupPath: secret.secretGroup?.path,
+                groupPath: secret.group?.path,
               }),
             );
             return { secret, results };
@@ -673,7 +673,7 @@ export async function buildOrganizationGraphAccess(
                 orgId: organizationId,
                 vaultId: secret.vaultId,
                 secretId: secret.id,
-                groupPath: secret.secretGroup?.path,
+                groupPath: secret.group?.path,
               }),
             );
             return { secret, results };
@@ -726,7 +726,7 @@ export async function buildOrganizationGraphAccess(
                 orgId: organizationId,
                 vaultId: secret.vaultId,
                 secretId: secret.id,
-                groupPath: secret.secretGroup?.path,
+                groupPath: secret.group?.path,
               }),
             );
             return { secret, results };
@@ -768,7 +768,7 @@ export async function buildOrganizationGraphAccess(
       orgId: organizationId,
       vaultId: secret.vaultId,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
 
     const members = await Promise.all(

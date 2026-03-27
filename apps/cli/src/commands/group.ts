@@ -31,7 +31,7 @@ interface GroupDeleteOptions {
   yes?: boolean;
 }
 
-export const groupCommand = new Command("group").description("Manage secret groups");
+export const groupCommand = new Command("group").description("Manage groups");
 
 groupCommand
   .command("list")
@@ -42,10 +42,10 @@ groupCommand
     runCommand(async () => {
       requireAuth();
       const vault = opts.vault ? await resolveVault(opts.vault) : await requireActiveVault();
-      const groups = await sdk.getSecretGroups(vault.id, opts.parent ? { parentId: opts.parent } : {});
+      const groups = await sdk.getGroups(vault.id, opts.parent ? { parentId: opts.parent } : {});
       renderData({ vault, groups });
       if (groups.length === 0) {
-        ui.warn("No secret groups found");
+        ui.warn("No groups found");
         ui.newline();
         return;
       }
@@ -62,7 +62,7 @@ groupCommand
 
 groupCommand
   .command("create")
-  .description("Create a secret group")
+  .description("Create a group")
   .option("--vault <query>", "Vault name or id")
   .option("--parent <query>", "Parent group id or name")
   .option("-p, --path <path>", "Path like prod/api")
@@ -86,7 +86,7 @@ groupCommand
         (!isNonInteractive()
           ? await promptInput({ message: "Description (optional):" }, "")
           : undefined);
-      const group = await sdk.createSecretGroup({
+      const group = await sdk.createGroup({
         vaultId: vault.id,
         name: name.trim(),
         description: description?.trim() || undefined,
@@ -100,7 +100,7 @@ groupCommand
 
 groupCommand
   .command("update")
-  .description("Update a secret group")
+  .description("Update a group")
   .argument("<query>", "Group id, short id, or name")
   .option("--vault <query>", "Vault name or id")
   .option("-n, --name <name>", "New name")
@@ -113,7 +113,7 @@ groupCommand
       if (!group) {
         abort(`No group matches "${query}".`);
       }
-      const updated = await sdk.updateSecretGroup(vault.id, group.id, {
+      const updated = await sdk.updateGroup(vault.id, group.id, {
         name: opts.name,
         description: opts.description,
       });
@@ -125,7 +125,7 @@ groupCommand
 
 groupCommand
   .command("delete")
-  .description("Delete a secret group")
+  .description("Delete a group")
   .argument("<query>", "Group id, short id, or name")
   .option("--vault <query>", "Vault name or id")
   .option("-y, --yes", "Skip confirmation")
@@ -140,7 +140,7 @@ groupCommand
       if (!opts.yes) {
         const confirmed = await promptConfirm(
           { message: `Delete group "${group.name}"?`, default: false },
-          "Use --yes when deleting a secret group in non-interactive mode.",
+          "Use --yes when deleting a group in non-interactive mode.",
         );
         if (!confirmed) {
           ui.warn("Cancelled");
@@ -148,7 +148,7 @@ groupCommand
           return;
         }
       }
-      await sdk.deleteSecretGroup(vault.id, group.id);
+      await sdk.deleteGroup(vault.id, group.id);
       renderData({ success: true, groupId: group.id });
       ui.success(`Group "${group.name}" deleted`);
       ui.newline();
@@ -157,6 +157,6 @@ groupCommand
 
 groupCommand
   .command("tree")
-  .description("Render the secret group hierarchy")
+  .description("Render the group hierarchy")
   .option("--vault <query>", "Vault name or id")
   .action((opts: { vault?: string }) => runCommand(() => handleGroupTree({ vaultQuery: opts.vault })));

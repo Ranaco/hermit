@@ -27,7 +27,7 @@ import organizationRoutes from "./routes/organization.routes";
 import vaultRoutes from "./routes/vault.routes";
 import keyRoutes from "./routes/key.routes";
 import secretRoutes from "./routes/secret.routes";
-import secretGroupRoutes from "./routes/secret-group.routes";
+import groupRoutes from "./routes/group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
@@ -38,8 +38,9 @@ import shareRoutes from "./routes/share.routes";
 export const createServer = (): Express => {
   const app = express();
 
-  // Trust proxy if behind reverse proxy (e.g., nginx, AWS ALB)
-  app.set("trust proxy", true);
+  // Trust only the first proxy hop (e.g., nginx, AWS ALB).
+  // Using `true` would allow clients to spoof X-Forwarded-For.
+  app.set("trust proxy", 1);
 
   // Disable x-powered-by header
   app.disable("x-powered-by");
@@ -116,7 +117,7 @@ export const createServer = (): Express => {
   app.use(`${config.app.apiPrefix}/users`, userRoutes);
   app.use(`${config.app.apiPrefix}/organizations`, organizationRoutes);
   app.use(`${config.app.apiPrefix}/vaults`, vaultRoutes);
-  app.use(`${config.app.apiPrefix}/vaults/:vaultId/groups`, secretGroupRoutes);
+  app.use(`${config.app.apiPrefix}/vaults/:vaultId/groups`, groupRoutes);
   app.use(`${config.app.apiPrefix}/keys`, keyRoutes);
   app.use(`${config.app.apiPrefix}/secrets`, secretRoutes);
   app.use(`${config.app.apiPrefix}/onboarding`, onboardingRoutes);

@@ -55,7 +55,7 @@ configCommand
         ui.newline();
         ui.panel("Project Configuration", [
           ui.kv("Version", ui.colors.primary(String(config.version))),
-          ui.kv("Envs", ui.colors.primary(Object.keys(config.environments).join(", ")), { overflow: "wrap" }),
+          ui.kv("Envs", ui.colors.primary(Object.keys(config.environments || {}).join(", ") || "none"), { overflow: "wrap" }),
           ui.kv("Status", validation.valid ? ui.colors.green("valid") : ui.colors.red("invalid")),
         ]);
       }

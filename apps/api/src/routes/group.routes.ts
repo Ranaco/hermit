@@ -4,7 +4,7 @@ import {
   getGroups,
   updateGroup,
   deleteGroup,
-} from "../controllers/secret-group.controller";
+} from "../controllers/group.controller";
 import { validate } from "../validators/validation.middleware";
 import { authenticate, requireOfficialCli } from "../middleware/auth";
 import { requirePolicy } from "../middleware/policy";
@@ -17,10 +17,10 @@ import {
 } from "../services/iam-resource.service";
 import { buildPolicyUrn } from "../services/organization-iam.service";
 import {
-  createSecretGroupSchema,
-  updateSecretGroupSchema,
-  getSecretGroupsSchema,
-} from "../validators/secret-group.validator";
+  createGroupSchema,
+  updateGroupSchema,
+  getGroupsSchema,
+} from "../validators/group.validator";
 
 const router = Router({ mergeParams: true });
 
@@ -32,7 +32,7 @@ const getGroupUrn = async (req: Request & { organizationId?: string }) => {
   const prisma = getPrismaClient();
 
   if (groupId) {
-    const group = await prisma.secretGroup.findUnique({
+    const group = await prisma.group.findUnique({
       where: { id: groupId as string },
       include: { vault: { select: { organizationId: true, id: true } } },
     });
@@ -49,7 +49,7 @@ const getGroupUrn = async (req: Request & { organizationId?: string }) => {
   }
 
   if (parentId) {
-    const parent = await prisma.secretGroup.findUnique({
+    const parent = await prisma.group.findUnique({
       where: { id: parentId as string },
       include: { vault: { select: { organizationId: true, id: true } } },
     });
@@ -78,7 +78,7 @@ const getGroupUrn = async (req: Request & { organizationId?: string }) => {
       throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND, "Vault not found");
     }
     req.organizationId = vault.organizationId;
-    const groups = await prisma.secretGroup.findMany({
+    const groups = await prisma.group.findMany({
       where: { vaultId: vault.id },
       select: { id: true, path: true },
     });
@@ -126,7 +126,7 @@ router.use(authenticate);
 
 router.get(
   "/",
-  validate({ query: getSecretGroupsSchema }),
+  validate({ query: getGroupsSchema }),
   async (req, res, next) => {
     if (req.query.cliScope === "true") {
       return requireOfficialCli(req, res, () =>
@@ -149,7 +149,7 @@ router.get(
 router.post(
   "/",
   requireVaultHealth,
-  validate({ body: createSecretGroupSchema }),
+  validate({ body: createGroupSchema }),
   requirePolicy("groups:create", getGroupUrn),
   createGroup,
 );
@@ -157,7 +157,7 @@ router.post(
 router.put(
   "/:groupId",
   requireVaultHealth,
-  validate({ body: updateSecretGroupSchema }),
+  validate({ body: updateGroupSchema }),
   requirePolicy("groups:update", getGroupUrn),
   updateGroup,
 );

@@ -457,7 +457,7 @@ export default function SecretDetailPage() {
                     </p>
                     <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
                       <FolderTree className="h-4 w-4 text-muted-foreground" />
-                      {secret.secretGroup?.name || "Root"}
+                      {secret.group?.name || "Root"}
                     </p>
                   </div>
                 </div>

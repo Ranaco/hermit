@@ -10,7 +10,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import { useSecretGroups } from "@/hooks/use-secret-groups";
+import { useGroups } from "@/hooks/use-groups";
 import { useSecrets } from "@/hooks/use-secrets";
 import { useVaults } from "@/hooks/use-vaults";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -705,7 +705,7 @@ function BuilderRuleCard({
   const supportsSpecificSecrets = group?.resourceKind === "secret";
   const selectableVaultId =
     supportsFolder || supportsSpecificSecrets ? rule.vaultId ?? vaults[0]?.id : undefined;
-  const { data: groupResponse } = useSecretGroups(
+  const { data: groupResponse } = useGroups(
     selectableVaultId,
     undefined,
     true,
@@ -933,7 +933,7 @@ function BuilderRuleCard({
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground">{secret.name}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {secret.secretGroup?.name ?? "Root"} / {secret.id.slice(0, 8)}
+                            {secret.group?.name ?? "Root"} / {secret.id.slice(0, 8)}
                           </p>
                         </div>
                       </label>

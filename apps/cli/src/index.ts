@@ -1,8 +1,12 @@
 import { Command, Option } from "commander";
 import { authCommand } from "./commands/auth.js";
 import { configCommand } from "./commands/config.js";
-import { envCommand } from "./commands/export.js";
+import { currentCommand } from "./commands/current.js";
+import { envCommand } from "./commands/env.js";
+import { secretExportCommand } from "./commands/export.js";
+import { useCommand } from "./commands/use.js";
 import { groupCommand } from "./commands/group.js";
+import { initCommand } from "./commands/init.js";
 import { keyCommand } from "./commands/key.js";
 import { orgCommand } from "./commands/org.js";
 import { runCommand as secretRunCommand } from "./commands/run.js";
@@ -70,6 +74,7 @@ program.hook("preAction", (thisCommand: Command) => {
 });
 
 program.addCommand(authCommand);
+program.addCommand(initCommand);
 program.addCommand(orgCommand);
 program.addCommand(teamCommand);
 program.addCommand(vaultCommand);
@@ -79,6 +84,9 @@ program.addCommand(secretCommand);
 program.addCommand(secretRunCommand);
 program.addCommand(configCommand);
 program.addCommand(envCommand);
+program.addCommand(secretExportCommand);
+program.addCommand(useCommand);
+program.addCommand(currentCommand);
 program.addCommand(whoamiCommand);
 
 program
@@ -186,8 +194,23 @@ program
   );
 
 program
+  .command("exec", { hidden: true })
+  .description("Alias for run")
+  .allowUnknownOption(true)
+  .allowExcessArguments(true)
+  .action(() => {
+    // Replace 'exec' with 'run' in argv and re-parse
+    const args = process.argv.slice();
+    const execIndex = args.indexOf("exec");
+    if (execIndex !== -1) {
+      args[execIndex] = "run";
+    }
+    program.parseAsync(args);
+  });
+
+program
   .command("tree [path]")
-  .description("Show secret group hierarchy (alias: group tree)")
+  .description("Show group hierarchy (alias: group tree)")
   .option("--vault <query>", "Vault name or id")
   .action((pathArg: string | undefined, opts: { vault?: string }) =>
     runCommand(() => handleGroupTree({ vaultQuery: opts.vault, pathQuery: pathArg })),

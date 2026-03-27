@@ -147,14 +147,14 @@ export async function resolveKey(vaultId: string, query: string): Promise<sdk.Ke
 export async function resolveGroupByPath(
   vaultId: string,
   pathValue: string,
-): Promise<sdk.SecretGroupSummary> {
+): Promise<sdk.GroupSummary> {
   const segments = pathValue.split("/").map((segment) => segment.trim()).filter(Boolean);
   if (segments.length === 0) {
-    throw new Error("Secret group path is empty.");
+    throw new Error("Group path is empty.");
   }
 
   let parentId: string | null = null;
-  let current: sdk.SecretGroupSummary | undefined;
+  let current: sdk.GroupSummary | undefined;
   let traversedPath = "";
 
   for (const segment of segments) {
@@ -185,7 +185,7 @@ export async function resolveGroupByPath(
   }
 
   if (!current) {
-    throw new Error(`No secret group path matches "${pathValue}".`);
+    throw new Error(`No group path matches "${pathValue}".`);
   }
 
   return current;
@@ -195,7 +195,7 @@ export async function resolveGroup(
   vaultId: string,
   query?: string,
   pathValue?: string,
-): Promise<sdk.SecretGroupSummary | undefined> {
+): Promise<sdk.GroupSummary | undefined> {
   if (pathValue) {
     return resolveGroupByPath(vaultId, pathValue);
   }
@@ -205,5 +205,5 @@ export async function resolveGroup(
 
   const allGroups = await getAllAccessibleGroups(vaultId);
 
-  return requireByIdOrName(allGroups, query, "secret group");
+  return requireByIdOrName(allGroups, query, "group");
 }

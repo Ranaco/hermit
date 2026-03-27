@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { secretService, type CreateSecretData, type UpdateSecretData, type RevealSecretData } from "@/services/secret.service";
 import { toast } from "sonner";
 
-export function useSecrets(vaultId?: string, secretGroupId?: string) {
+export function useSecrets(vaultId?: string, groupId?: string) {
   return useQuery({
-    queryKey: ["secrets", vaultId, secretGroupId],
-    queryFn: () => secretService.getAll(vaultId!, secretGroupId),
+    queryKey: ["secrets", vaultId, groupId],
+    queryFn: () => secretService.getAll(vaultId!, groupId),
     enabled: !!vaultId,
   });
 }

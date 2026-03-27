@@ -22,8 +22,8 @@ export function renderSecretValueOutput(revealed: sdk.SecretRevealResult): void 
 
 export function renderSecretListOutput(
   vault: sdk.VaultSummary,
-  group: sdk.SecretGroupSummary | undefined,
-  childGroups: sdk.SecretGroupSummary[],
+  group: sdk.GroupSummary | undefined,
+  childGroups: sdk.GroupSummary[],
   secrets: sdk.SecretSummary[],
 ): void {
   if (isJsonMode()) {

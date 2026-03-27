@@ -40,7 +40,7 @@ export interface Secret {
     commitMessage?: string;
   } | null;
   versionCount?: number;
-  secretGroup?: {
+  group?: {
     id: string;
     name: string;
     parentId?: string | null;
@@ -75,7 +75,7 @@ export interface CreateSecretData {
   value: string;
   valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
   vaultId: string;
-  secretGroupId?: string;
+  groupId?: string;
   keyId: string;
   password?: string;
   metadata?: Record<string, unknown>;
@@ -123,10 +123,10 @@ export interface PermissionBinding {
 export const secretService = {
   getAll: async (
     vaultId: string,
-    secretGroupId?: string,
+    groupId?: string,
   ): Promise<{ secrets: Secret[]; count: number }> => {
     const response = await apiClient.get("/secrets", {
-      params: { vaultId, secretGroupId },
+      params: { vaultId, groupId },
     });
     return response.data.data;
   },

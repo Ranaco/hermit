@@ -4,13 +4,13 @@ import { matchId } from "./ui.js";
 const SECRET_PAGE_SIZE = 200;
 
 export interface GroupTreeNode {
-  group: sdk.SecretGroupSummary;
+  group: sdk.GroupSummary;
   path: string;
 }
 
-const groupChildrenCache = new Map<string, Promise<sdk.SecretGroupSummary[]>>();
+const groupChildrenCache = new Map<string, Promise<sdk.GroupSummary[]>>();
 const secretListCache = new Map<string, Promise<sdk.SecretSummary[]>>();
-const allGroupsCache = new Map<string, Promise<sdk.SecretGroupSummary[]>>();
+const allGroupsCache = new Map<string, Promise<sdk.GroupSummary[]>>();
 const groupTreeCache = new Map<string, Promise<GroupTreeNode[]>>();
 
 function rootKey(parentId?: string | null): string {
@@ -40,14 +40,14 @@ function prefixIdMatch<T extends { id: string }>(items: T[], query: string): T[]
 export async function getAccessibleGroupChildren(
   vaultId: string,
   parentId?: string | null,
-): Promise<sdk.SecretGroupSummary[]> {
+): Promise<sdk.GroupSummary[]> {
   const cacheKey = groupChildrenCacheKey(vaultId, parentId);
   const cached = groupChildrenCache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const request = sdk.getSecretGroups(vaultId, parentId ? { parentId, cliScope: true } : { cliScope: true });
+  const request = sdk.getGroups(vaultId, parentId ? { parentId, cliScope: true } : { cliScope: true });
   groupChildrenCache.set(cacheKey, request);
   return request;
 }
@@ -80,7 +80,7 @@ export async function getAccessibleGroupTree(
   return request;
 }
 
-export async function getAllAccessibleGroups(vaultId: string): Promise<sdk.SecretGroupSummary[]> {
+export async function getAllAccessibleGroups(vaultId: string): Promise<sdk.GroupSummary[]> {
   const cached = allGroupsCache.get(vaultId);
   if (cached) {
     return cached;
@@ -111,7 +111,7 @@ export async function listSecretsForGroup(
 
     while (true) {
       const batch = await sdk.getSecrets(vaultId, {
-        secretGroupId: groupId,
+        groupId: groupId,
         page,
         limit: SECRET_PAGE_SIZE,
         cliScope: true,

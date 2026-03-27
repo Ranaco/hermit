@@ -27,7 +27,7 @@ async function executeSecretExport(opts: SecretExportOptions): Promise<void> {
 
   const result = await sdk.bulkRevealSecretsCli({
     vaultId: vault.id,
-    secretGroupId: group?.id,
+    groupId: group?.id,
     includeDescendants: !!group,
     password: opts.password,
     vaultPassword: opts.vaultPassword,
@@ -58,16 +58,7 @@ async function executeSecretExport(opts: SecretExportOptions): Promise<void> {
   process.stdout.write(output);
 }
 
-export const envCommand = new Command("env")
-  .description("Export secrets as environment variables")
-  .option("--vault <query>", "Vault name or id")
-  .option("--group <query>", "Group id or name")
-  .option("-p, --path <path>", "Group path like prod/api")
-  .option("--format <fmt>", "Export format (dotenv, shell, json, yaml)")
-  .option("--output <file>", "Write output to a file instead of stdout")
-  .option("--password <password>", "Secret-level password used for protected secrets")
-  .option("--vault-password <password>", "Vault password used for protected vaults")
-  .action((opts: SecretExportOptions) => runCommand(() => executeSecretExport(opts)));
+export { executeSecretExport };
 
 export const secretExportCommand = new Command("export")
   .description("Export secrets as dotenv, shell, json, or yaml")

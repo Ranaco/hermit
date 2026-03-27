@@ -34,7 +34,7 @@ async function collectDescendantGroupIds(
   vaultId: string,
   parentId: string,
 ): Promise<string[]> {
-  const parent = await prisma.secretGroup.findUnique({
+  const parent = await prisma.group.findUnique({
     where: { id: parentId },
     select: { path: true },
   });
@@ -43,7 +43,7 @@ async function collectDescendantGroupIds(
     return [];
   }
 
-  const descendants = await prisma.secretGroup.findMany({
+  const descendants = await prisma.group.findMany({
     where: {
       vaultId,
       path: {
@@ -227,7 +227,7 @@ export const secretWrapper = {
       value: string;
       valueType?: 'STRING' | 'JSON' | 'NUMBER' | 'BOOLEAN' | 'MULTILINE';
       vaultId: string;
-      secretGroupId?: string;
+      groupId?: string;
       keyId: string;
       password?: string;      
       metadata?: Record<string, any>;
@@ -245,7 +245,7 @@ export const secretWrapper = {
       value,
       valueType,
       vaultId,
-      secretGroupId,
+      groupId,
       keyId,
       password,
       metadata,
@@ -302,13 +302,13 @@ export const secretWrapper = {
       );
     }
 
-    if (secretGroupId) {
-      const secretGroup = await prisma.secretGroup.findUnique({
-        where: { id: secretGroupId },
+    if (groupId) {
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
         select: { id: true, vaultId: true, path: true },
       });
 
-      if (!secretGroup || secretGroup.vaultId !== vaultId) {
+      if (!group || group.vaultId !== vaultId) {
         throw new ValidationError(
           "Secret group must belong to the selected vault",
         );
@@ -318,8 +318,8 @@ export const secretWrapper = {
         !canAccessGroupScopedAction(accessContext, "secrets:create", {
           orgId: vault.organizationId,
           vaultId,
-          groupId: secretGroup.id,
-          groupPath: secretGroup.path,
+          groupId: group.id,
+          groupPath: group.path,
         })
       ) {
         throw new ForbiddenError(
@@ -363,7 +363,7 @@ export const secretWrapper = {
         name,
         description,
         vaultId,
-        secretGroupId,
+        groupId,
         keyId,
         valueType,
         passwordHash,
@@ -425,7 +425,7 @@ export const secretWrapper = {
       details: {
         secretName: name,
         vaultId,
-        secretGroupId,
+        groupId,
         keyId,
         hasPassword: !!password,
         versionNumber: 1,
@@ -444,24 +444,24 @@ export const secretWrapper = {
     userId: string,
     data: {
       vaultId: string;
-      secretGroupId?: string;
+      groupId?: string;
       page?: number;
       limit?: number;
       search?: string;
       cliScope?: boolean;
     },
   ) {
-    const { vaultId, secretGroupId, page = 1, limit = 20, search, cliScope } = data;
+    const { vaultId, groupId, page = 1, limit = 20, search, cliScope } = data;
 
     const where: any = {
       vaultId,
     };
     
-    // Exact match for secretGroupId or only root vault secrets (secretGroupId = null)
-    if (secretGroupId) {
-      where.secretGroupId = secretGroupId;
+    // Exact match for groupId or only root vault secrets (groupId = null)
+    if (groupId) {
+      where.groupId = groupId;
     } else {
-      where.secretGroupId = null;
+      where.groupId = null;
     }
 
     if (!vaultId) {
@@ -497,7 +497,7 @@ export const secretWrapper = {
       prisma.secret.findMany({
         where,
         include: {
-          secretGroup: {
+          group: {
             select: {
               id: true,
               path: true,
@@ -535,7 +535,7 @@ export const secretWrapper = {
           orgId: vault.organizationId,
           vaultId,
           secretId: secret.id,
-          groupPath: secret.secretGroup?.path,
+          groupPath: secret.group?.path,
         });
 
         return cliScope
@@ -545,9 +545,9 @@ export const secretWrapper = {
       })
       .map((secret) => ({
         ...secret,
-        secretGroup: secret.secretGroup
+        group: secret.group
           ? {
-              id: secret.secretGroup.id,
+              id: secret.group.id,
             }
           : null,
         hasPassword: !!secret.passwordHash,
@@ -594,7 +594,7 @@ export const secretWrapper = {
             valueType: true,
           },
         },
-        secretGroup: {
+        group: {
           select: {
             id: true,
             name: true,
@@ -638,18 +638,18 @@ export const secretWrapper = {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
 
     return {
       secret: {
         ...secret,
-        secretGroup: secret.secretGroup
+        group: secret.group
           ? {
-              id: secret.secretGroup.id,
-              name: secret.secretGroup.name,
-              parentId: secret.secretGroup.parentId,
-              depth: secret.secretGroup.depth,
+              id: secret.group.id,
+              name: secret.group.name,
+              parentId: secret.group.parentId,
+              depth: secret.group.depth,
             }
           : null,
         latestVersion: secret.versions[0] || null,
@@ -694,7 +694,7 @@ export const secretWrapper = {
             organizationId: true,
           },
         },
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -737,7 +737,7 @@ export const secretWrapper = {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
     if (cliScope) {
       const hasCliAccess =
@@ -754,7 +754,7 @@ export const secretWrapper = {
         orgId: secret.vault.organizationId,
         vaultId: secret.vault.id,
         secretId: secret.id,
-        groupPath: secret.secretGroup?.path,
+        groupPath: secret.group?.path,
       });
     }
 
@@ -923,7 +923,7 @@ export const secretWrapper = {
       metadata?: Record<string, any>;
       tags?: string[];
       expiresAt?: Date | string;
-      secretGroupId?: string;
+      groupId?: string;
       commitMessage?: string;
     },
     auditInfo: {
@@ -941,7 +941,7 @@ export const secretWrapper = {
       tags,
       expiresAt,
       commitMessage,
-      secretGroupId,
+      groupId,
     } = data;
 
     const prisma = getPrismaClient();
@@ -956,7 +956,7 @@ export const secretWrapper = {
             organizationId: true,
           },
         },
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -990,7 +990,7 @@ export const secretWrapper = {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
 
     const currentVersion = secret.versions[0];
@@ -1014,18 +1014,18 @@ export const secretWrapper = {
     if (tags !== undefined) updateData.tags = tags;
     if (expiresAt !== undefined)
       updateData.expiresAt = expiresAt ? new Date(expiresAt) : null;
-    if (secretGroupId !== undefined)
-      updateData.secretGroupId = secretGroupId;
+    if (groupId !== undefined)
+      updateData.groupId = groupId;
     if (valueType !== undefined)
       updateData.valueType = valueType;
 
-    if (secretGroupId !== undefined && secretGroupId !== null) {
-      const secretGroup = await prisma.secretGroup.findUnique({
-        where: { id: secretGroupId },
+    if (groupId !== undefined && groupId !== null) {
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
         select: { id: true, vaultId: true, path: true },
       });
 
-      if (!secretGroup || secretGroup.vaultId !== secret.vaultId) {
+      if (!group || group.vaultId !== secret.vaultId) {
         throw new ValidationError(
           "Secret group must belong to the same vault as the secret",
         );
@@ -1035,8 +1035,8 @@ export const secretWrapper = {
         !canAccessGroupScopedAction(accessContext, "secrets:update", {
           orgId: secret.vault.organizationId,
           vaultId: secret.vault.id,
-          groupId: secretGroup.id,
-          groupPath: secretGroup.path,
+          groupId: group.id,
+          groupPath: group.path,
         })
       ) {
         throw new ForbiddenError(
@@ -1046,7 +1046,7 @@ export const secretWrapper = {
       }
     }
 
-    if (secretGroupId === null) {
+    if (groupId === null) {
       if (
         !canAccessGroupScopedAction(accessContext, "secrets:update", {
           orgId: secret.vault.organizationId,
@@ -1161,7 +1161,7 @@ export const secretWrapper = {
             organizationId: true,
           },
         },
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -1178,7 +1178,7 @@ export const secretWrapper = {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
 
     await prisma.secret.delete({
@@ -1219,7 +1219,7 @@ export const secretWrapper = {
         vault: {
           select: { id: true, organizationId: true },
         },
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -1236,7 +1236,7 @@ export const secretWrapper = {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
 
     const versions = await prisma.secretVersion.findMany({
@@ -1291,7 +1291,7 @@ export const secretWrapper = {
             organizationId: true,
           },
         },
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -1314,7 +1314,7 @@ export const secretWrapper = {
       orgId: secret.vault.organizationId,
       vaultId: secret.vault.id,
       secretId: secret.id,
-      groupPath: secret.secretGroup?.path,
+      groupPath: secret.group?.path,
     });
 
     const version = await prisma.secretVersion.findFirst({
@@ -1413,7 +1413,7 @@ export const secretWrapper = {
     userId: string,
     data: {
       vaultId: string;
-      secretGroupId?: string;
+      groupId?: string;
       secretIds?: string[];
       includeDescendants?: boolean;
       password?: string;
@@ -1427,7 +1427,7 @@ export const secretWrapper = {
   ) {
     const {
       vaultId,
-      secretGroupId,
+      groupId,
       secretIds,
       includeDescendants,
       password,
@@ -1437,10 +1437,10 @@ export const secretWrapper = {
 
     const prisma = getPrismaClient();
 
-    if (secretGroupId && secretIds?.length) {
+    if (groupId && secretIds?.length) {
       throw new ValidationError(
         ErrorCode.VALIDATION_ERROR,
-        "secretGroupId and secretIds cannot be combined in one bulk reveal request",
+        "groupId and secretIds cannot be combined in one bulk reveal request",
       );
     }
 
@@ -1490,17 +1490,17 @@ export const secretWrapper = {
     const where: any = { vaultId };
     if (secretIds?.length) {
       where.id = { in: secretIds };
-    } else if (secretGroupId && includeDescendants) {
-      const descendantGroupIds = await collectDescendantGroupIds(prisma, vaultId, secretGroupId);
-      where.secretGroupId = { in: [secretGroupId, ...descendantGroupIds] };
-    } else if (secretGroupId) {
-      where.secretGroupId = secretGroupId;
+    } else if (groupId && includeDescendants) {
+      const descendantGroupIds = await collectDescendantGroupIds(prisma, vaultId, groupId);
+      where.groupId = { in: [groupId, ...descendantGroupIds] };
+    } else if (groupId) {
+      where.groupId = groupId;
     }
 
     const secrets = await prisma.secret.findMany({
       where,
       include: {
-        secretGroup: {
+        group: {
           select: {
             path: true,
           },
@@ -1540,7 +1540,7 @@ export const secretWrapper = {
         orgId: vault.organizationId,
         vaultId,
         secretId: secret.id,
-        groupPath: secret.secretGroup?.path,
+        groupPath: secret.group?.path,
       });
 
       const canUseSecret = cliScope
@@ -1645,7 +1645,7 @@ export const secretWrapper = {
       details: {
         revealedCount: revealed.length,
         skippedCount: skipped.length,
-        secretGroupId,
+        groupId,
         secretIdsCount: secretIds?.length || 0,
         includeDescendants: !!includeDescendants,
       },

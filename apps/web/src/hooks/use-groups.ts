@@ -1,28 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { secretGroupService, type CreateSecretGroupData, type UpdateSecretGroupData } from "@/services/secret-group.service";
+import { groupService, type CreateGroupData, type UpdateGroupData } from "@/services/group.service";
 import { toast } from "sonner";
 
-export function useSecretGroups(
+export function useGroups(
   vaultId?: string,
   parentId?: string,
   includeChildren = false,
   forPolicyBuilder = false,
 ) {
   return useQuery({
-    queryKey: ["secret-groups", vaultId, parentId, includeChildren, forPolicyBuilder],
-    queryFn: () => secretGroupService.getAll(vaultId!, parentId, includeChildren, forPolicyBuilder),
+    queryKey: ["groups", vaultId, parentId, includeChildren, forPolicyBuilder],
+    queryFn: () => groupService.getAll(vaultId!, parentId, includeChildren, forPolicyBuilder),
     enabled: !!vaultId,
   });
 }
 
-export function useCreateSecretGroup() {
+export function useCreateGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ vaultId, data }: { vaultId: string; data: CreateSecretGroupData }) =>
-      secretGroupService.create(vaultId, data),
+    mutationFn: ({ vaultId, data }: { vaultId: string; data: CreateGroupData }) =>
+      groupService.create(vaultId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["secret-groups", variables.vaultId] });
+      queryClient.invalidateQueries({ queryKey: ["groups", variables.vaultId] });
       toast.success("Folder created successfully");
     },
     onError: () => {
@@ -31,14 +31,14 @@ export function useCreateSecretGroup() {
   });
 }
 
-export function useUpdateSecretGroup() {
+export function useUpdateGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ vaultId, groupId, data }: { vaultId: string; groupId: string; data: UpdateSecretGroupData }) =>
-      secretGroupService.update(vaultId, groupId, data),
+    mutationFn: ({ vaultId, groupId, data }: { vaultId: string; groupId: string; data: UpdateGroupData }) =>
+      groupService.update(vaultId, groupId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["secret-groups", variables.vaultId] });
+      queryClient.invalidateQueries({ queryKey: ["groups", variables.vaultId] });
       toast.success("Folder updated successfully");
     },
     onError: () => {
@@ -47,14 +47,14 @@ export function useUpdateSecretGroup() {
   });
 }
 
-export function useDeleteSecretGroup() {
+export function useDeleteGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ vaultId, groupId }: { vaultId: string; groupId: string }) =>
-      secretGroupService.delete(vaultId, groupId),
+      groupService.delete(vaultId, groupId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["secret-groups", variables.vaultId] });
+      queryClient.invalidateQueries({ queryKey: ["groups", variables.vaultId] });
       toast.success("Folder deleted successfully");
     },
     onError: (error: any) => {
