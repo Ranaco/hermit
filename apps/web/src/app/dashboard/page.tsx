@@ -44,9 +44,9 @@ function EmptyWorkspace({
   linkLabel: string;
 }) {
   return (
-    <section className="flex min-h-[360px] flex-col items-start justify-center gap-4 rounded-[18px] border border-border bg-card px-8 py-10">
+    <section className="hermit-page-hero flex min-h-[360px] flex-col items-start justify-center gap-4">
       <p className="app-eyebrow">Workspace</p>
-      <div className="space-y-2">
+      <div className="relative z-10 space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
         <p className="max-w-xl text-sm text-muted-foreground">{detail}</p>
       </div>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
     return (
       <DashboardLayout>
         <div className="space-y-8">
-          <section className="space-y-2 border-b border-border pb-6">
+          <section className="hermit-page-hero space-y-2 border-b-0 pb-6">
             <p className="app-eyebrow">Workspace</p>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
               {currentOrganization.name}
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 : []),
               { label: "For me", value: myInvitations?.length ?? 0 },
             ].map((item) => (
-              <div key={item.label} className="rounded-[18px] border border-border bg-card px-5 py-4">
+              <div key={item.label} className="hermit-stat">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
                 <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
                   {vaultsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : item.value}
@@ -166,8 +166,8 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="flex flex-col gap-3 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
+        <section className="hermit-page-hero flex flex-col gap-3 border-b-0 pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2 relative z-10">
             <p className="app-eyebrow">Workspace</p>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
               {currentOrganization.name}
@@ -175,7 +175,7 @@ export default function DashboardPage() {
             <p className="text-sm text-muted-foreground">{selectedVault.name}</p>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-sm">
+          <div className="flex flex-wrap gap-3 text-sm relative z-10">
             <Link href="/dashboard/secrets" className="text-muted-foreground transition-colors hover:text-foreground">
               Secrets
             </Link>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="rounded-[18px] border border-border bg-card px-5 py-4 transition-colors hover:bg-muted/30"
+                className="hermit-stat"
               >
                 <div className="flex items-center justify-between">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>

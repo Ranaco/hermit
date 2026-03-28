@@ -47,10 +47,17 @@ export default function Page() {
           keys, secrets, IAM policy evaluation, invite workflows, and runtime-safe reveal paths. This docs surface is
           organized like a reference system rather than a marketing page.
         </p>
+        <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-[var(--docs-border)] pt-5 text-[11px] uppercase tracking-[0.24em] text-[var(--docs-soft)]">
+          <span>Policy-aware</span>
+          <span className="hidden h-1 w-1 rounded-full bg-[var(--docs-border-strong)] sm:block" />
+          <span>Vault-backed</span>
+          <span className="hidden h-1 w-1 rounded-full bg-[var(--docs-border-strong)] sm:block" />
+          <span>Operator-first</span>
+        </div>
       </section>
 
       <section className="mt-8">
-        <div className="grid gap-px border bg-[var(--docs-border)] md:grid-cols-2 xl:grid-cols-3">
+        <div className="docs-divider-list">
           {categories.map((item) => {
             const Icon = item.icon;
 
@@ -58,16 +65,14 @@ export default function Page() {
               <Link
                 key={item.title}
                 href={item.href}
-                className="group bg-[var(--docs-panel)] px-5 py-5 transition-colors hover:bg-[var(--docs-panel-elevated)]"
+                className="docs-link-row group md:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)_auto] md:items-start md:gap-8"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-lg font-semibold tracking-[-0.04em] text-[var(--docs-text)]">{item.title}</p>
-                    <p className="mt-3 text-sm leading-6 text-[var(--docs-muted)]">{item.description}</p>
-                  </div>
-                  <Icon className="mt-0.5 h-4 w-4 text-[var(--docs-soft)] transition-colors group-hover:text-[var(--docs-accent)]" />
+                <div className="flex items-center gap-3">
+                  <Icon className="h-4 w-4 text-[var(--docs-soft)] transition-colors duration-300 group-hover:text-[var(--docs-accent)]" />
+                  <p className="docs-display text-[1.45rem] font-semibold tracking-[-0.03em] text-[var(--docs-text)]">{item.title}</p>
                 </div>
-                <p className="mt-5 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--docs-soft)]">
+                <p className="max-w-[56ch] text-sm leading-7 text-[var(--docs-muted)]">{item.description}</p>
+                <p className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--docs-soft)] md:justify-self-end">
                   Open section
                   <ArrowRight className="h-3.5 w-3.5" />
                 </p>
@@ -77,10 +82,10 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="mt-10 grid gap-10 border-t pt-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]" style={{ borderColor: "var(--docs-border)" }}>
+      <section className="mt-10 grid gap-6 border-t pt-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]" style={{ borderColor: "var(--docs-border)" }}>
         <div>
           <p className="docs-kicker">What Hermit is</p>
-          <h2 className="mt-3 max-w-[18ch] text-[clamp(1.9rem,3.4vw,3rem)] font-semibold leading-[1] tracking-[-0.06em]">
+          <h2 className="docs-display mt-3 max-w-[18ch] text-[clamp(2.1rem,3.6vw,3.2rem)] font-semibold leading-[1] tracking-[-0.04em] text-[var(--docs-text)]">
             A multi-tenant KMS and secret operations platform with explicit structure.
           </h2>
           <p className="mt-4 max-w-[62ch] text-[15px] leading-7 text-[var(--docs-muted)]">
@@ -91,14 +96,14 @@ export default function Page() {
           </p>
         </div>
 
-        <div className="grid gap-px border bg-[var(--docs-border)]">
+        <div className="docs-divider-list">
           {[
             "Organizations contain vaults, which contain keys and secrets.",
             "Vault transit remains the source of truth for encryption and decryption.",
             "Dynamic IAM policy evaluation sits in the request path, not outside it.",
             "Operator workflows matter as much as the cryptographic primitives.",
           ].map((item) => (
-            <div key={item} className="bg-[var(--docs-panel)] px-5 py-4 text-sm leading-6 text-[var(--docs-muted)]">
+            <div key={item} className="border-b border-[var(--docs-border)] py-4 text-sm leading-7 text-[var(--docs-muted)] last:border-b-0">
               {item}
             </div>
           ))}

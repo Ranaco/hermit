@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+
+const docsSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-docs-sans",
+});
+
+const docsDisplay = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-docs-display",
+});
 
 export const metadata: Metadata = {
   title: "Hermit Docs",
@@ -14,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${docsSans.variable} ${docsDisplay.variable}`}>
         <script
           dangerouslySetInnerHTML={{
             __html: `(() => {

@@ -31,15 +31,15 @@ function ChildLinks({ page }: { page: DocPageMeta }) {
   }
 
   return (
-    <div className="mt-8 grid gap-3 md:grid-cols-3">
+    <div className="docs-divider-list mt-8">
       {children.map((child) => (
         <Link
           key={child.id}
           href={child.href}
-          className="rounded-md border bg-[var(--docs-panel)] px-4 py-4 transition-colors hover:border-[var(--docs-border-strong)] hover:bg-[color:color-mix(in_oklab,var(--docs-panel)_72%,var(--docs-bg))]"
+          className="docs-link-row md:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] md:items-start md:gap-8"
         >
-          <p className="text-sm font-semibold text-[var(--docs-text)]">{child.title}</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--docs-muted)]">{child.description}</p>
+          <p className="docs-display text-lg font-semibold tracking-[-0.03em] text-[var(--docs-text)]">{child.title}</p>
+          <p className="text-sm leading-7 text-[var(--docs-muted)]">{child.description}</p>
         </Link>
       ))}
     </div>
@@ -59,13 +59,13 @@ function Pager({ page }: { page: DocPageMeta }) {
       {prev ? (
         <Link
           href={prev.href}
-          className="rounded-md border bg-[var(--docs-panel)] px-4 py-4 transition-colors hover:border-[var(--docs-border-strong)]"
+          className="border border-[var(--docs-border)] px-4 py-4 transition-all duration-500 hover:border-[var(--docs-border-strong)] hover:bg-[color:color-mix(in_oklab,var(--docs-panel)_58%,transparent)]"
         >
           <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[var(--docs-soft)]">
             <ChevronLeft className="h-3.5 w-3.5" />
             Previous
           </p>
-          <p className="mt-2 text-base font-semibold text-[var(--docs-text)]">{prev.title}</p>
+          <p className="docs-display mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--docs-text)]">{prev.title}</p>
         </Link>
       ) : (
         <div />
@@ -74,13 +74,13 @@ function Pager({ page }: { page: DocPageMeta }) {
       {next ? (
         <Link
           href={next.href}
-          className="rounded-md border bg-[var(--docs-panel)] px-4 py-4 text-right transition-colors hover:border-[var(--docs-border-strong)]"
+          className="border border-[var(--docs-border)] px-4 py-4 text-right transition-all duration-500 hover:border-[var(--docs-border-strong)] hover:bg-[color:color-mix(in_oklab,var(--docs-panel)_58%,transparent)]"
         >
           <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[var(--docs-soft)]">
             Next
             <ChevronRight className="h-3.5 w-3.5" />
           </p>
-          <p className="mt-2 text-base font-semibold text-[var(--docs-text)]">{next.title}</p>
+          <p className="docs-display mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--docs-text)]">{next.title}</p>
         </Link>
       ) : null}
     </nav>
@@ -114,7 +114,7 @@ export function DocsSectionPage({
         <Hero page={page} compact>
           <ChildLinks page={page} />
         </Hero>
-        <article className="docs-prose mt-10">{children}</article>
+        <article className="docs-prose mt-10 border-t border-[var(--docs-border)] px-1 pt-8 sm:px-2 sm:pt-10">{children}</article>
       </div>
     </DocsShell>
   );
@@ -131,7 +131,7 @@ export function DocsArticlePage({
     <DocsShell page={page}>
       <div className="mx-auto max-w-[780px]">
         <Hero page={page} />
-        <article className="docs-prose mt-10">{children}</article>
+        <article className="docs-prose mt-10 border-t border-[var(--docs-border)] px-1 pt-8 sm:px-2 sm:pt-10">{children}</article>
         <Pager page={page} />
       </div>
     </DocsShell>
