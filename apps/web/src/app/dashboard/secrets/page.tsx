@@ -311,7 +311,7 @@ export default function SecretsPage() {
   if (!currentVault) {
     return (
       <DashboardLayout>
-        <div className="app-empty">
+        <div className="app-empty hermit-enter">
           <Vault className="mx-auto mb-3 h-8 w-8" />
           Select a vault to manage secrets.
         </div>
@@ -322,15 +322,15 @@ export default function SecretsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="app-page-header border-b border-border pb-6">
-          <div className="app-page-intro">
+        <section className="hermit-page-hero app-page-header border-b-0 pb-6">
+          <div className="app-page-intro relative z-10">
             <p className="app-eyebrow">Secrets</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
-              Secrets
+              Secret custody
             </h1>
-            <p className="app-page-copy">Credentials and versioned values.</p>
+            <p className="app-page-copy">Credentials, folders, reveal controls, and versioned values.</p>
           </div>
-          <div className="app-toolbar">
+          <div className="app-toolbar relative z-10">
             <Button variant="secondary" className="h-11 px-5" onClick={() => setShowShareModal(true)}>
               <LinkIcon className="mr-2 h-4 w-4 text-indigo-500" />
               Share
@@ -760,7 +760,7 @@ export default function SecretsPage() {
           </DialogContent>
         </Dialog>
 
-        <section className="relative">
+        <section className="hermit-enter-soft relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search secrets or folders..."
@@ -771,13 +771,13 @@ export default function SecretsPage() {
         </section>
 
         {/* Breadcrumb Navigation */}
-        <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-border pb-3 text-[14px] font-medium text-muted-foreground">
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-border/70 pb-3 text-[14px] font-medium text-muted-foreground hermit-enter-soft">
           <button
             onClick={() => {
               setCurrentGroupId(undefined);
               setBreadcrumbs([]);
             }}
-            className="hover:text-foreground transition-colors flex items-center"
+            className="hermit-compact-chip hover:text-foreground transition-colors flex items-center"
           >
             <Folder className="h-4 w-4 mr-2" />
             Root
@@ -791,7 +791,7 @@ export default function SecretsPage() {
                   setCurrentGroupId(crumb.id);
                   setBreadcrumbs(breadcrumbs.slice(0, idx + 1));
                 }}
-                className="hover:text-foreground transition-colors"
+                className="hermit-compact-chip hover:text-foreground transition-colors"
               >
                 {crumb.name}
               </button>
@@ -801,7 +801,7 @@ export default function SecretsPage() {
 
         <section className="space-y-4">
           {secretsLoading || groupsLoading ? (
-            <div className="app-empty">
+            <div className="app-empty hermit-enter-soft">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (filteredSecrets && filteredSecrets.length > 0) || (filteredGroups && filteredGroups.length > 0) ? (
@@ -809,7 +809,7 @@ export default function SecretsPage() {
               {filteredGroups?.map((group) => (
                 <Card
                   key={group.id}
-                  className="cursor-pointer transition-colors group"
+                  className="hermit-list-row cursor-pointer transition-colors group"
                 >
                   <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div
@@ -820,7 +820,7 @@ export default function SecretsPage() {
                         setSearchQuery("");
                       }}
                     >
-                      <div className="rounded-md bg-muted p-3 text-muted-foreground">
+                      <div className="rounded-2xl border border-border/80 bg-muted/55 p-3 text-muted-foreground">
                         <Folder className="h-5 w-5 fill-primary/20" />
                       </div>
                       <div>
@@ -830,7 +830,7 @@ export default function SecretsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex shrink-0 self-start overflow-hidden rounded-md border border-border bg-background sm:self-center">
+                    <div className="flex shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-background/82 sm:self-center">
                       {permissions.canDeleteSecret ? (
                         <Button
                           variant="ghost"
@@ -853,11 +853,11 @@ export default function SecretsPage() {
               ))}
 
               {filteredSecrets?.map((secret) => (
-                <Card key={secret.id}>
+                <Card key={secret.id} className="hermit-list-row">
                   <CardContent className="p-5">
                     <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                       <div className="flex min-w-0 flex-1 items-start gap-4">
-                        <div className="rounded-md bg-muted p-3 text-muted-foreground">
+                        <div className="rounded-2xl border border-border/80 bg-muted/55 p-3 text-muted-foreground">
                           <Lock className="h-5 w-5" />
                         </div>
 
@@ -879,7 +879,7 @@ export default function SecretsPage() {
                           <p className="mt-1.5 text-[14px] font-medium text-muted-foreground">{secret.description || "No description provided."}</p>
 
                           {activePrompt === secret.id ? (
-                            <div className="mt-4 flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-center">
+                            <div className="mt-4 flex flex-col gap-3 rounded-[18px] border border-border bg-muted/30 p-3 sm:flex-row sm:items-center">
                               <Input
                                 type="password"
                                 placeholder="Enter secret password..."
@@ -918,8 +918,8 @@ export default function SecretsPage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="mt-4 flex w-full min-w-0 flex-col gap-2 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-start">
-                              <code className="block max-h-48 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-background px-3 py-2 font-mono text-[13px] leading-6">
+                            <div className="mt-4 flex w-full min-w-0 flex-col gap-2 rounded-[18px] border border-border bg-muted/30 p-3 sm:flex-row sm:items-start">
+                              <code className="block max-h-48 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-[16px] border border-border bg-background/85 px-3 py-2 font-mono text-[13px] leading-6">
                                 {getSecretPreview(secret.id)}
                               </code>
                               <div className="flex shrink-0 justify-end gap-1">
@@ -939,7 +939,7 @@ export default function SecretsPage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 self-end overflow-hidden rounded-md border border-border bg-background xl:self-start">
+                      <div className="flex shrink-0 self-end overflow-hidden rounded-2xl border border-border bg-background/82 xl:self-start">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1008,7 +1008,7 @@ export default function SecretsPage() {
               ))}
             </>
           ) : (
-            <div className="app-empty flex flex-col items-center justify-center">
+            <div className="app-empty hermit-enter flex flex-col items-center justify-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-black/5 dark:bg-white/5">
                 <Lock className="h-8 w-8 text-muted-foreground opacity-50" />
               </div>
@@ -1060,7 +1060,7 @@ export default function SecretsPage() {
                         </div>
 
                         {activePrompt === vKey ? (
-                          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-center">
+                          <div className="flex flex-col gap-2 rounded-[18px] border border-border bg-muted/30 p-3 sm:flex-row sm:items-center">
                             <Input
                               type="password"
                               placeholder="Password"
@@ -1099,8 +1099,8 @@ export default function SecretsPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex min-w-0 flex-col gap-2 rounded-md border border-border bg-muted/30 p-2 sm:flex-row sm:items-start">
-                            <code className="block max-h-40 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-background px-3 py-2 font-mono text-[13px] leading-6">
+                          <div className="flex min-w-0 flex-col gap-2 rounded-[18px] border border-border bg-muted/30 p-3 sm:flex-row sm:items-start">
+                            <code className="block max-h-40 min-h-10 w-full min-w-0 overflow-auto whitespace-pre-wrap break-all rounded-[16px] border border-border bg-background/85 px-3 py-2 font-mono text-[13px] leading-6">
                               {getSecretPreview(vKey)}
                             </code>
                             <div className="flex shrink-0 justify-end gap-1">

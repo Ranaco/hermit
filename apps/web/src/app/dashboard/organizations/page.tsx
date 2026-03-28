@@ -355,17 +355,17 @@ export default function OrganizationsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="app-page-header">
-          <div className="app-page-intro">
+        <section className="hermit-page-hero app-page-header">
+          <div className="app-page-intro relative z-10">
             <p className="app-eyebrow">Organizations</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
               Organizations
             </h1>
             <p className="app-page-copy">
-              Members, roles, and teams.
+              Members, roles, teams, and inherited access.
             </p>
           </div>
-          <Button onClick={() => setShowCreateForm((v) => !v)} size="lg">
+          <Button onClick={() => setShowCreateForm((v) => !v)} size="lg" className="relative z-10">
             <Plus className="mr-2 h-5 w-5" />
             New organization
           </Button>
@@ -427,8 +427,8 @@ export default function OrganizationsPage() {
               <button
                 key={org.id}
                 className={cn(
-                  "rounded-[18px] border border-border bg-card p-5 text-left transition-colors",
-                  isActive ? "border-foreground" : "hover:bg-muted/30"
+                  "hermit-list-row p-5 text-left",
+                  isActive ? "border-primary/70 bg-card shadow-[0_24px_60px_-38px_rgba(39,28,17,0.34)]" : ""
                 )}
                 onClick={() => {
                   setSelectedOrgId(org.id);
@@ -439,8 +439,8 @@ export default function OrganizationsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
                     <div className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground",
-                      isActive ? "bg-foreground text-background" : ""
+                      "flex h-11 w-11 items-center justify-center rounded-2xl border border-border/80 bg-muted/55 text-muted-foreground",
+                      isActive ? "border-primary/50 bg-primary text-primary-foreground" : ""
                     )}>
                       <Building2 className="h-5 w-5" />
                     </div>
@@ -464,7 +464,7 @@ export default function OrganizationsPage() {
 
         {selectedOrg ? (
           <section className="grid gap-8 xl:grid-cols-[1.1fr_1fr]">
-            <Card className="flex flex-col">
+            <Card className="flex flex-col hermit-enter-soft">
               <CardHeader className="border-b border-border p-6 lg:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5 w-full">
@@ -706,7 +706,7 @@ export default function OrganizationsPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col">
+            <Card className="flex flex-col hermit-enter-soft">
               <CardHeader className="border-b border-border p-6 lg:p-8">
                 <div className="flex items-center justify-between">
                   <div>
@@ -724,7 +724,7 @@ export default function OrganizationsPage() {
               <CardContent className="p-6 lg:p-8 flex-1 space-y-6">
                 <div className="space-y-4">
                   {teams?.map((team) => (
-                    <div key={team.id} className="border-b border-border pb-5">
+                    <div key={team.id} className="rounded-[24px] border border-border/80 bg-background/55 px-4 py-5">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-[16px] font-semibold tracking-tight text-foreground">{team.name}</p>
@@ -739,7 +739,7 @@ export default function OrganizationsPage() {
 
                       <div className="mt-5 flex flex-wrap gap-2">
                         {team.members?.map((membership) => (
-                          <div key={membership.id} className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-[12px] font-medium text-foreground">
+                          <div key={membership.id} className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/70 px-2.5 py-1 text-[12px] font-medium text-foreground">
                             <span>{membership.user.email}</span>
                             {permissions.canManageTeams ? (
                               <button
@@ -757,7 +757,7 @@ export default function OrganizationsPage() {
                       </div>
 
                       {permissions.canReadRoles ? (
-                        <div className="mt-5 rounded-[16px] border border-border bg-muted/20 p-4">
+                        <div className="mt-5 rounded-[18px] border border-border bg-muted/20 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-sm font-semibold text-foreground">Team access</p>
@@ -835,7 +835,7 @@ export default function OrganizationsPage() {
                   ))}
 
                   {(!teams || teams.length === 0) && (
-                    <div className="app-empty">
+                    <div className="app-empty hermit-enter-soft">
                       <Layers className="h-10 w-10 text-muted-foreground/40 mb-4" />
                       <p className="text-[15px] font-semibold text-foreground">No Teams Built</p>
                       <p className="text-[13px] text-muted-foreground mt-1 max-w-[200px]">Create a team to group permissions.</p>
@@ -846,7 +846,7 @@ export default function OrganizationsPage() {
             </Card>
           </section>
         ) : (
-          <section className="app-empty min-h-[400px] flex items-start justify-center flex-col">
+          <section className="app-empty hermit-enter min-h-[400px] flex items-start justify-center flex-col">
             <h2 className="text-xl font-bold tracking-tight text-foreground">No Organization Selected</h2>
             <p className="text-[15px] text-muted-foreground mt-2">Select an organization above.</p>
           </section>

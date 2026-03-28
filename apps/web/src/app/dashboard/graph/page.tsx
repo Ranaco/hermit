@@ -469,7 +469,7 @@ export default function AccessGraphPage() {
   if (!permissions.canReadPolicies) {
     return (
       <DashboardLayout>
-        <section className="rounded-[20px] border border-border bg-card px-6 py-10">
+        <section className="hermit-page-hero">
           <p className="app-eyebrow">Access graph</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">Restricted</h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
@@ -483,9 +483,9 @@ export default function AccessGraphPage() {
   return (
     <DashboardLayout fullWidth contentClassName="pb-0 pt-6">
       <div className="flex min-h-[calc(100vh-88px)] flex-col gap-5">
-        <section className="flex flex-col gap-5 rounded-[24px] border border-border bg-card px-6 py-6">
+        <section className="hermit-page-hero flex flex-col gap-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-2">
+            <div className="space-y-2 relative z-10">
               <p className="app-eyebrow">Access graph</p>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                 {currentOrganization?.name || "Current organization"}
@@ -494,7 +494,7 @@ export default function AccessGraphPage() {
                 React Flow powers a full workspace board. Inspect structure on the canvas and access on the side.
               </p>
             </div>
-            <div className="relative w-full max-w-sm">
+            <div className="relative z-10 w-full max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
@@ -505,7 +505,7 @@ export default function AccessGraphPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 relative z-10">
             {NODE_TYPE_ORDER.map((type) => {
               const active = activeTypes.has(type);
               const meta = NODE_TYPE_META[type];
@@ -552,7 +552,7 @@ export default function AccessGraphPage() {
         </section>
 
         <section className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-h-[720px] overflow-hidden rounded-[24px] border border-border bg-card">
+          <div className="min-h-[720px] overflow-hidden rounded-[28px] border border-border/80 bg-card/88 shadow-[0_28px_70px_-44px_rgba(39,28,17,0.28)] hermit-enter-soft">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div className="flex items-center gap-3">
                 <Network className="h-4 w-4 text-muted-foreground" />
@@ -608,7 +608,7 @@ export default function AccessGraphPage() {
             </div>
           </div>
 
-          <aside className="min-h-[720px] rounded-[24px] border border-border bg-card">
+          <aside className="min-h-[720px] rounded-[28px] border border-border/80 bg-card/88 shadow-[0_28px_70px_-44px_rgba(39,28,17,0.28)] hermit-enter-soft">
             <div className="border-b border-border px-5 py-4">
               <p className="text-sm font-medium text-foreground">
                 {selectedNode ? "Inspector" : "Select a node"}

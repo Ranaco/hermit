@@ -62,8 +62,8 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-[58ch]">
+        <section className="hermit-page-hero flex flex-col gap-5 border-b-0 pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[58ch] relative z-10">
             <p className="app-eyebrow">Account</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
               Settings
@@ -73,7 +73,7 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground relative z-10">
             <Badge variant="secondary">
               <Fingerprint className="mr-1.5 h-3.5 w-3.5" />
               MFA recommended
@@ -83,7 +83,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card>
+          <Card className="hermit-enter-soft">
             <CardHeader className="border-b border-border">
               <CardTitle className="inline-flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -209,7 +209,7 @@ export default function SettingsPage() {
           </Card>
 
           <div className="space-y-6">
-            <Card>
+            <Card className="hermit-enter-soft">
               <CardHeader className="border-b border-border">
                 <CardTitle className="inline-flex items-center gap-2">
                   <Shield className="h-4 w-4" />
@@ -238,7 +238,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="hermit-enter-soft">
               <CardHeader className="border-b border-border">
                 <CardTitle>Current posture</CardTitle>
               </CardHeader>

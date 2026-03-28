@@ -245,7 +245,7 @@ export default function PoliciesPage() {
   if (!currentOrganization) {
     return (
       <DashboardLayout>
-        <div className="app-empty">
+        <div className="app-empty hermit-enter">
           <Building2 className="mx-auto mb-4 h-10 w-10" />
           <p className="text-lg font-bold tracking-tight text-foreground">
             Select an organization to view policies
@@ -261,7 +261,7 @@ export default function PoliciesPage() {
   if (!canAccessPoliciesPage) {
     return (
       <DashboardLayout>
-        <div className="app-empty">
+        <div className="app-empty hermit-enter">
           <Shield className="mx-auto mb-4 h-10 w-10" />
           <p className="text-lg font-bold tracking-tight text-foreground">
             Policy access is restricted
@@ -280,8 +280,8 @@ export default function PoliciesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-[60ch]">
+        <section className="hermit-page-hero flex flex-col gap-5 border-b-0 pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[60ch] relative z-10">
             <p className="app-eyebrow">Policies</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
               Access policies
@@ -291,7 +291,7 @@ export default function PoliciesPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
             <Badge variant="secondary">
               <Building2 className="mr-1.5 h-3.5 w-3.5" />
               {currentOrganization.name}
@@ -306,7 +306,7 @@ export default function PoliciesPage() {
           <MetricCard label="Baseline" value={managedRoleCount} detail="Managed defaults." />
         </section>
 
-        <Card>
+        <Card className="hermit-enter-soft">
           <CardHeader className="border-b border-border p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -429,7 +429,7 @@ export default function PoliciesPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hermit-enter-soft">
           <CardHeader className="border-b border-border p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -784,7 +784,7 @@ function MetricCard({
   detail: string;
 }) {
   return (
-    <article className="rounded-[18px] border border-border bg-card px-5 py-4">
+    <article className="hermit-stat">
       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
@@ -871,8 +871,8 @@ function EmptyState({
   body: string;
 }) {
   return (
-    <div className="app-empty">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-muted text-foreground">
+    <div className="app-empty hermit-enter-soft">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border/80 bg-muted/70 text-foreground">
         {icon}
       </div>
       <p className="mt-4 text-base font-semibold tracking-tight text-foreground">{title}</p>
@@ -895,7 +895,7 @@ function PolicySelection({
   return (
     <div className="space-y-2">
       <Label>Attach policies</Label>
-      <div className="grid max-h-56 gap-2 overflow-y-auto border border-border p-3">
+      <div className="grid max-h-56 gap-2 overflow-y-auto rounded-[22px] border border-border bg-background/58 p-3">
         {policies.length === 0 ? (
           <p className="p-2 text-sm text-muted-foreground">No policies available yet.</p>
         ) : (
@@ -903,7 +903,7 @@ function PolicySelection({
             const checked = selectedPolicies.includes(policy.id);
 
             return (
-              <label key={policy.id} className="flex items-start gap-3 border-b border-border px-3 py-3 last:border-b-0">
+              <label key={policy.id} className="flex items-start gap-3 rounded-[18px] border border-border/70 bg-card/72 px-3 py-3">
                 <Checkbox
                   checked={checked}
                   onCheckedChange={(nextChecked) => onToggle(policy.id, nextChecked === true)}

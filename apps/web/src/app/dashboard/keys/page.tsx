@@ -105,15 +105,15 @@ export default function KeysPage() {
   if (!currentVault) {
     return (
       <DashboardLayout>
-        <section className="flex min-h-[360px] flex-col items-start justify-center gap-4 rounded-[18px] border border-border bg-card px-8 py-10">
+        <section className="hermit-page-hero flex min-h-[360px] flex-col items-start justify-center gap-4">
           <p className="app-eyebrow">Workspace</p>
-          <div className="space-y-2">
+          <div className="relative z-10 space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">Keys</h1>
             <p className="max-w-xl text-sm text-muted-foreground">Choose a vault to get started</p>
           </div>
           <Link
             href={"/dashboard/vaults"}
-            className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-opacity hover:opacity-70"
+            className="relative z-10 inline-flex items-center gap-2 text-sm font-medium text-foreground transition-opacity hover:opacity-70"
           >
             Open vaults
             <ArrowUpRight className="h-4 w-4" />
@@ -126,19 +126,19 @@ export default function KeysPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <section className="app-page-header">
-          <div className="app-page-intro">
+        <section className="hermit-page-hero app-page-header">
+          <div className="app-page-intro relative z-10">
             <p className="app-eyebrow">Keys</p>
             <h1 className="mt-2 text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight text-foreground">
-              Keys
+              Transit keys
             </h1>
             <p className="app-page-copy">
-              Transit-backed encryption keys.
+              Provision and rotate vault-scoped encryption rails.
             </p>
           </div>
 
-          <div className="app-toolbar">
-            <Badge variant="secondary">
+          <div className="app-toolbar relative z-10">
+            <Badge variant="secondary" className="gap-1.5">
               <ShieldCheck className="mr-1.5 h-4 w-4" />
               {currentVault.name}
             </Badge>
@@ -240,7 +240,7 @@ export default function KeysPage() {
           </DialogContent>
         </Dialog>
 
-        <section className="relative">
+        <section className="hermit-enter-soft relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search keys"
@@ -250,7 +250,7 @@ export default function KeysPage() {
           />
         </section>
 
-        <section className="app-grid-table overflow-hidden">
+        <section className="app-grid-table hermit-enter-soft overflow-hidden">
           <div className="app-grid-table-header grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto]">
             <p>Name</p>
             <p>Type</p>
@@ -266,11 +266,11 @@ export default function KeysPage() {
             filteredKeys.map((key) => (
               <div
                 key={key.id}
-                className="app-grid-table-row grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto]"
+                className="app-grid-table-row hermit-list-row mx-3 my-3 grid-cols-[minmax(0,1.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_auto] border-b-0"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/80 bg-muted/55 text-muted-foreground">
                       <KeyRound className="h-4 w-4" />
                     </span>
                     <div className="min-w-0">
