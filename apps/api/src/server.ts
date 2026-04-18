@@ -19,6 +19,12 @@ import {
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
 import { checkHealth as checkEncryptionHealth } from "./services/encryption.service";
+import {
+  getReadinessState,
+  isVaultReady,
+  markApplicationReady,
+  resetApplicationReadiness,
+} from "./readiness";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -61,7 +67,7 @@ export const createServer = (): Express => {
       morgan("combined", {
         stream: httpLogStream,
         skip: (req: Request) =>
-          req.path === "/health" || req.path === "/status",
+          req.path === "/health" || req.path === "/readyz" || req.path === "/status",
       }),
     );
   }
@@ -86,6 +92,13 @@ export const createServer = (): Express => {
       uptime: process.uptime(),
       environment: config.app.env,
     });
+  });
+
+  app.get("/readyz", async (_req: Request, res: Response) => {
+    const readiness = await getReadinessState();
+    const httpStatus = readiness.status === "ready" ? 200 : 503;
+
+    res.status(httpStatus).json(readiness);
   });
 
   /**
@@ -150,8 +163,8 @@ export const createServer = (): Express => {
  */
 async function checkVaultConnection(): Promise<boolean> {
   try {
-    await checkEncryptionHealth();
-    return true;
+    const health = await checkEncryptionHealth();
+    return isVaultReady(health);
   } catch (error) {
     log.error("Vault connection check failed", { error });
     return false;
@@ -163,6 +176,8 @@ async function checkVaultConnection(): Promise<boolean> {
  * Performs startup checks and setup
  */
 export async function initializeApp(): Promise<void> {
+  resetApplicationReadiness();
+
   log.info("Initializing Hermit KMS API...", {
     environment: config.app.env,
     version: config.app.version,
@@ -186,6 +201,7 @@ export async function initializeApp(): Promise<void> {
   // TODO: Initialize Vault keys if needed
   log.info("Vault keys initialization check skipped (managed by operator-controlled Vault bootstrap)");
 
+  markApplicationReady();
   log.info("Application initialized successfully");
 }
 

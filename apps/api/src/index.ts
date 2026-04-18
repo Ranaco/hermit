@@ -33,6 +33,7 @@ async function start(): Promise<void> {
         `📡 API endpoints available at: http://localhost:${port}${config.app.apiPrefix}`,
       );
       log.info(`❤️  Health check: http://localhost:${port}/health`);
+      log.info(`🟢 Readiness check: http://localhost:${port}/readyz (internal network only)`);
       log.info(`📊 Status check: http://localhost:${port}/status`);
       
       // Schedule background workers

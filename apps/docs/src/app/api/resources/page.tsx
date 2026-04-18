@@ -17,6 +17,10 @@ export default function Page() {
         Public system endpoints come first so you can confirm host alignment and API health before moving into
         authenticated flows. Every endpoint below includes a built-in request runner.
       </Callout>
+      <Callout title="Internal readiness endpoint">
+        <code>/readyz</code> is documented here for operators, but it is internal-only and is not routed through the
+        public ingress path.
+      </Callout>
 
       <h2 id="quick-tests">Quick tests</h2>
       <p>

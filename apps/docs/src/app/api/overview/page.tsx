@@ -30,6 +30,10 @@ export default function Page() {
 Health:   https://hermit.ranax.co/health
 Status:   https://hermit.ranax.co/status`}
       />
+      <p className="mt-4">
+        Hermit also exposes <code>/readyz</code> for internal readiness checks, but it is intentionally kept off the
+        public ingress surface. Use it only from the internal network that can reach the API service directly.
+      </p>
 
       <h2 id="request-modes">Request modes</h2>
       <div className="mt-6 grid gap-3 md:grid-cols-3">

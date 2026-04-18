@@ -78,7 +78,7 @@ export const generalRateLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req: Request) => {
     // Skip rate limiting for health checks
-    return req.path === '/health' || req.path === '/status';
+    return req.path === '/health' || req.path === '/readyz' || req.path === '/status';
   },
 });
 
