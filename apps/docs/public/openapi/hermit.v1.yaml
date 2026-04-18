@@ -20,6 +20,12 @@ tags:
 paths:
   /health:
     get: { tags: [System], summary: Get basic API health. }
+  /readyz:
+    get:
+      tags: [System]
+      summary: Get API readiness for internal callers.
+      description: Internal network only. Reports whether the API has completed boot and can reach required startup dependencies.
+      x-internal: true
   /status:
     get: { tags: [System], summary: Get detailed API, database, and Vault status. }
   /api/info:

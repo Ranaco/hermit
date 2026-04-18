@@ -29,9 +29,18 @@ export const apiEndpointGroups: ApiEndpointGroup[] = [
   {
     id: "system",
     title: "System",
-    description: "Operational endpoints for health, connectivity, and basic API metadata.",
+    description: "Operational endpoints for health, readiness, connectivity, and basic API metadata.",
     endpoints: [
       { id: "health", method: "GET", path: "/health", summary: "Basic API health status.", auth: "public", tags: ["system"] },
+      {
+        id: "readyz",
+        method: "GET",
+        path: "/readyz",
+        summary: "Internal-only readiness status for boot completion and startup dependencies.",
+        auth: "public",
+        tags: ["system", "internal"],
+        notes: ["Internal network only. This endpoint is intentionally not exposed through the public ingress path."],
+      },
       {
         id: "status",
         method: "GET",
