@@ -1,0 +1,48 @@
+{
+  "project": {
+    "id": "ca6be078-4929-470f-9147-38e5887ed5af",
+    "name": "Hermit",
+    "linkedProjects": [
+      {
+        "id": "21378826-d6cc-4431-a085-ab44eb59e472",
+        "confidence": 1
+      }
+    ],
+    "auditorAssignments": [
+      {
+        "userId": "U_COMPLIANCE_OFFICER",
+        "role": "Compliance Auditor",
+        "scope": "Hermit project governance and documentation controls",
+        "status": "active",
+        "source": "slack:hermit_governance_registration_1776581773668",
+        "recordedAt": "2026-04-19T16:06:58Z"
+      }
+    ],
+    "documentationApprovals": [
+      {
+        "changeId": "ca6be078-4929-470f-9147-38e5887ed5af",
+        "status": "approved",
+        "reviewedBy": [
+          "U_COMPLIANCE_OFFICER"
+        ],
+        "reviewTeam": "compliance",
+        "basis": "Provided source context and related decision record.",
+        "recordedAt": "2026-04-19T16:06:58Z"
+      }
+    ],
+    "complianceRequirements": [
+      {
+        "id": "secret-management-soc2-level-2-audit-trail",
+        "title": "SOC2-Level-2 audit trail for secret-management services",
+        "status": "mandatory",
+        "appliesTo": [
+          "all infrastructure components",
+          "secret-management services"
+        ],
+        "statement": "All infrastructure components must adhere to SOC2-Level-2 audit trail standards for secret-management services.",
+        "source": "slack:hermit_governance_registration_1776581773668",
+        "recordedAt": "2026-04-19T16:06:58Z"
+      }
+    ]
+  }
+}

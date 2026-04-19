@@ -84,6 +84,7 @@ export const docsPages = {
       { id: "iam-policy-engine", label: "IAM policy engine" },
       { id: "three-tier-protection", label: "Three-tier protection" },
       { id: "audit-behavior", label: "Audit behavior" },
+      { id: "compliance-controls", label: "Compliance controls" },
       { id: "important-constraints", label: "Important constraints" },
     ],
     prev: "architecture",

@@ -100,6 +100,18 @@ Important implementation details:
 - Frontend forms already enforce the expected minimum password length
 - Secret reveal flows should preserve the distinction between `vault` and `secret` password requirements
 
+## Compliance And Audit Trail Requirements
+
+Hermit's infrastructure baseline now includes an explicit compliance control for secret-management services.
+
+- `U_COMPLIANCE_OFFICER` is the registered Compliance Auditor for the Hermit project
+- All infrastructure components must adhere to SOC2-Level-2 audit trail standards for secret-management services
+- Governance registration and compliance audit evidence are recorded under `docs/governance/`
+
+For implementation and operations, this means audit records should preserve enough context to support control review,
+operator accountability, and post-incident investigation for systems that store, reveal, rotate, share, or otherwise
+handle secret material.
+
 ## Request Lifecycle
 
 The backend follows a layered pattern:
