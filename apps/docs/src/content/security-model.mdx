@@ -53,6 +53,18 @@ Examples of important audited actions include:
 
 The goal is not just compliance logging. It is to preserve operational context around sensitive activity.
 
+<h2 id="compliance-controls">Compliance controls</h2>
+
+Hermit now treats compliance ownership and audit-trail requirements as explicit parts of the security model.
+
+- `U_COMPLIANCE_OFFICER` is registered as the **Compliance Auditor** for the Hermit project
+- all infrastructure components must adhere to **SOC2-Level-2 audit trail** standards for
+  **secret-management services**
+- governance registration and audit evidence are tracked in the project governance records alongside the docs update
+
+That requirement raises the bar beyond generic event logging. Secret-management services need durable audit trails that
+capture enough context for control review, operator accountability, and incident reconstruction.
+
 <h2 id="important-constraints">Important constraints</h2>
 
 The current implementation carries a few architectural constraints that the docs should make explicit:
