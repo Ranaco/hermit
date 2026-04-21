@@ -32,6 +32,12 @@ import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
 
+interface VaultHealthResponse {
+  status: "healthy" | "unhealthy";
+  vault_connected: boolean;
+  latency_ms: number;
+}
+
 /**
  * Create and configure Express application
  */
@@ -77,15 +83,11 @@ export const createServer = (): Express => {
 
   /**
    * Health check endpoint
-   * Returns basic server health status
+   * Returns the current Vault connectivity state without changing HTTP status.
    */
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.app.env,
-    });
+  app.get("/health", async (_req: Request, res: Response) => {
+    const health = await getVaultHealthResponse();
+    res.status(200).json(health);
   });
 
   /**
@@ -155,6 +157,28 @@ async function checkVaultConnection(): Promise<boolean> {
   } catch (error) {
     log.error("Vault connection check failed", { error });
     return false;
+  }
+}
+
+async function getVaultHealthResponse(): Promise<VaultHealthResponse> {
+  const startedAt = Date.now();
+
+  try {
+    await checkEncryptionHealth();
+
+    return {
+      status: "healthy",
+      vault_connected: true,
+      latency_ms: Date.now() - startedAt,
+    };
+  } catch (error) {
+    log.error("Vault health endpoint check failed", { error });
+
+    return {
+      status: "unhealthy",
+      vault_connected: false,
+      latency_ms: Date.now() - startedAt,
+    };
   }
 }
 
