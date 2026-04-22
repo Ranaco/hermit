@@ -36,26 +36,37 @@ interface VaultHealthResponse {
   status: string;
   vault_connected: boolean;
   latency_ms: number;
+  timestamp: string;
+  uptime: number;
+  environment: string;
 }
 
 async function getVaultHealthResponse(): Promise<VaultHealthResponse> {
-  const startedAt = Date.now();
+  const startedAt = performance.now();
+
+  const baseHealth = {
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    environment: config.app.env,
+  };
 
   try {
     await checkEncryptionHealth();
 
     return {
+      ...baseHealth,
       status: "healthy",
       vault_connected: true,
-      latency_ms: Date.now() - startedAt,
+      latency_ms: Math.round(performance.now() - startedAt),
     };
   } catch (error) {
     log.error("Vault connection check failed", { error });
 
     return {
+      ...baseHealth,
       status: "degraded",
       vault_connected: false,
-      latency_ms: Date.now() - startedAt,
+      latency_ms: Math.round(performance.now() - startedAt),
     };
   }
 }
