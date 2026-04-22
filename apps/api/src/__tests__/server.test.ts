@@ -1,5 +1,6 @@
-import { describe, it, expect, jest } from "@jest/globals";
-import type { Request, Response } from "express";
+import { EventEmitter } from "node:events";
+import { describe, expect, it, jest } from "@jest/globals";
+import type { Express } from "express";
 
 jest.mock(
   "@hermit/logger",
@@ -42,68 +43,104 @@ jest.mock("../services/prisma.service", () => ({
 import { checkHealth as checkEncryptionHealth } from "../services/encryption.service";
 import { createServer } from "../server";
 
-function getHealthRouteHandler() {
-  const app = createServer() as ReturnType<typeof createServer> & {
-    _router: {
-      stack: Array<{
-        route?: {
-          path: string;
-          stack: Array<{ handle: (_req: Request, res: Response) => Promise<void> | void }>;
-        };
-      }>;
-    };
+interface MockRequest extends EventEmitter {
+  method: string;
+  url: string;
+  path: string;
+  headers: Record<string, string>;
+  connection: { remoteAddress: string };
+  socket: { remoteAddress: string };
+}
+
+interface MockResponse extends EventEmitter {
+  statusCode: number;
+  body: string;
+  headersSent: boolean;
+  locals: Record<string, unknown>;
+  setHeader: (name: string, value: string | string[]) => void;
+  getHeader: (name: string) => string | string[] | undefined;
+  removeHeader: (name: string) => void;
+  end: (chunk?: string) => void;
+  write: (chunk: string) => boolean;
+}
+
+async function performGet(app: Express, url: string): Promise<{ status: number; body: unknown }> {
+  const req = new EventEmitter() as MockRequest;
+  req.method = "GET";
+  req.url = url;
+  req.path = url;
+  req.headers = {};
+  req.connection = { remoteAddress: "127.0.0.1" };
+  req.socket = { remoteAddress: "127.0.0.1" };
+
+  const headers = new Map<string, string | string[]>();
+  const res = new EventEmitter() as MockResponse;
+  res.statusCode = 200;
+  res.body = "";
+  res.headersSent = false;
+  res.locals = {};
+  res.setHeader = (name, value) => {
+    headers.set(name.toLowerCase(), value);
+  };
+  res.getHeader = (name) => headers.get(name.toLowerCase());
+  res.removeHeader = (name) => {
+    headers.delete(name.toLowerCase());
+  };
+  res.write = (chunk) => {
+    res.body += chunk;
+    return true;
+  };
+  res.end = (chunk) => {
+    if (chunk) {
+      res.body += chunk;
+    }
+    res.headersSent = true;
+    res.emit("finish");
   };
 
-  const routeLayer = app._router.stack.find((layer) => layer.route?.path === "/health");
+  const response = new Promise<{ status: number; body: unknown }>((resolve, reject) => {
+    res.once("finish", () => {
+      try {
+        resolve({
+          status: res.statusCode,
+          body: JSON.parse(res.body),
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
 
-  if (!routeLayer?.route) {
-    throw new Error("Health route not found");
-  }
+  app.handle(req as never, res as never);
+  req.emit("end");
 
-  return routeLayer.route.stack[0]?.handle;
+  return response;
 }
 
-async function invokeHealthRoute() {
-  const handler = getHealthRouteHandler();
-  const status = jest.fn().mockReturnThis();
-  const json = jest.fn();
-  const res = { status, json } as unknown as Response;
-
-  await handler({} as Request, res);
-
-  return { status, json };
-}
-
-describe("Server", () => {
+describe("GET /health", () => {
   it("returns vault connectivity details when Vault is reachable", async () => {
     jest.mocked(checkEncryptionHealth).mockResolvedValueOnce({ initialized: true });
 
-    const { status, json } = await invokeHealthRoute();
+    const response = await performGet(createServer(), "/health");
 
-    expect(status).toHaveBeenCalledWith(200);
-    expect(json).toHaveBeenCalledWith({
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
       status: "healthy",
       vault_connected: true,
       latency_ms: expect.any(Number),
-      timestamp: expect.any(String),
-      uptime: expect.any(Number),
-      environment: expect.any(String),
     });
   });
 
   it("returns degraded health details when Vault is unreachable", async () => {
     jest.mocked(checkEncryptionHealth).mockRejectedValueOnce(new Error("vault down"));
 
-    const { status, json } = await invokeHealthRoute();
+    const response = await performGet(createServer(), "/health");
 
-    expect(status).toHaveBeenCalledWith(200);
-    expect(json).toHaveBeenCalledWith({
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
       status: "degraded",
       vault_connected: false,
       latency_ms: expect.any(Number),
-      timestamp: expect.any(String),
-      uptime: expect.any(Number),
-      environment: expect.any(String),
     });
   });
 });

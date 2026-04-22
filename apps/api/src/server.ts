@@ -9,7 +9,7 @@ import morgan from "morgan";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { log, httpLogStream } from "@hermit/logger";
-import { errorHandler, notFoundHandler } from "@hermit/error-handling";
+import { asyncHandler, errorHandler, notFoundHandler } from "@hermit/error-handling";
 import config from "./config";
 import {
   setupHelmet,
@@ -36,39 +36,41 @@ interface VaultHealthResponse {
   status: string;
   vault_connected: boolean;
   latency_ms: number;
-  timestamp: string;
-  uptime: number;
-  environment: string;
 }
 
-async function getVaultHealthResponse(): Promise<VaultHealthResponse> {
-  const startedAt = performance.now();
+interface VaultConnectionCheckResult {
+  vaultConnected: boolean;
+  latencyMs: number;
+}
 
-  const baseHealth = {
-    timestamp: new Date().toISOString(),
-    uptime: Math.floor(process.uptime()),
-    environment: config.app.env,
-  };
+async function checkVaultConnectionStatus(): Promise<VaultConnectionCheckResult> {
+  const startedAt = performance.now();
 
   try {
     await checkEncryptionHealth();
 
     return {
-      ...baseHealth,
-      status: "healthy",
-      vault_connected: true,
-      latency_ms: Math.round(performance.now() - startedAt),
+      vaultConnected: true,
+      latencyMs: Math.round(performance.now() - startedAt),
     };
   } catch (error) {
     log.error("Vault connection check failed", { error });
 
     return {
-      ...baseHealth,
-      status: "degraded",
-      vault_connected: false,
-      latency_ms: Math.round(performance.now() - startedAt),
+      vaultConnected: false,
+      latencyMs: Math.round(performance.now() - startedAt),
     };
   }
+}
+
+async function getVaultHealthResponse(): Promise<VaultHealthResponse> {
+  const { vaultConnected, latencyMs } = await checkVaultConnectionStatus();
+
+  return {
+    status: vaultConnected ? "healthy" : "degraded",
+    vault_connected: vaultConnected,
+    latency_ms: latencyMs,
+  };
 }
 
 /**
@@ -118,10 +120,10 @@ export const createServer = (): Express => {
    * Health check endpoint
    * Returns Vault connectivity status
    */
-  app.get("/health", async (_req: Request, res: Response) => {
+  app.get("/health", asyncHandler(async (_req: Request, res: Response) => {
     const health = await getVaultHealthResponse();
     res.status(200).json(health);
-  });
+  }));
 
   /**
    * Detailed status endpoint
@@ -184,8 +186,8 @@ export const createServer = (): Express => {
  * Check Vault connectivity
  */
 async function checkVaultConnection(): Promise<boolean> {
-  const health = await getVaultHealthResponse();
-  return health.vault_connected;
+  const { vaultConnected } = await checkVaultConnectionStatus();
+  return vaultConnected;
 }
 
 /**
