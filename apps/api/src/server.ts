@@ -18,7 +18,7 @@ import {
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
-import { checkHealth as checkEncryptionHealth } from "./services/encryption.service";
+import { checkVaultConnection, getVaultHealthResponse } from "./services/health.service";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -31,12 +31,6 @@ import groupRoutes from "./routes/group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
-
-interface HealthCheckResponse {
-  status: "healthy" | "unhealthy";
-  vault_connected: boolean;
-  latency_ms: number;
-}
 
 /**
  * Create and configure Express application
@@ -146,42 +140,6 @@ export const createServer = (): Express => {
 
   return app;
 };
-
-/**
- * Check Vault connectivity
- */
-async function checkVaultConnection(): Promise<boolean> {
-  try {
-    await checkEncryptionHealth();
-    return true;
-  } catch (error) {
-    log.error("Vault connection check failed", { error });
-    return false;
-  }
-}
-
-async function getVaultHealthResponse(): Promise<HealthCheckResponse> {
-  const startedAt = Date.now();
-
-  try {
-    const vaultHealth = await checkEncryptionHealth();
-    const vaultConnected = vaultHealth.initialized && !vaultHealth.sealed;
-
-    return {
-      status: vaultConnected ? "healthy" : "unhealthy",
-      vault_connected: vaultConnected,
-      latency_ms: Date.now() - startedAt,
-    };
-  } catch (error) {
-    log.warn("Vault health endpoint check failed", { error });
-
-    return {
-      status: "unhealthy",
-      vault_connected: false,
-      latency_ms: Date.now() - startedAt,
-    };
-  }
-}
 
 /**
  * Initialize application
