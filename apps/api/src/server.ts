@@ -3,6 +3,7 @@
  * Production-ready Express server with comprehensive security and middleware
  */
 
+import { performance } from "node:perf_hooks";
 import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import { json, urlencoded } from "body-parser";
 import morgan from "morgan";

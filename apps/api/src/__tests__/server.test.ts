@@ -1,6 +1,5 @@
-import { EventEmitter } from "node:events";
 import { describe, expect, it, jest } from "@jest/globals";
-import type { Express } from "express";
+import request from "supertest";
 
 jest.mock(
   "@hermit/logger",
@@ -43,85 +42,11 @@ jest.mock("../services/prisma.service", () => ({
 import { checkHealth as checkEncryptionHealth } from "../services/encryption.service";
 import { createServer } from "../server";
 
-interface MockRequest extends EventEmitter {
-  method: string;
-  url: string;
-  path: string;
-  headers: Record<string, string>;
-  connection: { remoteAddress: string };
-  socket: { remoteAddress: string };
-}
-
-interface MockResponse extends EventEmitter {
-  statusCode: number;
-  body: string;
-  headersSent: boolean;
-  locals: Record<string, unknown>;
-  setHeader: (name: string, value: string | string[]) => void;
-  getHeader: (name: string) => string | string[] | undefined;
-  removeHeader: (name: string) => void;
-  end: (chunk?: string) => void;
-  write: (chunk: string) => boolean;
-}
-
-async function performGet(app: Express, url: string): Promise<{ status: number; body: unknown }> {
-  const req = new EventEmitter() as MockRequest;
-  req.method = "GET";
-  req.url = url;
-  req.path = url;
-  req.headers = {};
-  req.connection = { remoteAddress: "127.0.0.1" };
-  req.socket = { remoteAddress: "127.0.0.1" };
-
-  const headers = new Map<string, string | string[]>();
-  const res = new EventEmitter() as MockResponse;
-  res.statusCode = 200;
-  res.body = "";
-  res.headersSent = false;
-  res.locals = {};
-  res.setHeader = (name, value) => {
-    headers.set(name.toLowerCase(), value);
-  };
-  res.getHeader = (name) => headers.get(name.toLowerCase());
-  res.removeHeader = (name) => {
-    headers.delete(name.toLowerCase());
-  };
-  res.write = (chunk) => {
-    res.body += chunk;
-    return true;
-  };
-  res.end = (chunk) => {
-    if (chunk) {
-      res.body += chunk;
-    }
-    res.headersSent = true;
-    res.emit("finish");
-  };
-
-  const response = new Promise<{ status: number; body: unknown }>((resolve, reject) => {
-    res.once("finish", () => {
-      try {
-        resolve({
-          status: res.statusCode,
-          body: JSON.parse(res.body),
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-
-  app.handle(req as never, res as never);
-  req.emit("end");
-
-  return response;
-}
-
 describe("GET /health", () => {
   it("returns vault connectivity details when Vault is reachable", async () => {
     jest.mocked(checkEncryptionHealth).mockResolvedValueOnce({ initialized: true });
 
-    const response = await performGet(createServer(), "/health");
+    const response = await request(createServer()).get("/health");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -134,7 +59,7 @@ describe("GET /health", () => {
   it("returns degraded health details when Vault is unreachable", async () => {
     jest.mocked(checkEncryptionHealth).mockRejectedValueOnce(new Error("vault down"));
 
-    const response = await performGet(createServer(), "/health");
+    const response = await request(createServer()).get("/health");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
