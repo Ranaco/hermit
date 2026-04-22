@@ -3,7 +3,6 @@
  * Production-ready Express server with comprehensive security and middleware
  */
 
-import { performance } from "node:perf_hooks";
 import express, { type Express, type Request, type RequestHandler, type Response } from "express";
 import { json, urlencoded } from "body-parser";
 import morgan from "morgan";
@@ -19,7 +18,10 @@ import {
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
-import { checkHealth as checkEncryptionHealth } from "./services/encryption.service";
+import {
+  checkVaultConnectionStatus,
+  getVaultHealthResponse,
+} from "./services/health.service";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -32,47 +34,6 @@ import groupRoutes from "./routes/group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
-
-interface VaultHealthResponse {
-  status: string;
-  vault_connected: boolean;
-  latency_ms: number;
-}
-
-interface VaultConnectionCheckResult {
-  vaultConnected: boolean;
-  latencyMs: number;
-}
-
-async function checkVaultConnectionStatus(): Promise<VaultConnectionCheckResult> {
-  const startedAt = performance.now();
-
-  try {
-    await checkEncryptionHealth();
-
-    return {
-      vaultConnected: true,
-      latencyMs: Math.round(performance.now() - startedAt),
-    };
-  } catch (error) {
-    log.error("Vault connection check failed", { error });
-
-    return {
-      vaultConnected: false,
-      latencyMs: Math.round(performance.now() - startedAt),
-    };
-  }
-}
-
-async function getVaultHealthResponse(): Promise<VaultHealthResponse> {
-  const { vaultConnected, latencyMs } = await checkVaultConnectionStatus();
-
-  return {
-    status: vaultConnected ? "healthy" : "degraded",
-    vault_connected: vaultConnected,
-    latency_ms: latencyMs,
-  };
-}
 
 /**
  * Create and configure Express application
