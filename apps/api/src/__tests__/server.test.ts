@@ -56,12 +56,17 @@ describe("GET /health", () => {
       .get("/health")
       .expect(200);
 
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       status: HEALTH_STATUS.HEALTHY,
       vault_connected: true,
       latency_ms: expect.any(Number),
+      environment: expect.any(String),
+      timestamp: expect.any(String),
+      uptime: expect.any(Number),
     });
     expect(Number.isInteger(response.body.latency_ms)).toBe(true);
+    expect(Number.isFinite(response.body.uptime)).toBe(true);
+    expect(new Date(response.body.timestamp).toString()).not.toBe("Invalid Date");
   });
 
   it("returns degraded health details when Vault is unreachable", async () => {
@@ -70,11 +75,16 @@ describe("GET /health", () => {
       .get("/health")
       .expect(200);
 
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       status: HEALTH_STATUS.DEGRADED,
       vault_connected: false,
       latency_ms: expect.any(Number),
+      environment: expect.any(String),
+      timestamp: expect.any(String),
+      uptime: expect.any(Number),
     });
     expect(Number.isInteger(response.body.latency_ms)).toBe(true);
+    expect(Number.isFinite(response.body.uptime)).toBe(true);
+    expect(new Date(response.body.timestamp).toString()).not.toBe("Invalid Date");
   });
 });
