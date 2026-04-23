@@ -9,7 +9,7 @@ import morgan from "morgan";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { log, httpLogStream } from "@hermit/logger";
-import { errorHandler, notFoundHandler } from "@hermit/error-handling";
+import { asyncHandler, errorHandler, notFoundHandler } from "@hermit/error-handling";
 import config from "./config";
 import {
   setupHelmet,
@@ -18,7 +18,10 @@ import {
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
-import { checkHealth as checkEncryptionHealth } from "./services/encryption.service";
+import {
+  checkVaultConnectionStatus,
+  getVaultHealthResponse,
+} from "./services/health.service";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -77,16 +80,12 @@ export const createServer = (): Express => {
 
   /**
    * Health check endpoint
-   * Returns basic server health status
+   * Returns Vault connectivity status
    */
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.app.env,
-    });
-  });
+  app.get("/health", asyncHandler(async (_req: Request, res: Response) => {
+    const health = await getVaultHealthResponse();
+    res.status(200).json(health);
+  }));
 
   /**
    * Detailed status endpoint
@@ -149,13 +148,8 @@ export const createServer = (): Express => {
  * Check Vault connectivity
  */
 async function checkVaultConnection(): Promise<boolean> {
-  try {
-    await checkEncryptionHealth();
-    return true;
-  } catch (error) {
-    log.error("Vault connection check failed", { error });
-    return false;
-  }
+  const { vaultConnected } = await checkVaultConnectionStatus();
+  return vaultConnected;
 }
 
 /**
