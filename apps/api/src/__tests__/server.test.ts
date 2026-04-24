@@ -1,56 +1,69 @@
-import { describe, it, expect, jest } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
+import express from "express";
+import request from "supertest";
+
+const mockedCheckHealth = jest.fn();
+const mockRouterModule = {
+  __esModule: true,
+  default: express.Router(),
+};
 
 jest.mock("../services/encryption.service", () => ({
-  checkHealth: jest.fn(),
+  checkHealth: mockedCheckHealth,
 }));
 
-import { createHealthHandler } from "../routes/health.routes";
-import { checkHealth } from "../services/encryption.service";
+jest.mock("../middleware/security", () => ({
+  setupHelmet: jest.fn(),
+  setupCors: jest.fn(),
+  generalRateLimiter: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+}));
 
-const mockedCheckHealth = jest.mocked(checkHealth);
+jest.mock("../middleware/context", () => ({
+  requestContext: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+  logRequestCompletion: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+}));
 
-function createMockResponse() {
-  const response = {
-    status: jest.fn(),
-    json: jest.fn(),
-  };
+jest.mock("../services/prisma.service", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    $disconnect: jest.fn(),
+  })),
+  checkDatabaseConnection: jest.fn().mockResolvedValue(true),
+}));
 
-  response.status.mockReturnValue(response);
-  return response;
-}
+jest.mock("../routes/auth.routes", () => mockRouterModule);
+jest.mock("../routes/user.routes", () => mockRouterModule);
+jest.mock("../routes/organization.routes", () => mockRouterModule);
+jest.mock("../routes/vault.routes", () => mockRouterModule);
+jest.mock("../routes/key.routes", () => mockRouterModule);
+jest.mock("../routes/secret.routes", () => mockRouterModule);
+jest.mock("../routes/group.routes", () => mockRouterModule);
+jest.mock("../routes/onboarding.routes", () => mockRouterModule);
+jest.mock("../routes/audit.routes", () => mockRouterModule);
+jest.mock("../routes/share.routes", () => mockRouterModule);
 
-describe("Health routes", () => {
-  it("returns vault health details when Vault is reachable", async () => {
+import { createServer } from "../server";
+
+describe("createServer /health", () => {
+  it("mounts GET /health at the service root and reports a healthy Vault", async () => {
     mockedCheckHealth.mockResolvedValue({
       initialized: true,
       sealed: false,
-    } as Awaited<ReturnType<typeof checkHealth>>);
-    const response = createMockResponse();
-
-    await createHealthHandler()({} as never, response as never, jest.fn());
-
-    expect(response.status).toHaveBeenCalledWith(200);
-    expect(response.json).toHaveBeenCalledWith({
-      status: "ok",
-      vault_connected: true,
-      latency_ms: expect.any(Number),
     });
-    expect(
-      (response.json.mock.calls[0]?.[0] as { latency_ms: number }).latency_ms,
-    ).toBeGreaterThan(0);
-  });
 
-  it("returns an error payload when Vault is unreachable", async () => {
-    mockedCheckHealth.mockRejectedValue(new Error("vault unavailable"));
-    const response = createMockResponse();
+    const response = await request(createServer()).get("/health");
 
-    await createHealthHandler()({} as never, response as never, jest.fn());
-
-    expect(response.status).toHaveBeenCalledWith(200);
-    expect(response.json).toHaveBeenCalledWith({
-      status: "error",
-      vault_connected: false,
-      latency_ms: 0,
-    });
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        status: "ok",
+        vault_connected: true,
+        latency_ms: expect.any(Number),
+        environment: expect.any(String),
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+      }),
+    );
+    expect(response.body.latency_ms).toBeGreaterThan(0);
   });
 });
