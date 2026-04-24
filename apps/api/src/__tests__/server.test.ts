@@ -1,35 +1,69 @@
-import supertest from "supertest";
-import { describe, it, expect, jest } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
+import express from "express";
+import request from "supertest";
 
-jest.mock("@hermit/logger", () => ({
-  log: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-  httpLogStream: {
-    write: jest.fn(),
-  },
+const mockedCheckHealth = jest.fn();
+const mockRouterModule = {
+  __esModule: true,
+  default: express.Router(),
+};
+
+jest.mock("../services/encryption.service", () => ({
+  checkHealth: mockedCheckHealth,
 }));
 
-jest.mock("@hermit/vault-client", () => ({
-  createVaultService: () => ({
-    initialize: async () => undefined,
-    testConnection: async () => true,
-    checkHealth: async () => ({ initialized: true }),
-  }),
+jest.mock("../middleware/security", () => ({
+  setupHelmet: jest.fn(),
+  setupCors: jest.fn(),
+  generalRateLimiter: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
 }));
+
+jest.mock("../middleware/context", () => ({
+  requestContext: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+  logRequestCompletion: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+}));
+
+jest.mock("../services/prisma.service", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    $disconnect: jest.fn(),
+  })),
+  checkDatabaseConnection: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock("../routes/auth.routes", () => mockRouterModule);
+jest.mock("../routes/user.routes", () => mockRouterModule);
+jest.mock("../routes/organization.routes", () => mockRouterModule);
+jest.mock("../routes/vault.routes", () => mockRouterModule);
+jest.mock("../routes/key.routes", () => mockRouterModule);
+jest.mock("../routes/secret.routes", () => mockRouterModule);
+jest.mock("../routes/group.routes", () => mockRouterModule);
+jest.mock("../routes/onboarding.routes", () => mockRouterModule);
+jest.mock("../routes/audit.routes", () => mockRouterModule);
+jest.mock("../routes/share.routes", () => mockRouterModule);
 
 import { createServer } from "../server";
 
-describe("Server", () => {
-  it("health check returns 200", async () => {
-    await supertest(createServer())
-      .get("/health")
-      .expect(200)
-      .then((res) => {
-        expect(res.ok).toBe(true);
-      });
+describe("createServer /health", () => {
+  it("mounts GET /health at the service root and reports a healthy Vault", async () => {
+    mockedCheckHealth.mockResolvedValue({
+      initialized: true,
+      sealed: false,
+    });
+
+    const response = await request(createServer()).get("/health");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        status: "ok",
+        vault_connected: true,
+        latency_ms: expect.any(Number),
+        environment: expect.any(String),
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+      }),
+    );
+    expect(response.body.latency_ms).toBeGreaterThan(0);
   });
 });

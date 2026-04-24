@@ -31,6 +31,7 @@ import groupRoutes from "./routes/group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
+import { createHealthRouter } from "./routes/health.routes";
 
 /**
  * Create and configure Express application
@@ -75,18 +76,7 @@ export const createServer = (): Express => {
 
   // ==================== HEALTH & STATUS ROUTES ====================
 
-  /**
-   * Health check endpoint
-   * Returns basic server health status
-   */
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.app.env,
-    });
-  });
+  app.use(createHealthRouter());
 
   /**
    * Detailed status endpoint
