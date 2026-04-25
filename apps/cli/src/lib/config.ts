@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parse } from "yaml";
+import type { ValidatedVaultConfig } from "../../../../packages/vault-client/src/config-validation";
+import type { VaultConfig } from "../../../../packages/vault-client/src/types";
 import { abort } from "./command-helpers.js";
+import { loadValidatedCliConfigEntry } from "./vault-config.js";
 
 export interface HermitEnvironment {
   organization?: string;
@@ -24,6 +27,9 @@ export interface HermitConfig {
 }
 
 const CONFIG_FILENAMES = [".hermit.yml", ".hermit.yaml"];
+
+export type CliConfigEntries = Record<string, VaultConfig>;
+export type ValidatedCliConfigEntries = Record<string, ValidatedVaultConfig>;
 
 export function resolveConfigPath(explicitPath?: string): string | null {
   if (explicitPath) {
@@ -59,6 +65,23 @@ export function loadProjectConfig(explicitPath?: string): HermitConfig | null {
 
   const parsed = parse(readFileSync(path, "utf8")) as HermitConfig;
   return parsed;
+}
+
+export function validateCliConfigEntries(entries: CliConfigEntries): ValidatedCliConfigEntries {
+  const validatedEntries: ValidatedCliConfigEntries = {};
+
+  for (const [entryName, entry] of Object.entries(entries)) {
+    validatedEntries[entryName] = loadValidatedCliConfigEntry(entry, (config) => config, entryName);
+  }
+
+  return validatedEntries;
+}
+
+export function loadValidatedCliConfigEntries<T>(
+  entries: CliConfigEntries,
+  onValid: (validatedEntries: ValidatedCliConfigEntries) => T,
+): T {
+  return onValid(validateCliConfigEntries(entries));
 }
 
 export function resolveConfiguredServerUrl(explicitPath?: string): string | null {

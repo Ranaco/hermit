@@ -4,7 +4,8 @@
  */
 
 export interface VaultConfig {
-  endpoint: string;
+  address?: string;
+  endpoint?: string;
   token?: string;
   namespace?: string;
   transitMount?: string;
