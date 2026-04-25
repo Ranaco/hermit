@@ -77,3 +77,10 @@ Key tables and their core relationships:
 - **ACME bootstrap rule**: Do not load the full HTTPS nginx config before the first Let's Encrypt certificate exists. For initial issuance, serve only the HTTP challenge config, then render the SSL config after Certbot succeeds. Certificate existence checks must use the Certbot volume/container state, not host `/etc/letsencrypt` paths.
 - **Certbot compose gotcha**: The `certbot` service entrypoint is the long-running renew loop. One-off commands like `certonly` and `certificates` must override the entrypoint (for example `docker compose run --entrypoint certbot ...`) or they will silently run renew logic instead.
 - **Wrapped AppRole restart rule**: Production app restarts must mint fresh wrapped SecretIDs into `.env.runtime` and force-recreate the `api`/`web` containers. Updating `.env.runtime` alone does not guarantee Docker Compose will recreate containers or drop stale in-memory env values.
+
+## 10. CLI Architecture & Local Config Safety
+
+- **Thin client boundary**: The CLI remains a thin client over the vault microservice. Future CLI planning should keep business logic, policy evaluation, and authoritative secret operations in the service layer rather than recreating them locally in the CLI.
+- **Local config is first-class**: Local CLI config is increasingly important for multi-vault team workflows. Do not assume one active vault or one implicit runtime target is enough for future CLI UX.
+- **Required config shape**: Every resolved CLI config entry must include `address`, `token`, and `namespace`. Treat partially populated entries as invalid rather than attempting best-effort fallbacks.
+- **Fail-safe parsing**: When a CLI config file is malformed, unreadable, or incomplete, the CLI must fail safely with explicit validation errors. Do not silently coerce missing fields, infer hidden defaults, or continue with ambiguous config state.
