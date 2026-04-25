@@ -15,24 +15,32 @@ export class CliConfigValidationError extends Error {
   constructor(
     public readonly field: VaultConfigField,
     public readonly kind: VaultConfigValidationKind,
+    public readonly entryName?: string,
     message?: string,
   ) {
-    super(message ?? `Invalid CLI config: ${field} is invalid.`);
+    super(message ?? `Invalid Vault config: ${field} is required and must be valid.`);
     this.name = "CliConfigValidationError";
     Object.setPrototypeOf(this, CliConfigValidationError.prototype);
   }
 }
 
-function toCliValidationError(error: VaultConfigValidationError): CliConfigValidationError {
-  return new CliConfigValidationError(error.field, error.kind, error.message);
+function toCliValidationError(
+  error: VaultConfigValidationError,
+  entryName?: string,
+): CliConfigValidationError {
+  const message = entryName
+    ? `Invalid Vault config for entry "${entryName}": ${error.message.replace(/^Invalid Vault config:\s*/i, "")}`
+    : error.message;
+
+  return new CliConfigValidationError(error.field, error.kind, entryName, message);
 }
 
-export function validateCliConfigEntry(entry: VaultConfig): ValidatedVaultConfig {
+export function validateCliConfigEntry(entry: VaultConfig, entryName?: string): ValidatedVaultConfig {
   try {
     return validateVaultConfig(entry);
   } catch (error) {
     if (error instanceof VaultConfigValidationError) {
-      throw toCliValidationError(error);
+      throw toCliValidationError(error, entryName);
     }
 
     throw error;
@@ -42,6 +50,7 @@ export function validateCliConfigEntry(entry: VaultConfig): ValidatedVaultConfig
 export function loadValidatedCliConfigEntry<T>(
   entry: VaultConfig,
   onValid: (config: ValidatedVaultConfig) => T,
+  entryName?: string,
 ): T {
-  return onValid(validateCliConfigEntry(entry));
+  return onValid(validateCliConfigEntry(entry, entryName));
 }
