@@ -1,6 +1,7 @@
 import * as authStore from "./auth-store.js";
 import * as ui from "./ui.js";
 import { isJsonMode, isNonInteractive } from "./runtime.js";
+import { CliConfigValidationError } from "./vault-config.js";
 
 export class CliAbortError extends Error {
   constructor(
@@ -39,31 +40,49 @@ export function renderData(data: unknown): void {
   }
 }
 
+export function exitWithUserFacingError(
+  message: string,
+  opts: { exitCode?: number; suggestions?: string[]; details?: unknown } = {},
+): never {
+  const exitCode = opts.exitCode ?? 1;
+
+  if (isJsonMode()) {
+    ui.printJson({
+      success: false,
+      error: message,
+      details: opts.details,
+    });
+  } else {
+    ui.error(message, opts.suggestions);
+    ui.newline();
+  }
+
+  process.exit(exitCode);
+}
+
 export async function runCommand<T>(handler: () => Promise<T>): Promise<T | undefined> {
   try {
     return await handler();
   } catch (error) {
     if (error instanceof CliAbortError) {
-      if (isJsonMode()) {
-        ui.printJson({
-          success: false,
-          error: error.message,
-          details: error.details,
-        });
-      } else {
-        ui.error(error.message, error.suggestions);
-        ui.newline();
-      }
-      process.exit(error.exitCode);
+      exitWithUserFacingError(error.message, {
+        exitCode: error.exitCode,
+        suggestions: error.suggestions,
+        details: error.details,
+      });
+    }
+
+    if (error instanceof CliConfigValidationError) {
+      exitWithUserFacingError(error.message, {
+        details: {
+          code: error.code,
+          field: error.field,
+          kind: error.kind,
+        },
+      });
     }
 
     const message = error instanceof Error ? error.message : "Unexpected CLI error";
-    if (isJsonMode()) {
-      ui.printJson({ success: false, error: message });
-    } else {
-      ui.error(message);
-      ui.newline();
-    }
-    process.exit(1);
+    exitWithUserFacingError(message);
   }
 }

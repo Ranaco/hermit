@@ -14,7 +14,7 @@ import { secretCommand } from "./commands/secret.js";
 import { teamCommand } from "./commands/team.js";
 import { vaultCommand } from "./commands/vault.js";
 import { whoamiCommand } from "./commands/whoami.js";
-import { runCommand } from "./lib/command-helpers.js";
+import { exitWithUserFacingError, runCommand } from "./lib/command-helpers.js";
 import { handleLogin, handleLogout, type LoginOptions } from "./lib/auth-handlers.js";
 import { resolveConfiguredServerUrl } from "./lib/config.js";
 import { handleGroupTree } from "./lib/group-handlers.js";
@@ -27,6 +27,7 @@ import {
   type ValueType,
 } from "./lib/secret-handlers.js";
 import { setRuntimeState } from "./lib/runtime.js";
+import { CliConfigValidationError } from "./lib/vault-config.js";
 
 interface GlobalOptions {
   json?: boolean;
@@ -219,6 +220,16 @@ program
 (async () => {
   await program.parseAsync(process.argv);
 })().catch((error) => {
+  if (error instanceof CliConfigValidationError) {
+    exitWithUserFacingError(error.message, {
+      details: {
+        code: error.code,
+        field: error.field,
+        kind: error.kind,
+      },
+    });
+  }
+
   console.error(error);
   process.exit(1);
 });

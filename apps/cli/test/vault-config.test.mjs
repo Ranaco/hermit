@@ -7,6 +7,15 @@ const {
   loadValidatedCliConfigEntry,
   validateCliConfigEntry,
 } = await import("../dist/lib/vault-config.js");
+const { runCommand } = await import("../dist/lib/command-helpers.js");
+const ui = await import("../dist/lib/ui.js");
+
+class ExitSignal extends Error {
+  constructor(code) {
+    super(`process.exit(${code})`);
+    this.code = code;
+  }
+}
 
 test("validateCliConfigEntry accepts a complete config entry", () => {
   const config = validateCliConfigEntry({
@@ -75,5 +84,48 @@ for (const [field, entry] of [
     );
 
     assert.equal(invoked, false);
+  });
+
+  test(`runCommand renders a user-facing validation error when ${field} is missing`, async () => {
+    const originalExit = process.exit;
+    const originalError = console.error;
+    const originalLog = console.log;
+    const errorLines = [];
+
+    ui.setRuntimeState({
+      outputMode: "plain",
+      colorEnabled: false,
+      nonInteractive: true,
+      quiet: false,
+    });
+
+    process.exit = ((code) => {
+      throw new ExitSignal(code);
+    });
+    console.error = (...args) => {
+      errorLines.push(args.join(" "));
+    };
+    console.log = () => {};
+
+    try {
+      await assert.rejects(
+        () =>
+          runCommand(async () => {
+            loadValidatedCliConfigEntry(entry, () => "should-not-run");
+          }),
+        (error) => {
+          assert.ok(error instanceof ExitSignal);
+          assert.equal(error.code, 1);
+          return true;
+        },
+      );
+    } finally {
+      process.exit = originalExit;
+      console.error = originalError;
+      console.log = originalLog;
+    }
+
+    assert(errorLines.some((line) => line.includes(field)));
+    assert(errorLines.some((line) => line.includes("Invalid Vault config")));
   });
 }
