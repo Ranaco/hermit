@@ -77,14 +77,25 @@ export const createServer = (): Express => {
 
   /**
    * Health check endpoint
-   * Returns basic server health status
+   * Returns basic server health status including Vault connectivity and latency
    */
-  app.get("/health", (_req: Request, res: Response) => {
+  app.get("/health", async (_req: Request, res: Response) => {
+    const start = Date.now();
+    let vaultConnected = false;
+    
+    try {
+      vaultConnected = await checkVaultConnection();
+    } catch (error) {
+      log.error("Unexpected error during health check vault connection check", { error });
+      vaultConnected = false;
+    }
+    
+    const latency = Date.now() - start;
+
     res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.app.env,
+      status: vaultConnected ? "healthy" : "degraded",
+      vault_connected: vaultConnected,
+      latency_ms: latency,
     });
   });
 
