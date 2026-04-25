@@ -19,6 +19,25 @@ test("validateVaultConfig accepts a complete config", () => {
   assert.equal(config.namespace, "admin");
 });
 
+test("validateVaultConfig rejects an invalid address", () => {
+  assert.throws(
+    () =>
+      validateVaultConfig({
+        address: "vault.example.com",
+        token: "vault-token",
+        namespace: "admin",
+      }),
+    (error: unknown) => {
+      assert.ok(error instanceof VaultConfigValidationError);
+      assert.equal(error.code, "VAULT_CONFIG_VALIDATION_ERROR");
+      assert.equal(error.field, "address");
+      assert.equal(error.kind, "invalid");
+      assert.match(error.message, /valid http or https url/i);
+      return true;
+    },
+  );
+});
+
 for (const [field, config] of [
   [
     "address",
@@ -52,6 +71,7 @@ for (const [field, config] of [
         assert.ok(error instanceof VaultConfigValidationError);
         assert.equal(error.code, "VAULT_CONFIG_VALIDATION_ERROR");
         assert.equal(error.field, field);
+        assert.equal(error.kind, "missing");
         assert.match(error.message, new RegExp(field, "i"));
         return true;
       },
@@ -64,6 +84,7 @@ for (const [field, config] of [
       (error: unknown) => {
         assert.ok(error instanceof VaultConfigValidationError);
         assert.equal(error.field, field);
+        assert.equal(error.kind, "missing");
         return true;
       },
     );
