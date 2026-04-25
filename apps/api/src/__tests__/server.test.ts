@@ -1,6 +1,6 @@
 import express from "express";
-import request from "supertest";
 import { beforeEach, describe, it, expect, jest } from "@jest/globals";
+import type { NextFunction, Request, Response } from "express";
 
 const mockCheckHealth: jest.MockedFunction<
   () => Promise<{ initialized: boolean; sealed: boolean }>
@@ -49,17 +49,16 @@ jest.mock("../routes/share.routes", () => createEmptyRouter());
 
 jest.mock("../services/encryption.service", () => ({
   __esModule: true,
-  checkHealth: (...args: unknown[]) => mockCheckHealth(...args),
+  checkHealth: () => mockCheckHealth(),
   default: {
-    checkHealth: (...args: unknown[]) => mockCheckHealth(...args),
+    checkHealth: () => mockCheckHealth(),
   },
 }));
 
 jest.mock("../services/prisma.service", () => ({
   __esModule: true,
   default: jest.fn(),
-  checkDatabaseConnection: (...args: unknown[]) =>
-    mockCheckDatabaseConnection(...args),
+  checkDatabaseConnection: () => mockCheckDatabaseConnection(),
 }));
 
 import {
@@ -67,6 +66,121 @@ import {
   getHealthResponse,
   getReadinessResponse,
 } from "../server";
+
+type RouteHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => void | Promise<void>;
+
+interface MockRequestOptions {
+  headers?: Record<string, string>;
+  ips?: string[];
+  ip?: string;
+  socketAuthorized?: boolean;
+  remoteAddress?: string;
+}
+
+interface MockResponse {
+  statusCode: number;
+  body: unknown;
+}
+
+function getRouteHandlers(app: express.Express, path: string): RouteHandler[] {
+  const router = app as express.Express & {
+    _router?: {
+      stack?: Array<{
+        route?: {
+          path?: string;
+          stack?: Array<{ handle: RouteHandler }>;
+        };
+      }>;
+    };
+  };
+
+  const route = router._router?.stack?.find(
+    (layer: { route?: { path?: string } }) => layer.route?.path === path,
+  )?.route;
+  if (!route?.stack) {
+    throw new Error(`Route ${path} not found`);
+  }
+
+  return route.stack.map((layer: { handle: RouteHandler }) => layer.handle);
+}
+
+async function invokeRoute(
+  app: express.Express,
+  path: string,
+  reqOptions: MockRequestOptions = {},
+): Promise<MockResponse> {
+  const headers = Object.fromEntries(
+    Object.entries(reqOptions.headers ?? {}).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  const response: MockResponse = {
+    statusCode: 200,
+    body: undefined,
+  };
+
+  const req = {
+    headers,
+    header(name: string) {
+      return headers[name.toLowerCase()];
+    },
+    ips: reqOptions.ips ?? [],
+    ip: reqOptions.ip ?? reqOptions.remoteAddress ?? "127.0.0.1",
+    path,
+    socket: {
+      authorized: reqOptions.socketAuthorized ?? false,
+      remoteAddress: reqOptions.remoteAddress ?? "127.0.0.1",
+    },
+  } as unknown as Request;
+
+  const res = {
+    status(code: number) {
+      response.statusCode = code;
+      return this;
+    },
+    json(body: unknown) {
+      response.body = body;
+      return this;
+    },
+  } as unknown as Response;
+
+  const handlers = getRouteHandlers(app, path);
+  const runHandler = async (index: number): Promise<void> => {
+    const handler = handlers[index];
+    if (!handler) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      let nextCalled = false;
+
+      const next: NextFunction = (error?: unknown) => {
+        nextCalled = true;
+
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        void runHandler(index + 1).then(resolve).catch(reject);
+      };
+
+      Promise.resolve(handler(req, res, next))
+        .then(() => {
+          if (!nextCalled) {
+            resolve();
+          }
+        })
+        .catch(reject);
+    });
+  };
+
+  await runHandler(0);
+
+  return response;
+}
 
 describe("Server", () => {
   beforeEach(() => {
@@ -130,10 +244,9 @@ describe("Server", () => {
 
   it("rejects /health without mTLS", async () => {
     const app = createServer();
+    const response = await invokeRoute(app, "/health");
 
-    const response = await request(app).get("/health");
-
-    expect(response.status).toBe(401);
+    expect(response.statusCode).toBe(401);
     expect(response.body).toEqual({
       error: "mTLS client certificate required",
     });
@@ -141,12 +254,13 @@ describe("Server", () => {
 
   it("rejects /health when the proxy verification header is sent without a trusted proxy hop", async () => {
     const app = createServer();
+    const response = await invokeRoute(app, "/health", {
+      headers: {
+        "x-ssl-client-verify": "SUCCESS",
+      },
+    });
 
-    const response = await request(app)
-      .get("/health")
-      .set("x-ssl-client-verify", "SUCCESS");
-
-    expect(response.status).toBe(401);
+    expect(response.statusCode).toBe(401);
     expect(response.body).toEqual({
       error: "mTLS client certificate required",
     });
@@ -154,13 +268,17 @@ describe("Server", () => {
 
   it("GET /health returns 200 with the expected payload when mTLS succeeds", async () => {
     const app = createServer();
+    const response = await invokeRoute(app, "/health", {
+      headers: {
+        "x-forwarded-for": "198.51.100.10",
+        "x-ssl-client-verify": "SUCCESS",
+      },
+      ips: ["198.51.100.10"],
+      ip: "198.51.100.10",
+      remoteAddress: "172.18.0.5",
+    });
 
-    const response = await request(app)
-      .get("/health")
-      .set("x-forwarded-for", "198.51.100.10")
-      .set("x-ssl-client-verify", "SUCCESS");
-
-    expect(response.status).toBe(200);
+    expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({
       status: "ok",
       vault_connected: true,
@@ -170,25 +288,44 @@ describe("Server", () => {
 
   it("rejects /readyz without mTLS", async () => {
     const app = createServer();
+    const response = await invokeRoute(app, "/readyz");
 
-    const response = await request(app).get("/readyz");
-
-    expect(response.status).toBe(401);
+    expect(response.statusCode).toBe(401);
     expect(response.body).toEqual({
       error: "mTLS client certificate required",
     });
   });
 
+  it("GET /readyz returns 200 with mTLS when the service is ready", async () => {
+    const app = createServer();
+    const response = await invokeRoute(app, "/readyz", {
+      headers: {
+        "x-forwarded-for": "198.51.100.10",
+        "x-ssl-client-verify": "SUCCESS",
+      },
+      ips: ["198.51.100.10"],
+      ip: "198.51.100.10",
+      remoteAddress: "172.18.0.5",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ status: "ready" });
+  });
+
   it("GET /readyz returns 503 with mTLS when a dependency is unavailable", async () => {
     mockCheckDatabaseConnection.mockResolvedValue(false);
     const app = createServer();
+    const response = await invokeRoute(app, "/readyz", {
+      headers: {
+        "x-forwarded-for": "198.51.100.10",
+        "x-ssl-client-verify": "SUCCESS",
+      },
+      ips: ["198.51.100.10"],
+      ip: "198.51.100.10",
+      remoteAddress: "172.18.0.5",
+    });
 
-    const response = await request(app)
-      .get("/readyz")
-      .set("x-forwarded-for", "198.51.100.10")
-      .set("x-ssl-client-verify", "SUCCESS");
-
-    expect(response.status).toBe(503);
+    expect(response.statusCode).toBe(503);
     expect(response.body).toEqual({ status: "not_ready" });
   });
 });

@@ -243,7 +243,8 @@ docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.rel
 
 echo "Checking health..."
 health_attempts=0
-until curl -fsS http://127.0.0.1/health > /dev/null; do
+until docker compose -f "$COMPOSE_FILE" --env-file .env.production --env-file .env.release exec -T api \
+  node -e "fetch('http://127.0.0.1:5001/readyz',{headers:{'x-forwarded-for':'127.0.0.1','x-ssl-client-verify':'SUCCESS'}}).then(async r=>{if(r.status!==200)throw new Error(await r.text())})" > /dev/null 2>&1; do
   health_attempts=$((health_attempts + 1))
   if [ "$health_attempts" -ge 12 ]; then
     echo "Health check did not succeed in time." >&2

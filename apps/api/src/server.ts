@@ -143,16 +143,6 @@ export const createServer = (): Express => {
   app.use(`${config.app.apiPrefix}/audit`, auditRoutes);
   app.use(`${config.app.apiPrefix}/shares`, shareRoutes);
 
-  // Temporary placeholder route
-  app.get(`${config.app.apiPrefix}/info`, (_req: Request, res: Response) => {
-    res.json({
-      name: config.app.name,
-      version: config.app.version,
-      description: "Hermit Key Management System API",
-      features: config.features,
-    });
-  });
-
   // ==================== ERROR HANDLING ====================
 
   // 404 handler (must be after all routes)
