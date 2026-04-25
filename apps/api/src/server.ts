@@ -15,6 +15,7 @@ import {
   setupHelmet,
   setupCors,
   generalRateLimiter,
+  requireHealthEndpointMtls,
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
@@ -31,6 +32,19 @@ import groupRoutes from "./routes/group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
+
+export interface HealthResponse {
+  status: "ok" | "error";
+  vault_connected: boolean;
+  latency_ms: number;
+}
+
+export interface ReadinessResponse {
+  httpStatus: 200 | 503;
+  body: {
+    status: "ready" | "not_ready";
+  };
+}
 
 /**
  * Create and configure Express application
@@ -61,7 +75,7 @@ export const createServer = (): Express => {
       morgan("combined", {
         stream: httpLogStream,
         skip: (req: Request) =>
-          req.path === "/health" || req.path === "/status",
+          req.path === "/health" || req.path === "/readyz" || req.path === "/status",
       }),
     );
   }
@@ -77,25 +91,30 @@ export const createServer = (): Express => {
 
   /**
    * Health check endpoint
-   * Returns basic server health status
+   * Returns Vault connectivity without failing the caller on dependency errors.
    */
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.app.env,
-    });
+  app.get("/health", requireHealthEndpointMtls, async (_req: Request, res: Response) => {
+    const health = await getHealthResponse();
+    res.status(200).json(health);
+  });
+
+  /**
+   * Readiness endpoint
+   * Verifies the process can reach required startup dependencies.
+   */
+  app.get("/readyz", requireHealthEndpointMtls, async (_req: Request, res: Response) => {
+    const readiness = await getReadinessResponse();
+    res.status(readiness.httpStatus).json(readiness.body);
   });
 
   /**
    * Detailed status endpoint
    * Includes database and Vault connectivity
    */
-  app.get("/status", async (_req: Request, res: Response) => {
+  app.get("/status", requireHealthEndpointMtls, async (_req: Request, res: Response) => {
     const [dbStatus, vaultStatus] = await Promise.all([
       checkDatabaseConnection().catch(() => false),
-      checkVaultConnection().catch(() => false),
+      isVaultConnected().catch(() => false),
     ]);
 
     const status = {
@@ -124,16 +143,6 @@ export const createServer = (): Express => {
   app.use(`${config.app.apiPrefix}/audit`, auditRoutes);
   app.use(`${config.app.apiPrefix}/shares`, shareRoutes);
 
-  // Temporary placeholder route
-  app.get(`${config.app.apiPrefix}/info`, (_req: Request, res: Response) => {
-    res.json({
-      name: config.app.name,
-      version: config.app.version,
-      description: "Hermit Key Management System API",
-      features: config.features,
-    });
-  });
-
   // ==================== ERROR HANDLING ====================
 
   // 404 handler (must be after all routes)
@@ -148,14 +157,69 @@ export const createServer = (): Express => {
 /**
  * Check Vault connectivity
  */
-async function checkVaultConnection(): Promise<boolean> {
+async function isVaultConnected(): Promise<boolean> {
   try {
-    await checkEncryptionHealth();
-    return true;
+    const vaultHealth = await getVaultHealthSnapshot();
+    return vaultHealth.vaultConnected;
   } catch (error) {
     log.error("Vault connection check failed", { error });
     return false;
   }
+}
+
+export async function getHealthResponse(): Promise<HealthResponse> {
+  try {
+    const vaultHealth = await getVaultHealthSnapshot();
+
+    return {
+      status: vaultHealth.vaultConnected ? "ok" : "error",
+      vault_connected: vaultHealth.vaultConnected,
+      latency_ms: vaultHealth.latencyMs,
+    };
+  } catch (error) {
+    log.error("Vault health endpoint check failed", { error });
+
+    return {
+      status: "error",
+      vault_connected: false,
+      latency_ms: 0,
+    };
+  }
+}
+
+export async function getReadinessResponse(): Promise<ReadinessResponse> {
+  const [databaseConnected, vaultConnected] = await Promise.all([
+    checkDatabaseConnection().catch(() => false),
+    isVaultConnected().catch(() => false),
+  ]);
+
+  if (databaseConnected && vaultConnected) {
+    return {
+      httpStatus: 200,
+      body: { status: "ready" },
+    };
+  }
+
+  return {
+    httpStatus: 503,
+    body: { status: "not_ready" },
+  };
+}
+
+interface VaultHealthSnapshot {
+  vaultConnected: boolean;
+  latencyMs: number;
+}
+
+async function getVaultHealthSnapshot(): Promise<VaultHealthSnapshot> {
+  const startedAt = Date.now();
+  const health = await checkEncryptionHealth();
+  const vaultConnected = health.initialized && !health.sealed;
+
+  return {
+    vaultConnected,
+    latencyMs: vaultConnected ? Date.now() - startedAt : 0,
+  };
 }
 
 /**
@@ -175,7 +239,7 @@ export async function initializeApp(): Promise<void> {
   }
 
   // Check Vault connection
-  const vaultConnected = await checkVaultConnection();
+  const vaultConnected = await isVaultConnected();
   if (!vaultConnected) {
     log.warn("Vault connection failed - some features may be unavailable");
   }

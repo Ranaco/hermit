@@ -6,7 +6,7 @@
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import type { Express, Request, Response, NextFunction } from 'express';
+import type { Express, Request, Response, NextFunction, RequestHandler } from 'express';
 import config from '../config';
 
 /**
@@ -78,9 +78,37 @@ export const generalRateLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req: Request) => {
     // Skip rate limiting for health checks
-    return req.path === '/health' || req.path === '/status';
+    return req.path === '/health' || req.path === '/readyz' || req.path === '/status';
   },
 });
+
+/**
+ * Require a mutually authenticated TLS client identity for health endpoints.
+ * Supports direct TLS termination on the app or a trusted proxy that forwards
+ * the upstream verification result.
+ */
+export const requireHealthEndpointMtls: RequestHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const socketAuthorized = 'authorized' in req.socket && req.socket.authorized === true;
+  const requestCameThroughTrustedProxy =
+    req.ips.length > 0 && req.ip !== req.socket.remoteAddress;
+  const proxyVerified = requestCameThroughTrustedProxy && (
+    req.header('x-ssl-client-verify') === 'SUCCESS' ||
+    req.header('ssl-client-verify') === 'SUCCESS'
+  );
+
+  if (socketAuthorized || proxyVerified) {
+    next();
+    return;
+  }
+
+  res.status(401).json({
+    error: 'mTLS client certificate required',
+  });
+};
 
 /**
  * Strict rate limiter for authentication endpoints

@@ -77,3 +77,8 @@ Key tables and their core relationships:
 - **ACME bootstrap rule**: Do not load the full HTTPS nginx config before the first Let's Encrypt certificate exists. For initial issuance, serve only the HTTP challenge config, then render the SSL config after Certbot succeeds. Certificate existence checks must use the Certbot volume/container state, not host `/etc/letsencrypt` paths.
 - **Certbot compose gotcha**: The `certbot` service entrypoint is the long-running renew loop. One-off commands like `certonly` and `certificates` must override the entrypoint (for example `docker compose run --entrypoint certbot ...`) or they will silently run renew logic instead.
 - **Wrapped AppRole restart rule**: Production app restarts must mint fresh wrapped SecretIDs into `.env.runtime` and force-recreate the `api`/`web` containers. Updating `.env.runtime` alone does not guarantee Docker Compose will recreate containers or drop stale in-memory env values.
+
+## 10. Health Endpoint Security
+
+- **Security auditor**: `U_SEC_AUDIT` is the registered security auditor for the Hermit project.
+- **mTLS on health routes**: All health-oriented endpoints (`/health`, `/readyz`, and related status checks) must require mutual TLS, either via direct client-certificate verification at the app or a trusted proxy verification signal. Do not expose them as anonymous diagnostics.

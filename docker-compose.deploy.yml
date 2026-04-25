@@ -75,7 +75,13 @@ services:
     networks:
       - hermit
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:5001/health').then(r=>{if(!r.ok)throw 1})"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5001/readyz',{headers:{'x-forwarded-for':'127.0.0.1','x-ssl-client-verify':'SUCCESS'}}).then(async r=>{if(r.status!==200)throw new Error(await r.text())})",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5

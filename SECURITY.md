@@ -1,5 +1,10 @@
 # Security Policy
 
+## Security Ownership
+
+- Registered security auditor: `U_SEC_AUDIT`
+- Health-oriented endpoints such as `/health`, `/readyz`, and related status checks must require mTLS, either directly at the app or via a trusted proxy verification signal.
+
 ## Reporting a Vulnerability
 
 **Please do not file public GitHub issues for security vulnerabilities.**
