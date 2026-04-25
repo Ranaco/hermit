@@ -93,9 +93,12 @@ export const requireHealthEndpointMtls: RequestHandler = (
   next: NextFunction,
 ) => {
   const socketAuthorized = 'authorized' in req.socket && req.socket.authorized === true;
-  const proxyVerified =
+  const requestCameThroughTrustedProxy =
+    req.ips.length > 0 && req.ip !== req.socket.remoteAddress;
+  const proxyVerified = requestCameThroughTrustedProxy && (
     req.header('x-ssl-client-verify') === 'SUCCESS' ||
-    req.header('ssl-client-verify') === 'SUCCESS';
+    req.header('ssl-client-verify') === 'SUCCESS'
+  );
 
   if (socketAuthorized || proxyVerified) {
     next();

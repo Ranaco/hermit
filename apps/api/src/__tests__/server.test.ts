@@ -139,11 +139,25 @@ describe("Server", () => {
     });
   });
 
+  it("rejects /health when the proxy verification header is sent without a trusted proxy hop", async () => {
+    const app = createServer();
+
+    const response = await request(app)
+      .get("/health")
+      .set("x-ssl-client-verify", "SUCCESS");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: "mTLS client certificate required",
+    });
+  });
+
   it("GET /health returns 200 with the expected payload when mTLS succeeds", async () => {
     const app = createServer();
 
     const response = await request(app)
       .get("/health")
+      .set("x-forwarded-for", "198.51.100.10")
       .set("x-ssl-client-verify", "SUCCESS");
 
     expect(response.status).toBe(200);
@@ -171,6 +185,7 @@ describe("Server", () => {
 
     const response = await request(app)
       .get("/readyz")
+      .set("x-forwarded-for", "198.51.100.10")
       .set("x-ssl-client-verify", "SUCCESS");
 
     expect(response.status).toBe(503);

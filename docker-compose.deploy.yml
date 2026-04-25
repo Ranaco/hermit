@@ -75,7 +75,7 @@ services:
     networks:
       - hermit
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:5001/health').then(r=>{if(!r.ok)throw 1})"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5001/api/info').then(r=>{if(!r.ok)throw 1})"]
       interval: 15s
       timeout: 5s
       retries: 5
