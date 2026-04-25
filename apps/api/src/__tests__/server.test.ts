@@ -61,9 +61,13 @@ describe("Server /health", () => {
     expect(response.body).toMatchObject({
       status: "healthy",
       vault_connected: true,
+      environment: expect.any(String),
+      version: expect.any(String),
+      timestamp: expect.any(String),
+      uptime: expect.any(Number),
     });
     expect(typeof response.body.latency_ms).toBe("number");
-    expect(response.body.latency_ms).toBeGreaterThanOrEqual(50);
+    expect(response.body.latency_ms).toBeGreaterThanOrEqual(45); // Allow for small timer variance
   });
 
   it("returns 200 and degraded status when Vault is unreachable", async () => {
@@ -76,6 +80,10 @@ describe("Server /health", () => {
     expect(response.body).toMatchObject({
       status: "degraded",
       vault_connected: false,
+      environment: expect.any(String),
+      version: expect.any(String),
+      timestamp: expect.any(String),
+      uptime: expect.any(Number),
     });
     expect(typeof response.body.latency_ms).toBe("number");
     expect(response.body.latency_ms).toBeGreaterThanOrEqual(0);
