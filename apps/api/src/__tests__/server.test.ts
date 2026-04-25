@@ -1,4 +1,5 @@
 import express from "express";
+import request from "supertest";
 import { beforeEach, describe, it, expect, jest } from "@jest/globals";
 
 const mockCheckHealth: jest.MockedFunction<
@@ -125,5 +126,54 @@ describe("Server", () => {
       httpStatus: 503,
       body: { status: "not_ready" },
     });
+  });
+
+  it("rejects /health without mTLS", async () => {
+    const app = createServer();
+
+    const response = await request(app).get("/health");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: "mTLS client certificate required",
+    });
+  });
+
+  it("GET /health returns 200 with the expected payload when mTLS succeeds", async () => {
+    const app = createServer();
+
+    const response = await request(app)
+      .get("/health")
+      .set("x-ssl-client-verify", "SUCCESS");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "ok",
+      vault_connected: true,
+      latency_ms: expect.any(Number),
+    });
+  });
+
+  it("rejects /readyz without mTLS", async () => {
+    const app = createServer();
+
+    const response = await request(app).get("/readyz");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: "mTLS client certificate required",
+    });
+  });
+
+  it("GET /readyz returns 503 with mTLS when a dependency is unavailable", async () => {
+    mockCheckDatabaseConnection.mockResolvedValue(false);
+    const app = createServer();
+
+    const response = await request(app)
+      .get("/readyz")
+      .set("x-ssl-client-verify", "SUCCESS");
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ status: "not_ready" });
   });
 });

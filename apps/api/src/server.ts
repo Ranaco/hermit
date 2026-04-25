@@ -15,6 +15,7 @@ import {
   setupHelmet,
   setupCors,
   generalRateLimiter,
+  requireHealthEndpointMtls,
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
@@ -92,7 +93,7 @@ export const createServer = (): Express => {
    * Health check endpoint
    * Returns Vault connectivity without failing the caller on dependency errors.
    */
-  app.get("/health", async (_req: Request, res: Response) => {
+  app.get("/health", requireHealthEndpointMtls, async (_req: Request, res: Response) => {
     const health = await getHealthResponse();
     res.status(200).json(health);
   });
@@ -101,7 +102,7 @@ export const createServer = (): Express => {
    * Readiness endpoint
    * Verifies the process can reach required startup dependencies.
    */
-  app.get("/readyz", async (_req: Request, res: Response) => {
+  app.get("/readyz", requireHealthEndpointMtls, async (_req: Request, res: Response) => {
     const readiness = await getReadinessResponse();
     res.status(readiness.httpStatus).json(readiness.body);
   });
@@ -110,10 +111,10 @@ export const createServer = (): Express => {
    * Detailed status endpoint
    * Includes database and Vault connectivity
    */
-  app.get("/status", async (_req: Request, res: Response) => {
+  app.get("/status", requireHealthEndpointMtls, async (_req: Request, res: Response) => {
     const [dbStatus, vaultStatus] = await Promise.all([
       checkDatabaseConnection().catch(() => false),
-      checkVaultConnection().catch(() => false),
+      isVaultConnected().catch(() => false),
     ]);
 
     const status = {
@@ -166,10 +167,10 @@ export const createServer = (): Express => {
 /**
  * Check Vault connectivity
  */
-async function checkVaultConnection(): Promise<boolean> {
+async function isVaultConnected(): Promise<boolean> {
   try {
-    const health = await checkEncryptionHealth();
-    return health.initialized && !health.sealed;
+    const vaultHealth = await getVaultHealthSnapshot();
+    return vaultHealth.vaultConnected;
   } catch (error) {
     log.error("Vault connection check failed", { error });
     return false;
@@ -177,16 +178,13 @@ async function checkVaultConnection(): Promise<boolean> {
 }
 
 export async function getHealthResponse(): Promise<HealthResponse> {
-  const startedAt = Date.now();
-
   try {
-    const health = await checkEncryptionHealth();
-    const vaultConnected = health.initialized && !health.sealed;
+    const vaultHealth = await getVaultHealthSnapshot();
 
     return {
-      status: vaultConnected ? "ok" : "error",
-      vault_connected: vaultConnected,
-      latency_ms: vaultConnected ? Date.now() - startedAt : 0,
+      status: vaultHealth.vaultConnected ? "ok" : "error",
+      vault_connected: vaultHealth.vaultConnected,
+      latency_ms: vaultHealth.latencyMs,
     };
   } catch (error) {
     log.error("Vault health endpoint check failed", { error });
@@ -202,7 +200,7 @@ export async function getHealthResponse(): Promise<HealthResponse> {
 export async function getReadinessResponse(): Promise<ReadinessResponse> {
   const [databaseConnected, vaultConnected] = await Promise.all([
     checkDatabaseConnection().catch(() => false),
-    checkVaultConnection().catch(() => false),
+    isVaultConnected().catch(() => false),
   ]);
 
   if (databaseConnected && vaultConnected) {
@@ -215,6 +213,22 @@ export async function getReadinessResponse(): Promise<ReadinessResponse> {
   return {
     httpStatus: 503,
     body: { status: "not_ready" },
+  };
+}
+
+interface VaultHealthSnapshot {
+  vaultConnected: boolean;
+  latencyMs: number;
+}
+
+async function getVaultHealthSnapshot(): Promise<VaultHealthSnapshot> {
+  const startedAt = Date.now();
+  const health = await checkEncryptionHealth();
+  const vaultConnected = health.initialized && !health.sealed;
+
+  return {
+    vaultConnected,
+    latencyMs: vaultConnected ? Date.now() - startedAt : 0,
   };
 }
 
@@ -235,7 +249,7 @@ export async function initializeApp(): Promise<void> {
   }
 
   // Check Vault connection
-  const vaultConnected = await checkVaultConnection();
+  const vaultConnected = await isVaultConnected();
   if (!vaultConnected) {
     log.warn("Vault connection failed - some features may be unavailable");
   }
