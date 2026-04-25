@@ -1,5 +1,7 @@
 import vault from "node-vault";
 import { log } from "./logger";
+import { validateVaultConfig } from "./config-validation";
+import type { ValidatedVaultConfig } from "./config-validation";
 import type {
   VaultConfig,
   EncryptOptions,
@@ -25,21 +27,21 @@ import type {
 export class VaultService {
   private client: vault.client;
   private transitMount: string;
-  private config: VaultConfig;
+  private config: ValidatedVaultConfig;
   private tokenRenewalTimer?: NodeJS.Timeout;
   private initialized = false;
   private resolvedSecretId?: string;
 
   constructor(config: VaultConfig) {
-    this.config = config;
-    this.transitMount = config.transitMount || "transit";
+    this.config = validateVaultConfig(config);
+    this.transitMount = this.config.transitMount || "transit";
 
-    this.client = this.createClient({ token: config.token });
+    this.client = this.createClient({ token: this.config.token });
 
     log.info("VaultService initialized", {
-      endpoint: config.endpoint,
+      endpoint: this.config.endpoint,
       transitMount: this.transitMount,
-      namespace: config.namespace,
+      namespace: this.config.namespace,
     });
   }
 
