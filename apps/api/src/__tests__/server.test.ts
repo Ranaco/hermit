@@ -38,17 +38,20 @@ import { checkHealth as mockCheckHealth } from "../services/encryption.service";
 import { checkDatabaseConnection as mockCheckDbConnection } from "../services/prisma.service";
 import { createServer } from "../server";
 
+const mockedCheckHealth = mockCheckHealth as jest.Mock;
+const mockedCheckDbConnection = mockCheckDbConnection as jest.Mock;
+
 describe("Server /health", () => {
   const app = createServer();
 
   beforeEach(() => {
     jest.clearAllMocks();
     // Default DB to connected for health checks unless specified
-    (mockCheckDbConnection as any).mockResolvedValue(true);
+    mockedCheckDbConnection.mockResolvedValue(true);
   });
 
   it("returns 200 and healthy status when Vault is reachable", async () => {
-    mockCheckHealth.mockImplementation(async () => {
+    mockedCheckHealth.mockImplementation(async () => {
       // Simulate some network latency
       await new Promise<void>(resolve => setTimeout(resolve, 50));
       return { initialized: true };
@@ -71,7 +74,7 @@ describe("Server /health", () => {
   });
 
   it("returns 200 and degraded status when Vault is unreachable", async () => {
-    mockCheckHealth.mockRejectedValue(new Error("Vault connection refused"));
+    mockedCheckHealth.mockRejectedValue(new Error("Vault connection refused"));
 
     const response = await supertest(app)
       .get("/health")

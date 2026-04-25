@@ -18,7 +18,7 @@ import {
 } from "./middleware/security";
 import { requestContext, logRequestCompletion } from "./middleware/context";
 import getPrismaClient, { checkDatabaseConnection } from "./services/prisma.service";
-import { checkHealth as checkEncryptionHealth } from "./services/encryption.service";
+import { getVaultHealth } from "./services/health.service";
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
@@ -31,6 +31,7 @@ import groupRoutes from "./routes/group.routes";
 import onboardingRoutes from "./routes/onboarding.routes";
 import auditRoutes from "./routes/audit.routes";
 import shareRoutes from "./routes/share.routes";
+import healthRoutes from "./routes/health.routes";
 
 /**
  * Create and configure Express application
@@ -75,56 +76,7 @@ export const createServer = (): Express => {
 
   // ==================== HEALTH & STATUS ROUTES ====================
 
-  /**
-   * Health check endpoint
-   * Returns basic server health status including Vault connectivity and latency
-   */
-  app.get("/health", async (_req: Request, res: Response) => {
-    const start = performance.now();
-    let vaultConnected = false;
-    
-    try {
-      vaultConnected = await checkVaultHealth();
-    } catch (error) {
-      log.error("Unexpected error during health check vault connection check", { error });
-      vaultConnected = false;
-    }
-    
-    const latency = performance.now() - start;
-
-    res.json({
-      status: vaultConnected ? "healthy" : "degraded",
-      vault_connected: vaultConnected,
-      latency_ms: Number(latency.toFixed(3)),
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.app.env,
-      version: config.app.version,
-    });
-  });
-
-  /**
-   * Detailed status endpoint
-   * Includes database and Vault connectivity
-   */
-  app.get("/status", async (_req: Request, res: Response) => {
-    const [dbStatus, vaultStatus] = await Promise.all([
-      checkDatabaseConnection().catch(() => false),
-      checkVaultHealth().catch(() => false),
-    ]);
-
-    const status = {
-      api: "operational",
-      database: dbStatus ? "connected" : "disconnected",
-      vault: vaultStatus ? "connected" : "disconnected",
-      version: config.app.version,
-      environment: config.app.env,
-      timestamp: new Date().toISOString(),
-    };
-
-    const httpStatus = dbStatus && vaultStatus ? 200 : 503;
-    res.status(httpStatus).json(status);
-  });
+  app.use("/", healthRoutes);
 
   // ==================== API ROUTES ====================
 
@@ -161,19 +113,6 @@ export const createServer = (): Express => {
 };
 
 /**
- * Check Vault connectivity health
- */
-async function checkVaultHealth(): Promise<boolean> {
-  try {
-    await checkEncryptionHealth();
-    return true;
-  } catch (error) {
-    log.error("Vault health check failed", { error });
-    return false;
-  }
-}
-
-/**
  * Initialize application
  * Performs startup checks and setup
  */
@@ -190,8 +129,8 @@ export async function initializeApp(): Promise<void> {
   }
 
   // Check Vault connection
-  const vaultConnected = await checkVaultHealth();
-  if (!vaultConnected) {
+  const vaultHealth = await getVaultHealth();
+  if (!vaultHealth.connected) {
     log.warn("Vault connection failed - some features may be unavailable");
   }
 
