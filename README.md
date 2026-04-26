@@ -94,6 +94,7 @@ For detailed setup instructions, see [Quick Start Guide](./docs/quickstart.md).
 
 ### Documentation
 
+- [System Overview](./SYSTEM_OVERVIEW.md)
 - [Hermit Overview](./docs/hermit.md)
 - [Architecture Overview](./docs/features/organization_system.md)
 - [Frontend Guide](./docs/frontend/guide.md)
