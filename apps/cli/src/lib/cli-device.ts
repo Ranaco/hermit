@@ -63,6 +63,8 @@ export function buildCliSignatureHeaders(
   const device = ensureCliDevice();
   const timestamp = String(Date.now());
   const nonce = crypto.randomUUID();
+  // We use asymmetric Ed25519 signing for request integrity. 
+  // The private key is generated locally and never leaves the device.
   const signingPayload = [
     method.toUpperCase(),
     pathWithQuery,
