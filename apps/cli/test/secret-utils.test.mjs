@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSecretPathArg } from "../dist/lib/secret-utils.js";
+import { parseSecretPathArg } from "../src/lib/secret-utils.ts";
 
 test("parseSecretPathArg logic verification", () => {
   assert.deepEqual(parseSecretPathArg("DATABASE_URL"), {

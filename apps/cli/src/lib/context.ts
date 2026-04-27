@@ -21,11 +21,21 @@ export function findByIdOrName<T extends { id: string; name: string }>(
   items: T[],
   query: string,
 ): T | undefined {
-  return (
-    items.find((item) => item.id === query) ||
-    exactNameMatch(items, query) ||
-    shortIdMatch(items, query)
-  );
+  const exactId = items.find((item) => item.id === query);
+  if (exactId) return exactId;
+
+  const exactName = exactNameMatch(items, query);
+  const prefixMatches = items.filter((item) => matchId(query, item.id));
+
+  if (exactName) {
+    const prefixExcludingExact = prefixMatches.filter((item) => item.id !== exactName.id);
+    if (prefixExcludingExact.length > 0) {
+      return undefined;
+    }
+    return exactName;
+  }
+
+  return prefixMatches.length === 1 ? prefixMatches[0] : undefined;
 }
 
 export function requireByIdOrName<T extends { id: string; name: string }>(
@@ -182,7 +192,15 @@ export async function resolveGroupByPath(
 
     // 2. Try exact name match
     if (!current) {
-      current = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
+      const exactName = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
+      if (exactName) {
+        // Check for ambiguity with ID prefixes
+        const prefixMatches = groups.filter((group) => matchId(segment, group.id) && group.id !== exactName.id);
+        if (prefixMatches.length > 0) {
+          throw new Error(`Ambiguous segment "${segment}". It matches a group name exactly, but also matches ${prefixMatches.length} id prefix(es). Use the full ID to uniquely identify the target.`);
+        }
+        current = exactName;
+      }
     }
 
     // 3. Fall back to ID prefix match

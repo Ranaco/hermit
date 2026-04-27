@@ -140,15 +140,13 @@ export async function findSecretCandidates(
     return secrets;
   }
 
-  const exactNames = exactNameMatch(secrets, query);
-  if (exactNames.length > 0) {
-    return exactNames;
-  }
-
   const exactIds = exactIdMatch(secrets, query);
-  if (exactIds.length > 0) {
-    return exactIds;
-  }
+  const exactNames = exactNameMatch(secrets, query);
+  const prefixIds = prefixIdMatch(secrets, query);
 
-  return prefixIdMatch(secrets, query);
+  // Return union of matches
+  const results = new Map<string, sdk.SecretSummary>();
+  [...exactIds, ...exactNames, ...prefixIds].forEach((s) => results.set(s.id, s));
+  
+  return Array.from(results.values());
 }

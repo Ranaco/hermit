@@ -1,12 +1,14 @@
 # Hermit CLI — Comprehensive Review Report (v0.5.2)
 
 **Date:** April 27, 2026  
-**Status:** Completed  
+**Status:** Under Review  
 **Auditor:** Gemini CLI Agent
 
 ## 1. Executive Summary
 
-The Hermit CLI (v0.5.2) is a robust, secure, and modular secret management tool. It features a clean layered architecture and a sophisticated terminal UI. Security is a primary design goal, implemented via Ed25519 asymmetric request signing and encrypted local storage. The audit successfully identified and resolved a critical resolution ambiguity bug. Performance bottlenecks in resource resolution due to sequential API call volume remain the primary area for architectural improvement.
+The Hermit CLI (v0.5.2) is a robust, secure, and modular secret management tool. It features a clean layered architecture and a sophisticated terminal UI. Security is a primary design goal, implemented via Ed25519 asymmetric request signing and encrypted local storage. 
+
+This audit successfully identified and resolved critical resolution ambiguity bugs in resource identification and improved the testing infrastructure by transitioning to source-level verification. Performance bottlenecks in resource resolution due to sequential API call volume remain the primary area for architectural improvement.
 
 ## 2. Architecture Analysis
 
@@ -18,10 +20,9 @@ The codebase follows modern TypeScript best practices with a clear separation of
 - **SDK Layer (`src/lib/sdk.ts`, `src/lib/api-client.ts`)**: Clean abstraction for the backend API.
 - **UI Layer (`src/lib/ui.ts`)**: Rich, theme-aware terminal rendering with support for non-TTY environments.
 
-### Strengths
-- **Consistency**: Shorthand commands (`hermit get`) and nested commands (`hermit secret get`) are fully unified via shared handlers.
-- **Portability**: Compiled to multiple platforms via `pkg`.
-- **Scriptability**: Robust JSON and Raw output modes for integration into pipelines.
+### Improvements in this Audit
+- **Source-Level Testing**: The test suite has been updated to use `tsx` to run tests directly against TypeScript source files, removing the brittle dependency on build artifacts.
+- **Robustness**: Error handling in path resolution now provides clearer context on failure points.
 
 ## 3. Security Audit
 
@@ -44,8 +45,13 @@ The codebase follows modern TypeScript best practices with a clear separation of
 
 ## 5. Bugs and Issues (Fixed)
 
-- **Resolution Ambiguity (FIXED)**: Previously, exact Name matches were prioritized over exact ID matches, and ID prefix matches could be shadowed by Names without warning. The implementation in `src/lib/context.ts` has been updated to prioritize exact IDs and abort on Name vs Prefix ambiguity.
-- **Flawed Test (FIXED)**: `apps/cli/test/secret-utils.test.mjs` was testing a local mirror of logic. It now correctly imports from the built distribution.
+- **Resolution Ambiguity (FIXED)**: 
+    - Previously, exact Name matches were prioritized over exact ID matches without checking for collisions.
+    - `resolveGroupByPath` and `findByIdOrName` have been updated to detect if a name match also matches an ID prefix of another resource, aborting with a helpful error message to prevent accidental operations.
+    - `findSecretCandidates` was updated to return all potential matches (union of ID, Name, and Prefix) to ensure the caller can perform full ambiguity detection.
+- **Brittle Test infrastructure (FIXED)**: 
+    - Tests now use glob patterns (`test/*.test.ts`) instead of explicit file lists.
+    - Tests import directly from `src/` using `tsx`, ensuring the logic under test matches the current source state.
 
 ## 6. Prioritized Improvement Plan
 
@@ -61,6 +67,6 @@ The codebase follows modern TypeScript best practices with a clear separation of
 
 | Role | Status | Date | Signature |
 | :--- | :--- | :--- | :--- |
-| **Security Reviewer** | **APPROVED** | 2026-04-27 | *System-Signed* |
-| **Lead Architect** | **APPROVED** | 2026-04-27 | *System-Signed* |
-| **Governance Board** | **APPROVED** | 2026-04-27 | *System-Signed* |
+| **Security Reviewer** | [PENDING] | - | - |
+| **Lead Architect** | [PENDING] | - | - |
+| **Governance Board** | [PENDING] | - | - |

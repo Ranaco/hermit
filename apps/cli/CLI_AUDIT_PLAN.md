@@ -23,9 +23,12 @@
     - Security Audit (with severity)
     - Performance Bottlenecks (with quantification)
     - Prioritized Action Plan
-    - Governance Approval Section
+    - Governance Approval Section (Updated with placeholders)
 
 ## 4. Implementation Phase (Immediate Fixes)
-- [x] Fix flawed test in `apps/cli/test/secret-utils.test.mjs` (Import from dist instead of local mirror).
-- [x] Address "Resolution Ambiguity" in `src/lib/context.ts` (Prioritized exact ID matches and added ambiguity detection).
-- [x] Quantification of bottlenecks in `REVIEW_REPORT.md` (Added latency estimates and RTT analysis).
+- [x] Fix flawed test in `apps/cli/test/secret-utils.test.mjs` (Now tests against `src/` via `tsx`).
+- [x] Address "Resolution Ambiguity" in `src/lib/context.ts` (Fixed in `resolveGroupByPath` and `findByIdOrName`).
+- [x] Fix `findSecretCandidates` to allow ambiguity detection in secret resolution.
+- [x] Transition entire test suite to `tsx` for source-level verification.
+- [x] Remove brittle test file listing in `package.json` (Used globs).
+- [x] Add global `__VERSION__` fallback for development/test environments.

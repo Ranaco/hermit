@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { runWithEnv } = await import("../dist/lib/process-runner.js");
+const { runWithEnv } = await import("../src/lib/process-runner.ts");
 
 // Spawn tests must run serially — concurrent child processes can resolve
 // each other's promises via shared stdio, producing wrong exit codes.

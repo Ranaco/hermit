@@ -15,7 +15,7 @@ function visibleLines(output) {
 }
 
 async function loadUi() {
-  return import("../dist/lib/ui.js");
+  return import("../src/lib/ui.ts");
 }
 
 function captureOutput(run, { columns = 60, outputMode = "interactive" } = {}) {

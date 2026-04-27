@@ -36,6 +36,12 @@ interface GlobalOptions {
   color?: boolean;
 }
 
+// @ts-ignore
+if (typeof __VERSION__ === "undefined") {
+  // @ts-ignore
+  globalThis.__VERSION__ = "0.0.0-dev";
+}
+
 const program = new Command();
 
 program

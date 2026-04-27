@@ -6,7 +6,7 @@ import os from "node:os";
 import { spawn } from "node:child_process";
 import http from "node:http";
 
-const cliEntry = path.resolve("dist/index.js");
+const cliEntry = path.resolve("src/index.ts");
 
 function createServerState() {
   return {
@@ -204,7 +204,7 @@ async function startFakeHermitServer() {
 
 function runCli(args, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cliEntry, ...args], {
+    const child = spawn("npx", ["tsx", cliEntry, ...args], {
       cwd: path.resolve("."),
       env: {
         ...process.env,
