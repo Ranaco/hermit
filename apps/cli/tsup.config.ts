@@ -2,7 +2,7 @@ import { defineConfig, type Options } from "tsup";
 
 // ESM build — published to npm, used when installed via `npm i -g @hermit/cli`
 const esmConfig: Options = {
-  entry: ["src/index.ts", "src/lib/ui.ts", "src/lib/process-runner.ts"],
+  entry: ["src/index.ts", "src/lib/ui.ts", "src/lib/process-runner.ts", "src/lib/secret-utils.ts"],
   clean: true,
   format: ["esm"],
   target: "node18",
