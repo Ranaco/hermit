@@ -1,13 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-
-// Mirroring the logic from src/lib/secret-utils.ts for verification
-function parseSecretPathArg(arg) {
-  const index = arg.lastIndexOf("/");
-  return index === -1
-    ? { path: undefined, name: arg }
-    : { path: arg.slice(0, index), name: arg.slice(index + 1) };
-}
+import { parseSecretPathArg } from "../dist/lib/secret-utils.js";
 
 test("parseSecretPathArg logic verification", () => {
   assert.deepEqual(parseSecretPathArg("DATABASE_URL"), {

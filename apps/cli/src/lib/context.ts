@@ -21,7 +21,11 @@ export function findByIdOrName<T extends { id: string; name: string }>(
   items: T[],
   query: string,
 ): T | undefined {
-  return exactNameMatch(items, query) || shortIdMatch(items, query) || items.find((item) => item.id === query);
+  return (
+    items.find((item) => item.id === query) ||
+    exactNameMatch(items, query) ||
+    shortIdMatch(items, query)
+  );
 }
 
 export function requireByIdOrName<T extends { id: string; name: string }>(
@@ -29,23 +33,36 @@ export function requireByIdOrName<T extends { id: string; name: string }>(
   query: string,
   entityLabel: string,
 ): T {
-  const exactName = exactNameMatch(items, query);
-  if (exactName) {
-    return exactName;
-  }
-
   const exactId = items.find((item) => item.id === query);
+  const exactName = exactNameMatch(items, query);
+
   if (exactId) {
     return exactId;
   }
 
   const prefixMatches = items.filter((item) => matchId(query, item.id));
+
+  if (exactName) {
+    // Check for ambiguity with ID prefixes
+    const prefixExcludingExact = prefixMatches.filter((item) => item.id !== exactName.id);
+    if (prefixExcludingExact.length > 0) {
+      abort(`Ambiguous query "${query}". It matches a ${entityLabel} name exactly, but also matches ${prefixExcludingExact.length} ${entityLabel} id prefix(es).`, {
+        suggestions: ["Use the full ID to uniquely identify the target."],
+        details: {
+          nameMatch: { id: exactName.id, name: exactName.name },
+          prefixMatches: prefixExcludingExact.map((item) => ({ id: item.id, name: item.name })),
+        },
+      });
+    }
+    return exactName;
+  }
+
   if (prefixMatches.length === 1) {
     return prefixMatches[0];
   }
 
   if (prefixMatches.length > 1) {
-    abort(`Multiple ${entityLabel}s match "${query}".`, {
+    abort(`Multiple ${entityLabel}s match ID prefix "${query}".`, {
       suggestions: [`Use a longer ${entityLabel} id prefix or the exact ${entityLabel} name.`],
       details: {
         matches: prefixMatches.map((item) => ({ id: item.id, name: item.name })),
@@ -159,13 +176,16 @@ export async function resolveGroupByPath(
 
   for (const segment of segments) {
     const groups = await getAccessibleGroupChildren(vaultId, parentId);
-    // Try exact name match first
-    current = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
-    // Fall back to exact ID match
+    
+    // 1. Try exact ID match
+    current = groups.find((group) => group.id === segment);
+
+    // 2. Try exact name match
     if (!current) {
-      current = groups.find((group) => group.id === segment);
+      current = groups.find((group) => group.name.toLowerCase() === segment.toLowerCase());
     }
-    // Fall back to ID prefix match
+
+    // 3. Fall back to ID prefix match
     if (!current) {
       const prefixMatches = groups.filter((group) => matchId(segment, group.id));
       if (prefixMatches.length === 1) {
