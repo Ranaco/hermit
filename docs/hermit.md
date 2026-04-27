@@ -262,6 +262,8 @@ When working in Hermit, preserve these project-level rules:
 - [`docs/features/organization_system.md`](/home/astar/Code/web/hermit/docs/features/organization_system.md)
 - [`docs/features/one-time-secret-sharing.md`](/home/astar/Code/web/hermit/docs/features/one-time-secret-sharing.md)
 - [`docs/features/CLI.md`](/home/astar/Code/web/hermit/docs/features/CLI.md)
+- [`docs/marketing/marketing_plan.md`](./marketing/marketing_plan.md)
+- [`docs/marketing/strengths_report.md`](./marketing/strengths_report.md)
 
 ## Current Status
 
